@@ -1,0 +1,1374 @@
+<title>M1NT</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ink:#02100d; --glass:rgba(8,44,39,.62); --line:rgba(92,255,200,.26);
+  --mint:#5cffc8; --mint-dim:#2fae8a; --text:#e2fff5; --muted:#86bdae;
+  --warn:#ffc857; --bad:#ff7b72; --demo:#9db7ff;
+  --font-d:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-m:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(1100px 760px at 50% 46%,#0b3d35 0%,var(--ink) 64%) fixed,var(--ink);color:var(--text);font-family:var(--font-d);font-size:15px;line-height:1.45;overflow:hidden}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(92,255,200,.03) 0 1px,transparent 1px 3px)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
+.app{height:100vh;height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:6px;padding-top:max(10px,env(safe-area-inset-top,0px));padding-bottom:max(10px,env(safe-area-inset-bottom,0px));padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));position:relative;z-index:1}
+
+.top{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:flex-end;min-height:34px}
+.brand{display:flex;align-items:center;gap:9px;opacity:.9}
+.glyph{width:24px;height:24px;border-radius:50%;background:radial-gradient(circle,var(--mint) 0 22%,transparent 25%),conic-gradient(from 0deg,var(--mint),transparent 30%,var(--mint-dim) 60%,transparent 85%,var(--mint));-webkit-mask:radial-gradient(circle,#000 0 66%,transparent 68%);mask:radial-gradient(circle,#000 0 66%,transparent 68%)}
+h1{font-size:14px;letter-spacing:.24em;text-transform:uppercase;margin:0;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+.chip{font-family:var(--font-m);font-size:11px;letter-spacing:.07em;text-transform:uppercase;border:1px solid var(--line);background:rgba(4,24,21,.5);padding:4px 10px;border-radius:999px;color:var(--muted);display:inline-flex;align-items:center;gap:7px;min-height:30px;white-space:nowrap}
+button.chip{cursor:pointer}
+button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);color:var(--text)}
+.chip.go{background:var(--mint);color:#02100d;border-color:var(--mint);font-weight:500}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
+.dot.on{background:var(--mint);box-shadow:0 0 8px var(--mint)}
+.dot.demo{background:var(--demo);box-shadow:0 0 8px var(--demo)}
+.dot.warn{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.dot.bad{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+.dot.live{background:var(--bad);box-shadow:0 0 10px var(--bad);animation:pulse 1.1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.meter{width:34px;height:6px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;display:inline-block}
+.meter i{display:block;height:100%;width:0;background:var(--mint);transition:width .08s}
+
+.stage{position:relative;min-height:0;display:grid;grid-template-columns:minmax(210px,300px) minmax(0,1fr) minmax(210px,300px);grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:14px 18px;align-items:stretch;overflow:hidden}
+#fx{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.center{grid-column:2;grid-row:1 / span 2;position:relative;display:grid;place-items:center;min-width:0;min-height:0}
+.wakebtn{position:absolute;left:50%;top:50%;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;border:0;background:transparent;cursor:pointer;z-index:3}
+.app:not([data-state="asleep"]) .wakebtn{display:none}
+.resp{position:relative;z-index:2;width:min(680px,100%);max-height:100%;overflow:auto;text-align:center;padding:10px 12px;opacity:0;transform:scale(.94);pointer-events:none;transition:opacity .45s .12s,transform .6s cubic-bezier(.2,.8,.2,1)}
+.app[data-state="answer"] .resp{opacity:1;transform:none;pointer-events:auto}
+.asked{font-family:var(--font-m);font-size:12px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;overflow-wrap:anywhere}
+.asked b{color:var(--mint);font-weight:500}
+.doing{margin:8px 0 0;font-family:var(--font-m);font-size:12px;color:var(--mint);letter-spacing:.06em;min-height:18px}
+.doing.done{color:var(--muted)}
+.ans{margin:10px 0 0;font-size:clamp(22px,2.8vw,36px);line-height:1.2;font-weight:500;letter-spacing:-.01em;overflow-wrap:anywhere}
+.ans.small{font-size:clamp(18px,2.1vw,26px)}
+.rows{margin:14px auto 0;text-align:left;display:grid;gap:8px;max-width:620px}
+.row{display:grid;grid-template-columns:minmax(110px,150px) 1fr;gap:12px;border:1px solid var(--line);background:var(--glass);border-radius:10px;padding:9px 12px;font-size:16px}
+.row .t{font-family:var(--font-m);font-size:12px;color:var(--mint);padding-top:3px}
+.row .n{overflow-wrap:anywhere}
+.row .note{color:var(--muted);font-size:13px;margin-top:2px}
+.cards{margin:14px auto 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:620px;text-align:left}
+.card{text-align:left;font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line);background:var(--glass);border-radius:12px;padding:10px 12px;min-width:0}
+.card:hover{border-color:var(--mint);box-shadow:0 0 22px rgba(92,255,200,.15)}
+.card h3{margin:0;font-family:var(--font-m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500;display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px}
+.card .big{font-size:24px;font-weight:700;margin:2px 0}
+.card .l1{font-size:13px;overflow-wrap:anywhere}
+.tag{font-family:var(--font-m);font-size:10px;letter-spacing:.09em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid currentColor;white-space:nowrap;font-weight:400}
+.tag.live{color:var(--mint)} .tag.saved{color:var(--warn)} .tag.demo,.tag.snap{color:var(--demo)} .tag.na{color:var(--bad)} .tag.ok{color:var(--mint)}
+.src{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;font-family:var(--font-m);font-size:11px;color:var(--muted)}
+.acts{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.btn{cursor:pointer;border:1px solid var(--line);background:rgba(4,24,21,.6);border-radius:999px;padding:7px 14px;font-size:13px;min-height:36px}
+.btn:hover{border-color:var(--mint)} .btn.pri{background:var(--mint);color:#02100d;border-color:var(--mint);font-weight:700}
+.btn[disabled]{opacity:.5;cursor:default}
+.banner{margin:12px auto 0;max-width:620px;border:1px solid var(--line);border-left:3px solid var(--demo);background:rgba(157,183,255,.08);border-radius:8px;padding:8px 12px;text-align:left;font-size:14px;overflow-wrap:anywhere}
+.banner.na{border-left-color:var(--bad);background:rgba(255,123,114,.08)}
+.banner.warn{border-left-color:var(--warn);background:rgba(255,200,87,.07)}
+.banner.ok{border-left-color:var(--mint);background:rgba(92,255,200,.07)}
+
+.panel{position:relative;z-index:2;text-align:left;cursor:pointer;border:1px solid var(--line);background:linear-gradient(160deg,var(--glass),rgba(4,24,21,.72));border-radius:16px;padding:14px 16px;min-width:0;align-self:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:opacity .55s,transform .65s cubic-bezier(.2,.8,.2,1),border-color .2s,box-shadow .2s;opacity:0;pointer-events:none}
+.panel[data-pos="l"]{grid-column:1;transform:translateX(-46px) scale(.96)}
+.panel[data-pos="r"]{grid-column:3;transform:translateX(46px) scale(.96)}
+.panel[data-i="0"]{grid-row:1}.panel[data-i="1"]{grid-row:2}
+.app:not([data-state="asleep"]) .panel{opacity:1;pointer-events:auto;transform:none}
+.app:not([data-state="asleep"]) .panel[data-i="1"]{transition-delay:.08s}
+.panel:hover{border-color:var(--mint);box-shadow:0 0 30px rgba(92,255,200,.2)}
+.panel::before,.panel::after{content:"";position:absolute;width:12px;height:12px;border:2px solid var(--mint);opacity:.8}
+.panel::before{top:-1px;left:-1px;border-right:0;border-bottom:0;border-radius:12px 0 0 0}
+.panel::after{bottom:-1px;right:-1px;border-left:0;border-top:0;border-radius:0 0 12px 0}
+.ph{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ph h2{margin:0;font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
+.pbig{font-size:clamp(20px,2vw,28px);font-weight:500;margin:8px 0 2px;overflow-wrap:anywhere}
+.psub{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.popen{font-family:var(--font-m);font-size:11px;letter-spacing:.1em;color:var(--mint);margin-top:8px;text-transform:uppercase}
+
+.dock{display:grid;gap:7px;justify-items:center}
+.bar{width:min(760px,100%);display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:8px;align-items:center;border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:999px;padding:6px 8px 6px 6px;transition:opacity .5s}
+.app[data-state="asleep"] .bar{opacity:.45}
+.bar:focus-within{opacity:1;border-color:var(--mint);box-shadow:0 0 28px rgba(92,255,200,.2)}
+.bar input{background:transparent;border:0;outline:0;min-width:0;padding:8px 6px;font-size:16px}
+.bar input::placeholder{color:var(--muted)}
+.rb{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:rgba(4,24,21,.7);cursor:pointer;display:grid;place-items:center;touch-action:none;user-select:none;-webkit-user-select:none}
+.rb:hover{border-color:var(--mint)} .rb.on{background:var(--mint);color:#02100d;box-shadow:0 0 24px var(--mint)}
+.rb svg{width:20px;height:20px}
+.rb.muted{color:var(--bad);border-color:var(--bad)}
+.sendb{width:42px;height:42px;border-radius:50%;border:0;background:var(--mint);color:#02100d;cursor:pointer;display:grid;place-items:center}
+.sendb svg{width:20px;height:20px}
+.sugs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;transition:opacity .5s}
+.sugs .btn{font-size:12px;padding:5px 11px;min-height:30px;color:var(--text)}
+.app[data-state="asleep"] .sugs,.app[data-state="asleep"] .foldbtn{opacity:0;pointer-events:none}
+.hint{font-family:var(--font-m);font-size:11px;color:var(--muted);text-align:center;min-height:15px}
+
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .25s;z-index:5}
+.scrim.show{opacity:1;pointer-events:auto}
+.drawer{position:fixed;z-index:6;top:0;right:0;bottom:0;width:min(500px,100%);background:linear-gradient(170deg,rgba(7,40,35,.97),rgba(3,18,16,.98));border-left:1px solid var(--line);transform:translateX(102%);transition:transform .3s cubic-bezier(.2,.8,.2,1);display:grid;grid-template-rows:auto 1fr;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.drawer.show{transform:none}
+.dh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:16px 18px 8px}
+.dh h2{margin:0;font-size:15px;letter-spacing:.2em;text-transform:uppercase}
+.dh .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;font-family:var(--font-m);font-size:11px;color:var(--muted)}
+.db{overflow:auto;padding:6px 18px 24px;display:grid;gap:10px;align-content:start}
+.item{border:1px solid var(--line);background:var(--glass);border-radius:10px;padding:10px 12px}
+.item b{font-weight:500}
+.item .sm{color:var(--muted);font-size:13px;margin-top:3px;overflow-wrap:anywhere}
+.item .k{font-family:var(--font-m);font-size:11px;color:var(--mint);letter-spacing:.06em;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.item details{margin-top:6px;color:var(--muted);font-size:12px;font-family:var(--font-m)}
+.item details div{white-space:pre-wrap;overflow-wrap:anywhere}
+.item summary{cursor:pointer;color:var(--mint)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;margin:6px 0 0}
+.kv dt{color:var(--muted);font-family:var(--font-m);font-size:12px}
+.kv dd{margin:0;overflow-wrap:anywhere}
+.hist{padding:0;list-style:none;margin:0;display:grid;gap:10px}
+.empty{color:var(--muted);font-size:14px;border:1px dashed var(--line);border-radius:10px;padding:12px}
+.sel{background:rgba(4,24,21,.8);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-height:36px;max-width:100%}
+.sec{font-family:var(--font-m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+
+@media(max-width:900px){
+  .stage{grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) auto auto}
+  .center{grid-column:1 / span 2;grid-row:1}
+  .panel[data-i="0"][data-pos="l"]{grid-column:1;grid-row:2}.panel[data-i="1"][data-pos="l"]{grid-column:1;grid-row:3}
+  .panel[data-i="0"][data-pos="r"]{grid-column:2;grid-row:2}.panel[data-i="1"][data-pos="r"]{grid-column:2;grid-row:3}
+  .panel{padding:9px 11px;border-radius:12px}
+  .panel[data-pos="l"],.panel[data-pos="r"]{transform:translateY(24px)}
+  .pbig{font-size:16px;margin:4px 0 0}.psub{font-size:11px}.popen{display:none}
+  .chip{font-size:10px;padding:3px 8px}
+  .row{grid-template-columns:1fr;gap:2px}
+  .app[data-state="answer"] .panel{display:none}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<script type="application/json" id="claude-artifacts-manifest">{"permissions": []}</script>
+
+<div class="app" id="app" data-state="asleep">
+  <header class="top">
+    <div class="chips">
+      <span class="chip" id="micChip" role="status" title="Microphone status"><i class="dot" id="micDot"></i><span id="micTxt">Mic: not checked</span><span class="meter" id="meter" hidden><i id="meterI"></i></span></span>
+      <button class="chip go" type="button" id="enableMic">Enable microphone</button>
+      <button class="chip" type="button" id="micOff" title="Fully stop listening">Mic off</button>
+      <button class="chip" type="button" id="wakeBtn" aria-pressed="false">Hey Mint: off</button>
+      <button class="chip" type="button" id="muteBtn" aria-pressed="false">Voice: on</button>
+      <button class="chip" type="button" id="useBtn" title="Usage">Usage</button>
+      <button class="chip" type="button" id="histBtn">History</button>
+      <button class="chip" type="button" id="setBtn">Setup</button>
+      <span class="chip" id="linkChip" title="Connector status"><i class="dot demo" id="linkDot"></i><span id="linkTxt">Link</span></span>
+      <button class="chip go" type="button" id="installBtn" hidden>Install desktop app</button>
+      <span class="chip" id="clock"></span>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <canvas id="fx" aria-hidden="true"></canvas>
+    <button class="panel" data-pos="l" data-i="0" id="pCal" type="button"><div class="ph"><h2>Calendar</h2><span id="pCalTag"></span></div><div class="pbig" id="pCalBig">Tomorrow</div><div class="psub" id="pCalSub">Tap to check</div><div class="popen">Open ›</div></button>
+    <button class="panel" data-pos="l" data-i="1" id="pEvm" type="button"><div class="ph"><h2>Evermint</h2><span id="pEvmTag"></span></div><div class="pbig">4 Elite clients</div><div class="psub">Monthly day plus David Wilson. Setup snapshot.</div><div class="popen">Open ›</div></button>
+    <button class="panel" data-pos="r" data-i="0" id="pBrf" type="button"><div class="ph"><h2>Briefings</h2><span id="pBrfTag"></span></div><div class="pbig" id="pBrfBig">Morning · Evening</div><div class="psub" id="pBrfSub">Tap to read the latest</div><div class="popen">Open ›</div></button>
+    <button class="panel" data-pos="r" data-i="1" id="pSys" type="button"><div class="ph"><h2>System health</h2><span id="pSysTag"></span></div><div class="pbig" id="pSysBig">Not checked</div><div class="psub" id="pSysSub">Tap to check once</div><div class="popen">Open ›</div></button>
+    <div class="center" id="center">
+      <button class="wakebtn" id="wakeCore" type="button" aria-label="Wake M1NT"></button>
+      <section class="resp" id="resp" aria-live="polite" aria-label="M1NT response">
+        <div class="asked" id="asked"></div>
+        <div class="doing" id="doing"></div>
+        <div class="ans" id="ans"></div>
+        <div id="extra"></div>
+        <div class="src" id="srcRow"></div>
+        <div class="acts" id="acts"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="dock">
+    <div class="hint" id="hint" role="status"></div>
+    <form class="bar" id="cmdForm" autocomplete="off">
+      <button class="rb" id="micBtn" type="button" aria-label="Hold to talk" title="Hold to talk (or hold Space when not typing)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <input id="cmd" type="text" enterkeyhint="send" placeholder="Ask M1NT… try “What needs me?”" aria-label="Ask M1NT" autocapitalize="sentences">
+      <button class="rb" id="spk" type="button" aria-label="Mute voice" aria-pressed="false" title="Mute or unmute M1NT's voice">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path id="spkWave" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>
+      </button>
+      <button class="sendb" type="submit" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </form>
+    <div class="sugs" id="sugs"></div>
+  </footer>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+  <div class="dh"><div><h2 id="dTitle"></h2><div class="meta" id="dMeta"></div></div><button class="btn" id="dClose" type="button">Close</button></div>
+  <div class="db" id="dBody"></div>
+</aside>
+
+<script>
+(function(){
+'use strict';
+var ET='America/New_York', MAKE='Make', QUO='Quo', NOTION='Notion';
+var INSPECTOR=7197564, SCRATCH=211760, PAUSES=209760, DEPOSITS=209683, CONFIG=209770, TEAM=2358449;
+var QUO_INBOX='+15028062444', ALI='+15027162230';
+var LEADS_URL='collection://d4976344-8214-48f0-b38f-6514c1f793f0';
+var ELITE=['Richard Decker','Marc Clark','Rebecca Lucas','David Wilson'];
+var $=function(id){return document.getElementById(id);};
+var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+var app=$('app');
+var drawer=$('drawer'),scrim=$('scrim'),dBody=$('dBody'),lastFocus=null,curView=null;
+var ptt={on:false,buf:'',held:false};
+var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
+var sessionStart=Date.now();
+var STANDALONE=!window.claude;
+var BUILD='v7-2026-11-26';
+var INAPP=/Claude\//.test(navigator.userAgent||'');
+
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+function clear(n){while(n.firstChild)n.removeChild(n.firstChild);}
+function store(k,v){try{if(v===undefined){var r=localStorage.getItem('m1nt.'+k);return r?JSON.parse(r):null;}localStorage.setItem('m1nt.'+k,JSON.stringify(v));}catch(e){return null;}}
+function etDay(off){return new Intl.DateTimeFormat('en-CA',{timeZone:ET,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(Date.now()+off*86400000));}
+function prettyDay(ds){return new Date(ds+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'long',month:'long',day:'numeric'});}
+function t12(hm){var h=+hm.slice(0,2),m=hm.slice(3,5),ap=h>=12?'PM':'AM';h=h%12||12;return h+(m==='00'?'':':'+m)+' '+ap;}
+function clockET(ms){return new Date(ms).toLocaleTimeString('en-US',{timeZone:ET,hour:'numeric',minute:'2-digit'});}
+function stampET(ms){var d=new Date(ms);var same=new Intl.DateTimeFormat('en-CA',{timeZone:ET}).format(d)===etDay(0);return (same?'':d.toLocaleDateString('en-US',{timeZone:ET,month:'short',day:'numeric'})+' ')+clockET(ms)+' ET';}
+function ago(ms){var m=Math.round((Date.now()-ms)/60000);if(m<1)return 'just now';if(m<60)return m+' min ago';var h=Math.round(m/60);if(h<24)return h+' h ago';return Math.round(h/24)+' d ago';}
+function prettyPhone(p){var m=String(p||'').match(/^\+1(\d{3})(\d{3})(\d{4})$/);return m?'('+m[1]+') '+m[2]+'-'+m[3]:String(p||'');}
+function plural(n,a,b){return n===1?a:(b||a+'s');}
+function toArr(p){
+  if(typeof p==='string'){try{p=JSON.parse(p);}catch(e){return null;}}
+  if(Array.isArray(p))return p;
+  if(p&&typeof p==='object'){var k=['records','data','items','results','scenarios','executions'];for(var i=0;i<k.length;i++){if(Array.isArray(p[k[i]]))return p[k[i]];}}
+  return null;
+}
+function payloadOf(r){if(r&&r.payload!=null)return r.payload;if(r&&r.content&&r.content[0]&&r.content[0].text!=null)return r.content[0].text;return r;}
+function tick(){try{$('clock').textContent=clockET(Date.now())+' ET';}catch(e){}}
+tick();setInterval(tick,30000);
+
+/* ---------- usage (measured where possible) ---------- */
+function blank(){return {cmds:0,runs:0,ops:0,cc:0,measured:0,unmeasured:0,reads:0,claude:0,web:0};}
+var use={session:blank(),last:blank(),lastQ:''};
+function addUse(k,n){use.session[k]+=n;use.last[k]+=n;}
+function newCommandUse(q){use.last=blank();use.last.cmds=1;use.session.cmds++;use.lastQ=q;}
+function usageChip(){$('useBtn').textContent='Usage: '+use.session.runs+' run'+(use.session.runs===1?'':'s')+' · '+use.session.claude+' Claude';}
+usageChip();
+
+/* ---------- core animation ---------- */
+var cv=$('fx'),cx=cv.getContext('2d');
+var S={mode:'idle',aw:0,awT:0,an:0,anT:0,energy:0,t0:performance.now(),w:0,h:0,dpr:1,cx:0,cy:0,R:0};
+function size(){
+  var r=cv.getBoundingClientRect();S.dpr=Math.min(window.devicePixelRatio||1,2);S.w=r.width;S.h=r.height;
+  cv.width=Math.round(r.width*S.dpr);cv.height=Math.round(r.height*S.dpr);
+  var c=$('center').getBoundingClientRect();S.cx=c.left-r.left+c.width/2;S.cy=c.top-r.top+c.height/2;
+  S.R=Math.max(90,Math.min(c.width/2*1.02,c.height/2*1.0));
+}
+function draw(now){
+  var t=(now-S.t0)/1000;
+  S.aw+=(S.awT-S.aw)*0.07;S.an+=(S.anT-S.an)*0.08;
+  S.energy+=((S.mode==='speaking'?1:0)-S.energy)*(S.mode==='speaking'?0.12:0.04);
+  cx.setTransform(S.dpr,0,0,S.dpr,0,0);cx.clearRect(0,0,S.w,S.h);
+  var aw=S.aw,an=S.an,mode=S.mode;
+  var coreR=Math.min(30,S.R*0.2)*(1+aw*0.5);
+  var maxR=(62+(S.R*(0.9+0.12*an)-62)*aw);
+  var pulse=1+0.035*Math.sin(t*1.5)+S.energy*0.03*Math.sin(t*2.4);
+  cx.save();cx.translate(S.cx,S.cy);
+  var gr=coreR*(3.2+aw*3.6)*pulse*(mode==='listening'?(1.05+0.05*Math.sin(t*5)):1);
+  var ga=1-aw*0.7;
+  var g=cx.createRadialGradient(0,0,0,0,0,gr);
+  g.addColorStop(0,'rgba(190,255,235,'+(0.9*ga)+')');g.addColorStop(0.15,'rgba(92,255,200,'+(0.55*ga)+')');g.addColorStop(0.5,'rgba(47,174,138,'+(0.18+aw*0.05)+')');g.addColorStop(1,'rgba(47,174,138,0)');
+  cx.fillStyle=g;cx.beginPath();cx.arc(0,0,gr,0,Math.PI*2);cx.fill();
+  var nr=coreR*pulse*(1-aw*0.3);
+  var ng=cx.createRadialGradient(0,0,0,0,0,nr);ng.addColorStop(0,'rgba(240,255,250,'+(0.95*ga+0.05)+')');ng.addColorStop(0.55,'rgba(92,255,200,'+(0.85*ga+0.08)+')');ng.addColorStop(1,'rgba(47,174,138,'+(0.25*ga)+')');
+  cx.fillStyle=ng;cx.beginPath();cx.arc(0,0,nr,0,Math.PI*2);cx.fill();
+  var N=6,spin=mode==='thinking'?2.4:(mode==='listening'?1.0:0.45);
+  for(var i=0;i<N;i++){
+    var f=i/(N-1);
+    var show=i===0?1:aw;
+    if(show<0.01)continue;
+    var rSleep=coreR*2.1;
+    var rOpen=coreR*2.2+(maxR-coreR*2.2)*(0.3+0.7*f);
+    var r=i===0?(rSleep+(rOpen-rSleep)*aw*0.4+((maxR*0.34)-rSleep)*aw*0.6):(rSleep+(rOpen-rSleep)*aw);
+    var alpha=show*(0.16+0.52*(1-f))*(mode==='listening'?(0.8+0.2*Math.sin(t*4-i)):1);
+    if(i===0)alpha=Math.max(alpha,0.55);
+    cx.save();cx.rotate(t*spin*(i%2?-1:1)*(0.3+f*0.3)+i);
+    cx.strokeStyle='rgba(92,255,200,'+alpha+')';cx.lineWidth=i===0?1.2:(1+((i%3===0)?1:0));
+    cx.setLineDash(i%3===1?[6+i*2,10+i*3]:(i%3===2?[2,7]:(i===0?[90,16,4,16]:[])));cx.lineDashOffset=t*(i%2?-14:14);
+    cx.beginPath();cx.arc(0,0,Math.max(r,1),0,Math.PI*2);cx.stroke();
+    if(S.energy>0.03){
+      cx.setLineDash([]);
+      var a0=t*(0.9+f*0.5)*(i%2?-1:1)+i*1.3, span=0.9;
+      cx.strokeStyle='rgba(210,255,240,'+(0.55*S.energy*show)+')';cx.lineWidth=2.4;
+      cx.shadowColor='rgba(92,255,200,.9)';cx.shadowBlur=14*S.energy;
+      cx.beginPath();cx.arc(0,0,Math.max(r,1),a0,a0+span);cx.stroke();cx.shadowBlur=0;
+    }
+    if(i%2===0){var a=t*(0.5+f)+i;cx.fillStyle='rgba(190,255,235,'+(0.45+0.4*show)+')';cx.beginPath();cx.arc(Math.cos(a)*r,Math.sin(a)*r,2,0,Math.PI*2);cx.fill();}
+    cx.restore();
+  }
+  if(aw>0.3){cx.save();cx.rotate(-t*0.06);cx.strokeStyle='rgba(92,255,200,'+(0.26*aw)+')';cx.lineWidth=1;var R=maxR*0.99;for(var k=0;k<72;k++){var a2=k/72*Math.PI*2,l=k%6===0?9:4;cx.beginPath();cx.moveTo(Math.cos(a2)*R,Math.sin(a2)*R);cx.lineTo(Math.cos(a2)*(R-l),Math.sin(a2)*(R-l));cx.stroke();}cx.restore();}
+  cx.restore();
+  if(!reduce)requestAnimationFrame(draw);
+}
+function redraw(){if(reduce){S.aw=S.awT;S.an=S.anT;draw(performance.now());}}
+window.addEventListener('resize',function(){size();redraw();});
+if(window.ResizeObserver)new ResizeObserver(function(){size();}).observe($('center'));
+size();if(reduce)draw(performance.now());else requestAnimationFrame(draw);
+
+/* ---------- states: asleep -> awake -> answer ---------- */
+function setUi(state){
+  app.setAttribute('data-state',state);
+  S.awT=state==='asleep'?0:1;S.anT=state==='answer'?1:0;
+  setTimeout(size,60);setTimeout(size,700);redraw();
+}
+function wakeUi(){if(app.getAttribute('data-state')==='asleep'){setUi('awake');}}
+function sleepUi(){stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
+function setMode(m){S.mode=m;app.setAttribute('data-mode',m);}
+
+/* clicking the core while open folds it; clicking it asleep reopens it */
+var stageEl=$('stage');
+function coreHit(e){var r=cv.getBoundingClientRect();var dx=e.clientX-r.left-S.cx,dy=e.clientY-r.top-S.cy;return Math.sqrt(dx*dx+dy*dy)<=38;}
+var INTER='button,a,summary,input,select,details';
+stageEl.addEventListener('mousemove',function(e){if(app.getAttribute('data-state')==='asleep'){stageEl.style.cursor='';return;}stageEl.style.cursor=(coreHit(e)&&!(e.target.closest&&e.target.closest(INTER)))?'pointer':'';});
+stageEl.addEventListener('click',function(e){if(app.getAttribute('data-state')==='asleep')return;if(e.target.closest&&e.target.closest(INTER))return;var sel=window.getSelection&&String(window.getSelection());if(sel)return;if(coreHit(e))sleepUi();});
+
+/* ---------- bridge ---------- */
+var mcp=null,mcpTried=false;
+async function getMcp(){if(mcpTried)return mcp;mcpTried=true;try{mcp=await window.claude.use('mcp');}catch(e){mcp=null;}return mcp;}
+function setLink(kind,txt){$('linkDot').className='dot '+kind;$('linkTxt').textContent=txt;}
+var servers={};
+async function probeLink(){
+  var m=await getMcp();
+  if(!m){setLink('demo','Demo only');return;}
+  try{
+    var r=await m.listTools();var list=r.servers||[];
+    ['Make','Quo','Notion'].forEach(function(n){var s=list.filter(function(x){return x.server===n;})[0];servers[n]=!s?'missing':(s.authStatus==='needs_reauth'?'reauth':'ok');});
+    var ok=Object.keys(servers).filter(function(k){return servers[k]==='ok';});
+    setLink(ok.length===3?'on':'warn',ok.length===3?'Make · Quo · Notion':(ok.length?ok.join(' + ')+' only':'Not linked'));
+  }catch(e){setLink('demo','Link unknown');}
+}
+async function call(server,tool,input){
+  var m=await getMcp();if(!m)throw {code:'capability_disabled'};
+  var r=await m.callTool(server,tool,input,{cache:false});addUse('reads',1);usageChip();return payloadOf(r);
+}
+function errCopy(err,who){
+  var c=err&&err.code;who=who||'This connector';
+  if(c==='server_not_connected'||c==='selection_required')return who+' is not connected. Add it in claude.ai under Settings, Connectors, then reopen this page.';
+  if(c==='needs_reauth')return who+' needs you to sign in again (Settings, Connectors).';
+  if(c==='not_in_manifest')return 'This page is not allowed to use '+who+'. Reopen it and choose Allow when claude.ai asks.';
+  if(c==='approval_required')return 'Needs your approval: press the button again and choose Allow.';
+  if(c==='blocked_by_policy')return 'Your organization blocks this tool for '+who+'.';
+  if(c==='tool_error')return who+' answered with an error: '+String(err.message||'').slice(0,140);
+  if(c==='server_unavailable')return who+' did not answer in time. Try once more.';
+  if(c==='capability_disabled')return STANDALONE?'This standalone version has no Make, Quo or Notion link (those connections only exist inside Claude).':'No connector bridge in this window. Open the page in the main Claude window and press Allow.';
+  return who+' lookup could not run ('+(c||'unknown')+').';
+}
+
+/* ---------- data ---------- */
+var D={cal:null,pause:null,quo:null,leads:null,book:null,health:null,brief:null};
+(function loadSaved(){Object.keys(D).forEach(function(k){var v=store('d2.'+k);if(v&&v.at){v.saved=true;D[k]=v;}});})();
+function keep(k,data,extra){var r={at:Date.now(),data:data,saved:false};if(extra)Object.keys(extra).forEach(function(x){r[x]=extra[x];});D[k]=r;store('d2.'+k,r);return r;}
+
+function parseCal(val){
+  var out=[];String(val||'').split('\n').forEach(function(line){
+    var p=line.split(' | ');if(p.length<3||line.indexOf(' -> ')<0)return;
+    var se=p[0].split(' -> ');out.push({start:se[0].trim(),end:(se[1]||'').trim(),title:(p[1]||'').trim(),rem:(p[3]||'').replace(/^rem=/,'')});
+  });return out;
+}
+function remText(rem){try{var o=JSON.parse(rem);if(o.useDefault)return 'default reminder';var mm=o.overrides&&o.overrides[0]&&o.overrides[0].minutes;if(mm==null)return '';if(mm>=1440)return 'reminder '+Math.round(mm/1440)+' day before';if(mm>=60)return 'reminder '+Math.round(mm/60)+' h before';return 'reminder '+mm+' min before';}catch(e){return '';}}
+function eventsOn(events,ds){return events.filter(function(e){var sd=e.start.slice(0,10),ed=e.end.slice(0,10);if(e.start.length<=10)return sd<=ds&&ds<ed;return sd===ds;});}
+async function measureRun(scenarioId,startedMs){
+  try{
+    await new Promise(function(r){setTimeout(r,1500);});
+    var arr=toArr(await call(MAKE,'executions_list',{scenarioId:scenarioId,from:startedMs-3000}));
+    var rows=(arr||[]).filter(function(e){return e&&e.operations!=null&&e.centicredits!=null;});
+    if(!rows.length)throw 0;
+    var ops=0,cc=0;rows.forEach(function(e){ops+=Number(e.operations)||0;cc+=Number(e.centicredits)||0;});
+    addUse('ops',ops);addUse('cc',cc);addUse('measured',1);
+  }catch(e){addUse('unmeasured',1);}
+  usageChip();
+}
+async function fetchCal(){
+  var t0=Date.now();
+  await call(MAKE,'scenarios_run',{scenarioId:INSPECTOR,responsive:true});addUse('runs',1);usageChip();
+  var recs=toArr(await call(MAKE,'data-store-records_list',{dataStoreId:SCRATCH}));
+  var val=null;(recs||[]).forEach(function(r){if(r&&r.key==='cal'&&r.data&&r.data.value!=null)val=r.data.value;});
+  measureRun(INSPECTOR,t0);
+  if(val==null)throw {code:'tool_error',message:'The calendar check ran but returned no schedule record.'};
+  return keep('cal',parseCal(val));
+}
+async function fetchPause(){
+  var recs=toArr(await call(MAKE,'data-store-records_list',{dataStoreId:PAUSES}));
+  if(!recs)throw {code:'tool_error',message:'Unreadable pause list.'};
+  return keep('pause',recs.map(function(r){var d=r.data||{};return {phone:d.phone||r.key,reason:d.reason||'',at:d.pausedAt?Date.parse(d.pausedAt):0};}));
+}
+function parseQuo(text){
+  var convs=[],cur=null,last=null;
+  String(text||'').split('\n').forEach(function(line){
+    var h=line.match(/^(\+\d+|Group:.*?)\s+\(conversation\s+(CN\w+)\)/);
+    if(h){cur={phone:h[1],id:h[2],msgs:[]};convs.push(cur);last=null;return;}
+    var m=line.match(/^\s+(AC\w+)\s+\|\s+(incoming|outgoing)\s+\|\s+(\d{4}-\d\d-\d\dT[\d:.]+Z)\s+\|\s?(.*)$/);
+    if(m&&cur){last={id:m[1],dir:m[2],at:Date.parse(m[3]),text:m[4]};cur.msgs.push(last);return;}
+    if(last&&cur&&line.trim()&&!/^\s*\[/.test(line)&&!/^Display:/.test(line)&&!/^\d+ messages/.test(line))last.text+=' '+line.trim();
+  });
+  return convs.filter(function(c){return c.msgs.length;});
+}
+async function fetchQuo(){
+  var since=new Date(Date.now()-72*3600*1000).toISOString();
+  var p=await call(QUO,'fetch-messages',{inboxPhoneNumber:QUO_INBOX,createdAfter:since,excludeDoneConversations:true});
+  var txt=typeof p==='string'?p:(p&&p.text)||JSON.stringify(p);
+  return keep('quo',parseQuo(txt));
+}
+async function fetchLeads(){
+  var q='SELECT "Customer Name" AS name, "Status" AS status, "Vehicle" AS vehicle, "date:Next Follow-Up:start" AS nextfu, "Next Action" AS nextaction FROM ['+LEADS_URL+'] WHERE "Status" NOT IN (\'Dead / No Answer\',\'Lost / Declined\',\'Won / Booked\') ORDER BY "date:Next Follow-Up:start" ASC LIMIT 40';
+  var p=await call(NOTION,'notion-query-data-sources',{data:{data_source_urls:[LEADS_URL],query:q}});
+  var arr=toArr(p);if(!arr)throw {code:'tool_error',message:'Unreadable Notion answer.'};
+  return keep('leads',arr.map(function(r){return {name:r.name||'(no name)',status:r.status||'',vehicle:r.vehicle||'',nextfu:String(r.nextfu||'').slice(0,10),nextaction:r.nextaction||''};}));
+}
+async function fetchHealth(){
+  var arr=toArr(await call(MAKE,'scenarios_list',{teamId:TEAM}));
+  if(!arr)throw {code:'tool_error',message:'Unreadable scenario list.'};
+  return keep('health',arr.map(function(s){return {id:s.id,name:s.name,active:s.isActive!==undefined?!!s.isActive:(s.islinked!==false&&!s.isPaused),invalid:!!s.isinvalid,paused:!!s.isPaused,dlq:s.dlqCount||0,next:s.nextExec||null};}));
+}
+function parseBooked(text){
+  var gen=null,m=String(text||'').match(/generated\s+(.+?\bET)\b/);if(m)gen=m[1];
+  var out=[];String(text||'').split('\n').forEach(function(line){
+    var p=line.split(' | ');if(p.length<4)return;
+    var d=p[0].match(/^[A-Za-z]{3},\s+([A-Za-z]{3}\s+\d{1,2})\s+(\d{1,2}:\d\d\s+[AP]M)$/);if(!d)return;
+    var pay=(p[3]||'').replace(/^payment:\s*/i,'');
+    out.push({when:d[1]+' '+d[2],dayLabel:p[0],name:p[1].trim(),vehicle:(p[2]||'').trim(),pay:pay.trim()});
+  });
+  return {generated:gen,rows:out};
+}
+async function fetchBook(){
+  var cfg=toArr(await call(MAKE,'data-store-records_list',{dataStoreId:CONFIG}));
+  if(!cfg)throw {code:'tool_error',message:'Unreadable settings list.'};
+  var booked=null;cfg.forEach(function(r){var v=r&&r.data&&r.data.value;if(r.key==='booked_jobs')booked=v;});
+  if(booked==null)throw {code:'tool_error',message:'No saved booking list found.'};
+  var wv=null;try{var sc=toArr(await call(MAKE,'data-store-records_list',{dataStoreId:SCRATCH}));(sc||[]).forEach(function(r){if(r.key==='cc_waivers')wv=JSON.parse(r.data.value);});if(wv===null)wv=[];}catch(e){wv=null;}
+  var dep=null;try{dep=toArr(await call(MAKE,'data-store-records_list',{dataStoreId:DEPOSITS}));}catch(e){dep=null;}
+  var pb=parseBooked(booked);
+  return keep('book',{rows:pb.rows,generated:pb.generated,waivers:wv||[],waiversRead:wv!==null,payments:(dep||[]).map(function(r){return {paymentId:r.key,jobId:(r.data||{}).jobId||''};}),paymentsRead:dep!==null});
+}
+function parseThread(text){
+  var out=[],cur=null;
+  String(text||'').split('\n').forEach(function(line){
+    var h=line.match(/^(AC\w+)\s+\|\s+(\+?\w+)\s+\|\s+(incoming|outgoing)\s+\|\s+(\d{4}-\d\d-\d\dT[\d:.]+Z)\s*$/);
+    if(h){cur={id:h[1],dir:h[3],at:Date.parse(h[4]),text:''};out.push(cur);return;}
+    if(/^\[(more_available|next_page)|^Display:/.test(line)){cur=null;return;}
+    if(cur)cur.text+=(cur.text?'\n':'')+line;
+  });
+  out.forEach(function(m){m.text=m.text.replace(/\s+$/,'');});return out;
+}
+async function fetchBrief(){
+  var p=await call(QUO,'fetch-messages',{inboxPhoneNumber:QUO_INBOX,participantPhoneNumber:ALI,maxResults:100});
+  var txt=typeof p==='string'?p:(p&&p.text)||JSON.stringify(p);
+  var msgs=parseThread(txt).filter(function(m){return m.dir==='outgoing'&&m.text.length>180&&/\bTODAY\b/.test(m.text)&&/\b(YESTERDAY|TOMORROW|COMING UP|NEXT UP)\b/.test(m.text);});
+  var items=msgs.map(function(m){return {id:m.id,at:m.at,kind:/YESTERDAY/.test(m.text)?'Morning':'Evening',text:m.text};});
+  return keep('brief',items);
+}
+var FETCH={brief:fetchBrief,cal:fetchCal,pause:fetchPause,quo:fetchQuo,leads:fetchLeads,book:fetchBook,health:fetchHealth};
+var WHO={brief:'Quo',cal:'Make',pause:'Make',book:'Make',health:'Make',quo:'Quo',leads:'Notion'};
+async function get(k,opt){
+  opt=opt||{};var rec=D[k];var maxAge=(opt.maxAgeMin||0)*60000;
+  if(!opt.live&&rec&&!rec.saved&&maxAge&&Date.now()-rec.at<=maxAge)return {rec:rec,err:null};
+  try{var r=await FETCH[k]();return {rec:r,err:null};}
+  catch(e){return {rec:rec?Object.assign({},rec,{saved:true}):null,err:e};}
+}
+var DEMO_EVENTS=[{start:'T10:00:00',end:'T11:30:00',title:'Example Customer: 2024 Example SUV'},{start:'T14:00:00',end:'T15:00:00',title:'Example appointment'}];
+
+/* ---------- customer threads: never guess who paused them ---------- */
+function pauseActive(p,now){var m=(now-p.at)/60000;if(p.reason==='takeover')return m<10;if(p.reason==='hold')return m<60;return true;}
+function customerView(){
+  var now=Date.now(),pauses=(D.pause&&D.pause.data)||[],convs=(D.quo&&D.quo.data)||[];
+  var byPhone={};convs.forEach(function(c){byPhone[c.phone]=c;});
+  var notices=[];((byPhone[ALI]&&byPhone[ALI].msgs)||[]).forEach(function(m){if(m.dir==='outgoing'&&/MINT HANDOFF/i.test(m.text))notices.push(m);});
+  var out={needs:[],paused:[],unknown:[],unanswered:[],expired:[]};
+  pauses.forEach(function(p){
+    if(p.phone===ALI)return;
+    var c=byPhone[p.phone],last=c&&c.msgs[0];
+    var item={phone:p.phone,since:p.at,reason:p.reason,last:last||null,msgs:c?c.msgs.slice(0,3):[]};
+    if(!pauseActive(p,now)){item.why='Expired '+(p.reason==='takeover'?'takeover':p.reason)+' pause. Mint is already replying again.';out.expired.push(item);return;}
+    if(p.reason==='handoff'){
+      var digits=p.phone.replace(/\D/g,'').slice(-10),n=notices.filter(function(m){return m.text.replace(/\D/g,'').indexOf(digits)>=0;})[0];
+      item.why=n?'Mint handed this thread to you: '+n.text.replace(/^MINT HANDOFF[^:]*:?\s*/i,'').slice(0,160):'Paused until you text resume. Reason is a handoff or your own pause command; the handoff text was not found in the last 72 hours.';
+      item.verified=!!n;out.needs.push(item);
+    }else if(p.reason==='hold'){item.why='On hold: an answered call or customer photos. Auto-resumes after 60 minutes.';out.paused.push(item);}
+    else{item.why='Paused, reason unknown. A text left the Sales line without Mint\'s registration; that can be you or a Mint flow. Quo marks every send with your user, so I cannot tell them apart.';out.unknown.push(item);}
+  });
+  convs.forEach(function(c){if(c.phone===ALI||/^Group/.test(c.phone))return;var l=c.msgs[0];if(!l||l.dir!=='incoming')return;
+    if(pauses.some(function(p){return p.phone===c.phone&&pauseActive(p,now);}))return;
+    out.unanswered.push({phone:c.phone,since:l.at,last:l,msgs:c.msgs.slice(0,3),why:'Customer wrote last and nobody has replied yet.'});});
+  return out;
+}
+function customerCount(v){return v.needs.length+v.paused.length+v.unknown.length+v.unanswered.length;}
+
+/* ---------- bookings / deposits ---------- */
+function bookingStatus(b,wv){
+  var waived=(wv||[]).filter(function(w){return w.name===b.name&&w.when===b.when;})[0];
+  if(waived)return {kind:'waived',label:'Deposit waived by Ali',note:waived.note};
+  var pm=/PARTIAL:\s*\$([\d.]+)\s+paid/i.exec(b.pay);
+  if(pm)return {kind:'paid',label:'Deposit paid ($'+pm[1]+')',note:'Per Urable: '+b.pay};
+  if(/paid in full|^paid/i.test(b.pay))return {kind:'paid',label:'Paid',note:b.pay};
+  if(ELITE.indexOf(b.name)>=0)return {kind:'elite',label:'Elite client, no deposit expected',note:'Setup rule, not read from Urable.'};
+  if(/none received/i.test(b.pay))return {kind:'missing',label:'Deposit missing',note:'Urable shows no payment.'};
+  return {kind:'unknown',label:'Payment status: '+b.pay,note:''};
+}
+function missingDeposits(){
+  if(!D.book)return null;var wv=D.book.data.waivers;
+  return D.book.data.rows.filter(function(b){return bookingStatus(b,wv).kind==='missing';});
+}
+
+/* ---------- answer stage ---------- */
+var hist=store('hist')||[];
+var cur=null;
+function srcTag(kind,txt){return el('span','tag '+kind,txt);}
+function tagFor(rec){
+  if(!rec)return srcTag('na','Unavailable');
+  if(rec.saved)return srcTag('saved','Saved '+stampET(rec.at));
+  return srcTag('live','Live '+stampET(rec.at));
+}
+function beginAsk(q){
+  newCommandUse(q);wakeUi();setUi('answer');
+  cur={q:q};
+  $('asked').textContent='';$('asked').appendChild(el('b',null,'You asked  '));$('asked').appendChild(document.createTextNode(q));
+  $('doing').className='doing';$('doing').textContent='';$('ans').textContent='';clear($('extra'));clear($('srcRow'));clear($('acts'));
+  setMode('thinking');
+}
+function doing(txt){$('doing').className='doing';$('doing').textContent='M1NT is '+txt+'…';}
+function doneDoing(txt){$('doing').className='doing done';$('doing').textContent=txt||'';}
+function usageLine(){var u=use.last;var parts=[];if(u.runs)parts.push(u.runs+' Make run'+(u.runs===1?'':'s'));if(u.claude)parts.push(u.claude+' Claude');if(u.web)parts.push(u.web+' web lookup'+(u.web===1?'':'s'));parts.push(u.reads+' free read'+(u.reads===1?'':'s'));return parts.join(' · ');}
+function finish(o){
+  doneDoing('Done · '+clockET(Date.now())+' ET · '+usageLine());
+  var a=$('ans');a.textContent=o.headline;a.className='ans'+(o.small?' small':'');
+  var ex=$('extra');clear(ex);
+  if(o.rows&&o.rows.length){var rs=el('div','rows');o.rows.forEach(function(r){var row=el('div','row');row.appendChild(el('div','t',r.t));var n=el('div','n');if(r.link){var al=el('a',null,r.n);al.href=r.link;al.target='_blank';al.rel='noopener noreferrer';al.style.color='var(--mint)';n.appendChild(al);}else n.appendChild(document.createTextNode(r.n));if(r.note)n.appendChild(el('div','note',r.note));row.appendChild(n);rs.appendChild(row);});ex.appendChild(rs);}
+  if(o.cards){var cs=el('div','cards');o.cards.forEach(function(c){var b=el('button','card');b.type='button';var h=el('h3');h.appendChild(el('span',null,c.title));h.appendChild(c.tag);b.appendChild(h);b.appendChild(el('div','big',c.big));b.appendChild(el('div','l1',c.line));b.addEventListener('click',function(){openView(c.view);});cs.appendChild(b);});ex.appendChild(cs);}
+  (o.banners||[]).forEach(function(b){var d=el('div','banner '+(b.kind||''));d.appendChild(el('b',null,b.bold+' '));d.appendChild(document.createTextNode(b.text));ex.appendChild(d);});
+  var sr=$('srcRow');clear(sr);(o.tags||[]).forEach(function(t){sr.appendChild(t);});if(o.srcNote)sr.appendChild(el('span',null,o.srcNote));
+  var ac=$('acts');clear(ac);var spoken=o.spoken||o.headline;
+  var sp=el('button','btn','Speak again');sp.type='button';sp.addEventListener('click',function(){speak(spoken,true);});ac.appendChild(sp);
+  (o.acts||[]).forEach(function(x){var b=el('button','btn'+(x.pri?' pri':''),x.label);b.type='button';b.addEventListener('click',x.fn);ac.appendChild(b);});
+  cur.spoken=spoken;
+  pushHist({q:cur.q,a:o.headline+(o.rows&&o.rows.length?' · '+o.rows.map(function(r){return r.t+' '+r.n;}).join('; '):''),tags:(o.tags||[]).map(function(t){return t.textContent;}),use:usageLine(),at:Date.now()});
+  updatePanels();
+  var fk=o.clarify?'clarify':(o.follow?'follow':null);
+  if(o.follow)convo.last={kind:o.follow,q:cur.q,a:spoken,at:Date.now()};else if(o.clarify)convo.last=null;
+  convo.armAfterSpeech=(fk&&convo.armOk&&(fk==='clarify'||wake.on))?fk:null;
+  if(!muted)speak(spoken,false);else{setMode('idle');if(convo.armAfterSpeech)afterAnswerArm(300);}
+}
+function pushHist(e){hist.unshift(e);hist=hist.slice(0,40);store('hist',hist);}
+
+/* ---------- voice out ---------- */
+var tts=null,ttsTried=false,synth=('speechSynthesis' in window)?window.speechSynthesis:null,speakTok=0;
+var pref=store('voice')||{};
+var muted=store('muted')===true;
+var CLAUDE_VOICES=['buttery','airy','glassy','rounded'];
+async function getTts(){if(ttsTried)return tts;ttsTried=true;try{tts=await window.claude.use('tts');}catch(e){tts=null;}return tts;}
+function refreshMute(){
+  var b=$('muteBtn');b.textContent='Voice: '+(muted?'muted':'on');b.setAttribute('aria-pressed',muted?'true':'false');
+  var s=$('spk');s.setAttribute('aria-pressed',muted?'true':'false');s.classList.toggle('muted',muted);s.setAttribute('aria-label',muted?'Unmute voice':'Mute voice');
+  $('spkWave').style.display=muted?'none':'';
+}
+refreshMute();
+function toggleMute(){muted=!muted;store('muted',muted);refreshMute();if(muted)stopSpeak();$('hint').textContent=muted?'Muted. Answers stay on screen.':'Voice on.';}
+$('muteBtn').addEventListener('click',toggleMute);$('spk').addEventListener('click',toggleMute);
+function stopSpeak(){speakTok++;try{if(tts&&tts.stop)tts.stop();}catch(e){}try{if(synth)synth.cancel();}catch(e){}if(S.mode==='speaking')setMode('idle');}
+function localVoices(){
+  var v=synth?synth.getVoices():[];
+  return v.filter(function(x){return /^en/i.test(x.lang);}).map(function(x){var nat=/natural|online|neural|premium|enhanced/i.test(x.name);return {name:x.name,lang:x.lang,nat:nat,obj:x};}).sort(function(a,b){return (b.nat-a.nat)||(/en-US/.test(b.lang)-/en-US/.test(a.lang))||a.name.localeCompare(b.name);});
+}
+function chosenLocal(pf){
+  pf=pf||pref;var lv=localVoices();if(!lv.length)return null;
+  if(pf.kind==='local'){var m=lv.filter(function(x){return x.name===pf.name;})[0];if(m)return m.obj;}
+  return lv[0].obj;
+}
+function paceRate(pf){return (pf||pref).pace||0.98;}
+function sentences(text){var s=String(text).replace(/\s+/g,' ').match(/[^.!?]+[.!?]*/g)||[text];return s.map(function(x){return x.trim();}).filter(Boolean);}
+var voiceOut='none';
+async function speak(text,force,ov){
+  if(!text)return;var pf=ov||pref;
+  if(muted&&!force){if(S.mode==='thinking')setMode('idle');return;}
+  text=String(text).slice(0,1900);var tok=++speakTok;
+  wakePauseForSpeech();
+  var t=(pf.kind==='local'||dictHold())?null:await getTts();
+  if(t){
+    voiceOut='Claude voice';
+    try{
+      setMode('speaking');
+      var voice=CLAUDE_VOICES.indexOf(pf.name)>=0?pf.name:'buttery';
+      var lines=sentences(text).map(function(s){return {text:s,voice:voice,rate:paceRate(pf)};});
+      await t.speak(lines);
+      if(tok===speakTok)endSpeak();return;
+    }catch(e){if(tok!==speakTok)return;if(e&&(e.code==='viewer_stopped'||e.code==='stopped')){endSpeak();return;}}
+  }
+  if(synth){
+    voiceOut='Browser voice';
+    try{
+      synth.cancel();var v=chosenLocal(pf);var list=sentences(text);var n=0;
+      setMode('speaking');
+      list.forEach(function(s){
+        var u=new SpeechSynthesisUtterance(s);if(v){u.voice=v;u.lang=v.lang;}u.rate=paceRate(pf);u.pitch=1;
+        u.onend=u.onerror=function(){n++;if(n===list.length&&tok===speakTok)endSpeak();};
+        synth.speak(u);
+      });
+      return;
+    }catch(e){}
+  }
+  voiceOut='none';endSpeak();
+}
+function endSpeak(){if(S.mode==='speaking'||S.mode==='thinking')setMode('idle');if(!afterAnswerArm(1300))wakeResumeAfterSpeech();}
+
+/* ---------- microphone ---------- */
+var dict=null,dictTried=false,SR=window.SpeechRecognition||window.webkitSpeechRecognition||null;
+var micBackend='none',micSink=null,dictBound=false,webRec=null,lastBE='none',srBlocked=false;
+function dictHold(){return wake.on&&wakeBE()==='dictation'&&wake.armed;}
+function wakeBE(){return (SR&&!srBlocked)?'webspeech':micBackend;}
+var mic={perm:'unknown',diag:null,off:false};
+var stream=null,actx=null,meterTimer=0;
+function micUi(){
+  var dot=$('micDot'),txt=$('micTxt');
+  var listening=ptt.on||wake.cap||!!wake.reply&&wake.armed||(wake.on&&wake.armed);var reconn=wake.on&&wake.retrying&&!listening;
+  if(listening){dot.className='dot live';txt.textContent=ptt.on?'Mic live · push to talk':(wake.reply?'Mic live · listening for your reply':wake.cap?'Mic live · listening for your question':'Mic live · waiting for wake phrase');}
+  else if(reconn){dot.className='dot warn';txt.textContent='Mic: reconnecting…';}
+  else if(mic.off){dot.className='dot';txt.textContent='Mic: off';}
+  else if(mic.perm==='blocked'){dot.className='dot bad';txt.textContent='Mic: blocked';}
+  else if(mic.perm==='none'){dot.className='dot bad';txt.textContent='Mic: no device';}
+  else if(mic.perm==='ready'){dot.className='dot on';txt.textContent='Mic: ready (not listening)';}
+  else{dot.className='dot warn';txt.textContent='Mic: not enabled yet';}
+  $('enableMic').hidden=mic.perm==='ready'&&!mic.off;
+  $('micOff').hidden=!(mic.perm==='ready'||wake.on||ptt.on);
+  $('meter').hidden=!listening;
+  $('micBtn').classList.toggle('on',!!ptt.on);
+  $('wakeBtn').textContent='Hey Mint: '+(wake.on?(wake.armed?'listening':(wake.pausedForSpeech?'paused':(wake.retrying?'reconnecting':'on'))):'off');
+  $('wakeBtn').setAttribute('aria-pressed',wake.on?'true':'false');
+  renderSetupIfOpen();
+}
+function levelStart(){
+  if(!stream)return;
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();var an=actx.createAnalyser();an.fftSize=256;
+    var src=actx.createMediaStreamSource(stream);src.connect(an);var buf=new Uint8Array(an.frequencyBinCount);
+    clearInterval(meterTimer);meterTimer=setInterval(function(){an.getByteTimeDomainData(buf);var m=0;for(var i=0;i<buf.length;i++){m=Math.max(m,Math.abs(buf[i]-128));}$('meterI').style.width=Math.min(100,m*1.6)+'%';},90);
+  }catch(e){}
+}
+function levelStop(){clearInterval(meterTimer);$('meterI').style.width='0';}
+function explainMicError(e){
+  var name=(e&&e.name)||'',msg=String((e&&e.message)||'');
+  var r={name:name,msg:msg};
+  if(name==='NotAllowedError'||name==='SecurityError'||name==='PermissionDeniedError'){
+    if(/system/i.test(msg)){r.kind='windows';r.text='Windows is blocking it. Open Windows Settings (Win + I), then Privacy & security, then Microphone. Turn on “Microphone access” and “Let desktop apps access your microphone”, then press Enable microphone again.';}
+    else if(/dismiss/i.test(msg)){r.kind='dismissed';r.text='The permission question was closed without an answer. Press Enable microphone and choose Allow.';}
+    else if(/policy|feature|not allowed in this document|iframe/i.test(msg)){r.kind='artifact';r.text='This window does not hand the page the microphone (a limit of the installed Artifact window). Use the same page in the main Claude window, or type.';}
+    else if(INAPP&&/permission denied$/i.test(msg.trim())){r.kind='app';r.text='The Claude desktop app itself refuses the microphone for pages inside it. Windows is not the cause and no Windows setting or click turns this on. Open the same page in Chrome or Edge on Windows, or use the standalone version.';}
+    else{r.kind='denied';r.text='The app or this page was denied the microphone. If Windows asks, choose Allow. If nothing asks, check Windows Settings, Privacy & security, Microphone, “Let desktop apps access your microphone”. If that is already on, the installed Artifact window is not passing the microphone through, and the main Claude window is the closest option.';}
+  }else if(name==='NotFoundError'||name==='OverconstrainedError'){r.kind='none';r.text='No microphone was found. Plug one in or pick a default input in Windows Settings, System, Sound, Input.';}
+  else if(name==='NotReadableError'||name==='AbortError'){r.kind='busy';r.text='Another app is holding the microphone (a call or recorder). Close it and try again.';}
+  else{r.kind='other';r.text='The microphone could not be opened ('+(name||'unknown error')+').';}
+  return r;
+}
+async function enableMic(){
+  mic.off=false;
+  var gum=navigator.mediaDevices&&navigator.mediaDevices.getUserMedia;
+  var diag={at:Date.now(),inApp:INAPP,standalone:STANDALONE,gum:!!gum,dictation:micBackend==='dictation',sr:!!SR,perm:null,result:null,speechTest:null};
+  try{if(navigator.permissions&&navigator.permissions.query){var ps=await navigator.permissions.query({name:'microphone'});diag.perm=ps.state;}}catch(e){diag.perm='unreadable';}
+  if(!gum){mic.perm='blocked';diag.result={kind:'artifact',text:'This window has no microphone interface at all. Use the main Claude window, or type.',name:'',msg:''};}
+  else{
+    try{
+      var s=await navigator.mediaDevices.getUserMedia({audio:true});
+      if(stream){stream.getTracks().forEach(function(t){t.stop();});}
+      stream=s;mic.perm='ready';diag.result={kind:'ok',text:'Microphone access works in this window.'};
+    }catch(e){var ex=explainMicError(e);mic.perm=ex.kind==='none'?'none':'blocked';diag.result=ex;}
+  }
+  mic.diag=diag;micUi();
+  if(mic.perm==='ready'){await initMic();$('hint').textContent='Microphone enabled. Hold the mic button to talk.';}
+  else{$('hint').textContent=diag.result.text;}
+  renderSetupIfOpen();
+  return diag;
+}
+$('enableMic').addEventListener('click',function(){wakeUi();enableMic();});
+async function testMicRecognition(){
+  if(micBackend==='none')return {backend:'none',ok:false,detail:'No speech-to-text is offered in this window.'};
+  return new Promise(function(done){
+    var got=false,fin=false;
+    function end(r){if(fin)return;fin=true;clearTimeout(timer);levelStop();done(r);}
+    var timer=setTimeout(function(){micStop();end({ok:true,detail:got?'Heard you: speech-to-text works.':'Listening started with no error for 4 seconds, but no words were heard. Speak closer or check the input device.'});},4000);
+    levelStart();
+    var sink={partial:function(t){got=true;$('cmd').value=t;},final:function(t){got=true;$('cmd').value=t;},end:function(why){if(why==='stopped'||why==='viewer_stopped'||why==='hidden')end({ok:true,detail:got?'Heard you: speech-to-text works.':'Started and stopped cleanly; no words heard.'});else end({ok:false,detail:micWhy(why)+' ('+why+')'});}};
+    micStart(sink,false);
+  });
+}
+async function initMic(){
+  if(!dictTried){dictTried=true;try{dict=await window.claude.use('dictation');}catch(e){dict=null;}}
+  if(dict){
+    micBackend='dictation';
+    if(!dictBound){dictBound=true;
+      dict.onPartial(function(x){if(micSink&&micSink.partial)micSink.partial(x.text||'');});
+      dict.onFinal(function(x){if(micSink&&micSink.final)micSink.final(x.text||'');});
+      dict.onState(function(x){if(micSink&&micSink.state)micSink.state(x.state,x.reason);});
+    }
+  }else if(SR)micBackend='webspeech';
+  else micBackend='none';
+  micUi();
+}
+var micLog=[];
+function logMic(kind,detail){micLog.push({at:Date.now(),kind:kind,detail:detail||''});if(micLog.length>60)micLog.shift();renderSetupIfOpen();}
+function micStart(sink,continuous,be){
+  be=be||micBackend;lastBE=be;
+  if(be==='dictation'){
+    micSink={partial:sink.partial,final:sink.final,state:function(st,why){if(st==='idle'&&sink.end){var e=sink.end;sink.end=null;e(why||'stopped');}}};
+    return dict.start().then(function(){return true;},function(err){var e=sink.end;sink.end=null;if(e)e((err&&err.code)||'upstream_error');return false;});
+  }
+  if(be==='webspeech'){
+    try{
+      webRec=new SR();webRec.lang='en-US';webRec.interimResults=true;webRec.continuous=!!continuous;
+      webRec.onresult=function(ev){var fin='',par='';for(var i=ev.resultIndex;i<ev.results.length;i++){var r=ev.results[i];if(r.isFinal)fin+=r[0].transcript+' ';else par+=r[0].transcript;}if(par&&sink.partial)sink.partial(par);if(fin&&sink.final)sink.final(fin.trim());};
+      webRec.onerror=function(ev){logMic('error',ev.error+(ev.message?' · '+ev.message:''));var e=sink.end;sink.end=null;if(e)e(ev.error==='not-allowed'||ev.error==='service-not-allowed'?'not_granted':(ev.error==='network'?'network':(ev.error||'upstream_error')));};
+      webRec.onend=function(){logMic('end','session closed');var e=sink.end;sink.end=null;if(e)e('stopped');};
+      webRec.onstart=function(){logMic('start',continuous?'continuous':'single');};
+      webRec.onaudiostart=function(){logMic('audio','microphone capturing');};
+      webRec.onnomatch=function(){logMic('nomatch','speech not recognised');};
+      webRec.start();return Promise.resolve(true);
+    }catch(e){var f=sink.end;sink.end=null;if(f)f('upstream_error');return Promise.resolve(false);}
+  }
+  var g=sink.end;sink.end=null;if(g)g('unavailable');return Promise.resolve(false);
+}
+async function micStop(){try{if(lastBE==='dictation'&&dict)await dict.stop();else if(webRec)webRec.stop();}catch(e){}}
+function micWhy(why){
+  if(why==='not_granted')return 'Speech recognition was refused. Press Enable microphone to see why.';
+  if(why==='network'||why==='speech_service_unreachable')return 'The browser could not reach its speech-to-text service (a temporary network error).';
+  if(why==='dismissed')return 'Mic question closed. Press and hold again.';
+  if(why==='unavailable')return 'Speech input is not offered in this window.';
+  if(why==='rate_limited')return 'Mic is busy. Try again in a moment.';
+  return 'Mic stopped ('+why+').';
+}
+
+/* push-to-talk */
+function pttStart(){
+  if(ptt.on)return;mic.off=false;
+  wakeUi();
+  if(micBackend==='none'){$('hint').textContent='This window has no speech input. Press Enable microphone for the reason, or type.';return;}
+  if(wake.on){wake.wasOn=true;wakeOff('Hey Mint paused while you talk.');}
+  stopSpeak();ptt.on=true;ptt.buf='';setMode('listening');micUi();levelStart();
+  var sink={partial:function(t){$('cmd').value=(ptt.buf+' '+t).trim();},final:function(t){ptt.buf=(ptt.buf+' '+t).trim();$('cmd').value=ptt.buf;},end:function(why){pttEnd(why);}};
+  micStart(sink,false).then(function(ok){if(!ok&&ptt.on)pttEnd('failed');});
+}
+function pttEnd(why){
+  if(!ptt.on)return;ptt.on=false;levelStop();setMode('idle');micUi();
+  if(wake.wasOn){wake.wasOn=false;setTimeout(function(){if(!ptt.on&&!wake.on&&store('wakePref')&&!mic.off)wakeOn(true);},1200);}
+  var text=($('cmd').value||'').trim();
+  var clean=['stopped','viewer_stopped','hidden','time_limit'].indexOf(why)>=0;
+  if(!clean&&!text){$('hint').textContent=micWhy(why||'failed');if(why==='not_granted'||why==='failed'||why==='network'){mic.perm=mic.perm==='ready'?'ready':'blocked';micUi();}return;}
+  if(text){$('cmd').value='';run(text,{voice:true});}else{$('hint').textContent='Did not catch anything. Hold and speak.';}
+}
+async function pttStop(){if(!ptt.on)return;await micStop();setTimeout(function(){if(ptt.on)pttEnd('stopped');},900);}
+var micBtn=$('micBtn');
+micBtn.addEventListener('pointerdown',function(e){e.preventDefault();try{micBtn.setPointerCapture(e.pointerId);}catch(x){}ptt.held=true;pttStart();});
+['pointerup','pointercancel'].forEach(function(n){micBtn.addEventListener(n,function(){if(ptt.held){ptt.held=false;pttStop();}});});
+micBtn.addEventListener('keydown',function(e){if((e.key===' '||e.key==='Enter')&&!e.repeat){e.preventDefault();if(ptt.on)pttStop();else pttStart();}});
+document.addEventListener('keydown',function(e){if(e.code==='Space'&&!e.repeat&&document.activeElement===document.body&&!ptt.on&&!drawer.classList.contains('show')){e.preventDefault();ptt.held=true;pttStart();}});
+document.addEventListener('keyup',function(e){if(e.code==='Space'&&ptt.held){ptt.held=false;pttStop();}});
+
+/* ---------- two phrases, two jobs ----------
+   "Wake up, Mint"  -> opens the folded core only (never a search)
+   "Hey Mint ..."   -> listens for a question; question in one breath is sent once after silence */
+var NM='(?:mint|mince|minty|mynt|mind|m1nt|min|mid)';
+var WAKEUP_RE=new RegExp('\\b(?:wake\\s?up|wakeup)[,.!\\s]+'+NM+'\\b','i');
+var HEY_RE=new RegExp('\\b(?:hey|hay|hi|ok|okay)[,.!\\s]+'+NM+'\\b[,.!\\s]*','i');
+var SLEEP_RE=new RegExp('\\bgood\\s?night[,.!\\s]+'+NM+'\\b','i');
+var LEAD_RE=new RegExp('^(?:(?:hey|hay|hi|ok|okay|wake\\s?up)[,.!\\s]*)?(?:'+NM+')?[,.!\\s]*','i');
+var JUNK=/^(mint|min|mid|mind|hey|hay|hi|ok|okay|uh|um|a|the|and|so|well|up)$/i;
+var SIL=store('sil')||1000, silTimer=0, wakePend=null;
+var convo={pending:null,last:null,armAfterSpeech:null,armOk:false};
+wake.reply=null;wake.temp=false;wake.replyT=0;wake.needTap=false;
+var CHAINS="walmart|kroger|target|qdoba|lowe'?s|home depot|autozone|o'?reilly|costco|sam'?s club|meijer|aldi|walgreens|cvs|starbucks|mcdonald'?s|chick-?fil-?a|taco bell|wendy'?s|panera|chipotle|dunkin|kfc|subway|burger king|speedway|publix|dollar general|family dollar|menards|harbor freight|best buy|lidl|rite aid|advance auto|jiffy lube";
+var CHAIN_RE=new RegExp('\\b('+CHAINS+')\\b','i');
+function needsPlace(q){
+  var m=CHAIN_RE.exec(q);if(!m)return null;
+  if(!/\b(open|opens|opening|close|closes|closing|hours|address|phone|number|located|where)\b/i.test(q))return null;
+  var q2=q.replace(/\b(?:on|at|for|by|until|till)\s+(?:sun|mon|tue|wed|thu|fri|sat)\w*/ig,'').replace(/\b(?:at|by|until|till)\s+\d[\d:]*\s*(?:am|pm)?/ig,'').replace(/\b(?:on|for)\s+(?:christmas|thanksgiving|easter|new year|memorial|labor|july|the\s+\w+)\w*/ig,'').replace(/\b(?:on|for)\s+(?:tomorrow|today|tonight)/ig,'');
+  if(/\b(road|rd|street|st|ave|avenue|hwy|highway|blvd|boulevard|pike|pkwy|parkway|lane|ln|drive|dr|way|circle|court)\b/i.test(q2)||/\b\d{5}\b/.test(q2)||/\b(?:in|near|on|off|by)\s+[a-z]/i.test(q2))return null;
+  return m[1];
+}
+function shortReply(q){var w=q.trim().split(/\s+/);return w.length<=7&&!/^(what|when|who|how|why|is|are|does|do|can|will|hey|search|look|weather|schedule|brief)/i.test(q.trim());}
+function completePending(q){
+  var p=convo.pending;convo.pending=null;if(!p||Date.now()>p.until)return null;
+  var r=q.replace(/^(?:(?:um|uh|it'?s|it is|that'?s|that is|the one|the|one)\s+)+/i,'').replace(/[.!?]+$/,'').trim();if(!r)return null;
+  if(p.kind==='football')return p.orig+' '+r;
+  var base=p.orig.replace(/[?.!]+$/,'');
+  var pre=/^(on|at|in|near|off|by|across|next to)\b/i.test(r)?'':(/\b(road|rd|street|st|avenue|ave|highway|hwy|boulevard|blvd|pike|parkway|pkwy|lane|ln|drive|dr)\b/i.test(r)?'on ':'in ');
+  return base+' '+pre+r;
+}
+function askPlace(q,chain){
+  beginAsk(q);convo.pending={kind:'web-loc',orig:q,until:Date.now()+120000};
+  var nm=chain.replace(/\b\w/g,function(c){return c.toUpperCase();});
+  finish({headline:'Which '+nm+'?',small:true,spoken:'Which '+nm+'? Tell me the road or neighborhood.',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say or type the road or neighborhood, like “the one on Dixie Highway.” I am keeping your question: “'+q+'”.'}]});
+}
+/* reply window: after M1NT asks something (or answers), the mic reopens by itself */
+function replyActive(){return !!wake.reply&&Date.now()<wake.reply.until;}
+function afterAnswerArm(delay){
+  var k=convo.armAfterSpeech;convo.armAfterSpeech=null;if(!k)return false;
+  setTimeout(function(){if(S.mode==='speaking'||S.mode==='thinking')return;startReply(k);},delay||0);return true;
+}
+function startReply(kind){
+  if(mic.off||ptt.on||wakeBE()==='none'){wakeResumeAfterSpeech();return;}
+  if(kind==='follow'&&!wake.on)return;
+  wake.reply={kind:kind,until:Date.now()+(kind==='clarify'?12000:8000)};wake.cooldownUntil=0;wake.cap=false;
+  $('hint').textContent='Listening for your reply…';$('doing').className='doing';$('doing').textContent='Listening for your reply…';
+  setMode('listening');
+  if(!wake.on){wake.temp=true;wake.on=true;wake.starts=0;wake.fails=0;wake.pausedForSpeech=false;logMic('on','reply window (temporary)');wakeStart();}
+  else{wake.pausedForSpeech=false;if(!wake.armed){clearTimeout(wake.retryT);wake.retrying=false;wake.fails=0;wakeStart();}}
+  micUi();clearTimeout(wake.replyT);wake.replyT=setTimeout(replyTick,500);
+}
+function replyTick(){
+  if(!wake.reply)return;
+  if(Date.now()>=wake.reply.until&&!wakePend){endReply('quiet');return;}
+  wake.replyT=setTimeout(replyTick,500);
+}
+function endReply(why){
+  var r=wake.reply;wake.reply=null;clearTimeout(wake.replyT);clearTimeout(silTimer);wakePend=null;
+  if(r&&why==='quiet'){convo.pending=null;logMic('reply','window closed quiet');$('hint').textContent=r.kind==='follow'?'Say “Hey Mint” for a new question.':'No reply heard. Say “Hey Mint” and ask again.';$('doing').textContent='';}
+  if(S.mode==='listening'&&!wake.cap)setMode('idle');
+  if(wake.temp){wake.temp=false;wakeOff();}
+  micUi();
+}
+function cleanReply(t){var r=String(t||'').trim();return (r.length<2||JUNK.test(r))?'':r;}
+function submitReply(text){
+  clearTimeout(silTimer);wakePend=null;if(Date.now()<wake.ignoreUntil)return;wake.ignoreUntil=Date.now()+2500;
+  var kind=wake.reply&&wake.reply.kind;endReply('got');wake.pausedForSpeech=false;wake.cap=false;if(wakeBE()!=='dictation')micStop();stopSpeak();$('cmd').value='';
+  run(text,{voice:true,wake:true,reply:kind});
+}
+wake.ignoreUntil=0;wake.wasOn=false;wake.fails=0;wake.sessionAt=0;wake.retryT=0;wake.retrying=false;
+function busyNow(){return S.mode==='speaking'||S.mode==='thinking'||Date.now()<wake.cooldownUntil;}
+function cleanQ(q){var r=String(q||'').replace(LEAD_RE,'').trim();return (r.length<3||JUNK.test(r))?'':r;}
+function capArm(){wake.cap=true;setMode('listening');micUi();$('hint').textContent='Listening for your question…';clearTimeout(wake.capTimer);wake.capTimer=setTimeout(function(){wake.cap=false;if(S.mode==='listening')setMode('idle');$('hint').textContent='';micUi();},9000);}
+function submitWake(text){clearTimeout(silTimer);wakePend=null;if(Date.now()<wake.ignoreUntil)return;wake.ignoreUntil=Date.now()+2500;runFromWake(text);}
+function handleWake(t,isFinal){
+  if(SLEEP_RE.test(t)){if(isFinal){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;if(wake.reply)endReply('sleep');sleepUi();}return;}
+  if(busyNow())return;
+  if(wake.reply){
+    if(WAKEUP_RE.test(t))return;
+    if(HEY_RE.test(t)){convo.pending=null;convo.last=null;endReply('new');}      /* Hey Mint = new conversation: fall through */
+    else{
+      var rq=cleanReply(t);if(!rq)return;
+      wake.reply.until=Math.max(wake.reply.until,Date.now()+SIL+3000);clearTimeout(silTimer);wakePend=rq;
+      if(isFinal)submitReply(rq);else silTimer=setTimeout(function(){submitReply(wakePend);},SIL);
+      return;
+    }
+  }
+  if(WAKEUP_RE.test(t)){          /* opens only; anything said after it is ignored */
+    if(isFinal||app.getAttribute('data-state')==='asleep'){clearTimeout(silTimer);wakePend=null;wakeUi();try{window.focus();}catch(e){}$('hint').textContent='Awake. Say “Hey Mint” and your question.';}
+    return;
+  }
+  var q=null;
+  var m=HEY_RE.exec(t);
+  if(m){wakeUi();q=cleanQ(t.slice(m.index+m[0].length));if(!q){if(!wake.cap)capArm();return;}}
+  else if(wake.cap){q=cleanQ(t);if(!q)return;}
+  else if(/^\s*(hey|hay)[,.!\s]*(m\w{0,3})?\s*$/i.test(t)){wakeUi();if(!wake.cap)capArm();return;}   /* clipped wake transcript: never a query */
+  else return;
+  clearTimeout(silTimer);wakePend=q;
+  if(isFinal){submitWake(q);}else{silTimer=setTimeout(function(){submitWake(wakePend);},SIL);}
+}
+function wakeSink(be){
+  var started=Date.now();
+  return {
+    partial:function(t){if(!wake.on)return;wake.fails=0;handleWake(t,false);},
+    final:function(t){if(!wake.on)return;wake.fails=0;logMic('heard',t.slice(0,80));handleWake(t,true);},
+    end:function(why){
+      if(!wake.on)return;wake.armed=false;
+      var lived=Date.now()-started;
+      if(be==='dictation'&&why!=='not_granted'&&why!=='dismissed'){wake.needTap=true;wake.pausedForSpeech=false;wake.reply=null;micUi();$('hint').textContent='Mic paused by Claude’s dictation ('+why+'). Click or press any key anywhere and it listens again.';logMic('tap-needed',why);return;}
+      if(wake.pausedForSpeech){micUi();return;}
+      var fatal=(why==='not_granted'||why==='unavailable');
+      var ordinary=(why==='stopped'||why==='no-speech'||why==='aborted'||why==='viewer_stopped'||why==='time_limit');
+      if(why==='not_granted'&&be==='webspeech'&&dict)srBlocked=true;
+      if(fatal||be!=='webspeech'){
+        var wasTemp=wake.temp;wake.on=false;wake.temp=false;wake.reply=null;levelStop();micUi();
+        $('hint').textContent=(why==='not_granted'&&be==='webspeech'?'This window refused the browser’s speech recognition (“not-allowed”). Hands-free needs another window; typing and the mic button still work. ':'Hands-free stopped. '+micWhy(why)+' ')+(wasTemp?'Press the mic button to answer.':'Turn it on again with the button.');
+        logMic('stopped',why+' ('+be+')');return;}
+      if(ordinary&&lived>=1500)wake.fails=0;else if(lived>8000)wake.fails=0;else wake.fails++;
+      var delay=(ordinary&&lived>=1500)?300:Math.min(30000,wake.fails<2?500:500*Math.pow(2,wake.fails-1));
+      wake.retrying=true;micUi();logMic('retry','in '+delay+' ms after '+why+' (session '+Math.round(lived/1000)+'s, fails '+wake.fails+')');
+      clearTimeout(wake.retryT);wake.retryT=setTimeout(function(){wake.retrying=false;if(wake.on&&!wake.pausedForSpeech)wakeStart();},delay);
+    }
+  };
+}
+function wakeStart(){var be=wakeBE();wake.needTap=false;wake.starts++;wake.armed=true;micUi();levelStart();micStart(wakeSink(be),true,be).then(function(ok){if(!ok&&wake.on&&!wake.pausedForSpeech){wake.armed=false;micUi();}});}
+function runFromWake(text){wake.pausedForSpeech=false;wake.cap=false;clearTimeout(wake.capTimer);if(wakeBE()!=='dictation')micStop();stopSpeak();$('cmd').value='';run(text,{voice:true,wake:true,fresh:true});}
+function wakeOff(msg){wake.reply=null;wake.temp=false;clearTimeout(wake.replyT);wake.on=false;wake.armed=false;wake.cap=false;wake.retrying=false;clearTimeout(wake.retryT);clearTimeout(wake.capTimer);clearTimeout(silTimer);micStop();levelStop();micUi();if(msg)$('hint').textContent=msg;}
+function wakeOn(quiet){
+  if(micBackend==='none'){if(!quiet){wakeUi();$('hint').textContent='Hey Mint needs speech input. Press Enable microphone to see what this window allows.';}return;}
+  mic.off=false;wake.on=true;wake.starts=0;wake.fails=0;wake.pausedForSpeech=false;store('wakePref',true);
+  if(!quiet)$('hint').textContent='“Wake up, Mint” opens the screen. “Hey Mint” then your question. “Goodnight, Mint” folds it.';
+  logMic('on','wake listening requested');wakeStart();
+}
+$('wakeBtn').addEventListener('click',function(){
+  if(wake.on){store('wakePref',false);wakeOff('Hey Mint is off. The mic is no longer listening.');return;}
+  wakeOn(false);
+});
+function micOff(){
+  ptt.held=false;if(ptt.on){ptt.on=false;setMode('idle');}
+  store('wakePref',false);wake.wasOn=false;convo.pending=null;convo.last=null;convo.armAfterSpeech=null;wakeOff();
+  try{micStop();}catch(e){}
+  if(stream){stream.getTracks().forEach(function(t){t.stop();});stream=null;}
+  levelStop();mic.off=true;logMic('off','Mic off pressed');micUi();$('hint').textContent='Mic off. Nothing is listening. Press Hey Mint or the mic button to start again.';
+}
+$('micOff').addEventListener('click',micOff);
+document.addEventListener('pointerdown',function(){if(store('wakePref')&&!wake.on&&!mic.off&&micBackend!=='none')wakeOn(true);},{once:true});
+/* watchdog: if it should be listening but is neither listening nor waiting to retry, rearm it */
+function rearmIfStuck(why){if(wake.on&&!wake.armed&&!wake.pausedForSpeech&&!wake.retrying&&wakeBE()==='webspeech'&&S.mode!=='speaking'){logMic('watchdog','rearm ('+why+')');wakeStart();}}
+setInterval(function(){rearmIfStuck('interval');},6000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)rearmIfStuck('visible');});
+window.addEventListener('online',function(){if(wake.on){wake.fails=0;clearTimeout(wake.retryT);wake.retrying=false;rearmIfStuck('online');}});
+$('wakeCore').addEventListener('click',function(){wakeUi();});
+['pointerdown','keydown'].forEach(function(n){document.addEventListener(n,function(){if(wake.on&&wake.needTap&&!wake.armed&&!mic.off&&!ptt.on){logMic('tap','restarting dictation from a click');$('hint').textContent='';wakeStart();}},true);});
+function wakePauseForSpeech(){if(!wake.on)return;wake.pausedForSpeech=true;wake.cap=false;clearTimeout(wake.capTimer);if(wakeBE()==='dictation'&&wake.armed){micUi();return;}wake.armed=false;micStop();micUi();}
+function wakeResumeAfterSpeech(){
+  if(!wake.on||!wake.pausedForSpeech)return;
+  wake.cooldownUntil=Date.now()+1500;
+  setTimeout(function(){
+    if(!wake.on)return;wake.pausedForSpeech=false;
+    if(wakeBE()==='dictation'){if(wake.armed){logMic('keep','dictation stayed open while M1NT spoke');}return;}
+    if(wakeBE()==='webspeech'){wake.fails=0;logMic('rearm','after M1NT spoke');wakeStart();}
+    else{wake.on=false;micUi();$('hint').textContent='Hey Mint paused after M1NT spoke. Press “Hey Mint: off” to listen again (Claude’s mic needs a tap to restart).';}
+  },1600);
+}
+
+/* ---------- optional Claude ---------- */
+var sampler=null,samplerTried=false;
+async function getSampler(){if(samplerTried)return sampler;samplerTried=true;try{sampler=await window.claude.use('sample');}catch(e){sampler=null;}return sampler;}
+async function askClaude(prompt,label){
+  var s=await getSampler();if(!s)return {error:'Claude is not available in this window.'};
+  doing(label||'asking Claude');setMode('thinking');
+  try{var r=await s(prompt,{modelTier:'quick',cache:false});addUse('claude',1);usageChip();return {text:String(r.text||'').trim()};}
+  catch(e){return {error:e&&e.code==='not_granted'?'You chose not to let this page ask Claude.':(e&&e.message)||'Claude did not answer.'};}
+}
+
+/* ---------- commands ---------- */
+function nextWeekEvents(events){var a=etDay(0),b=etDay(7);return events.filter(function(e){var d=e.start.slice(0,10);return d>=a&&d<=b;}).sort(function(x,y){return x.start<y.start?-1:1;});}
+function isJob(e){return e.title.indexOf(': ')>0&&e.start.length>10;}
+function evRows(list){return list.map(function(e){var when=e.start.length<=10?'All day':t12(e.start.slice(11,16))+' – '+t12(e.end.slice(11,16));var n={t:when,n:e.title};var rt=remText(e.rem);if(rt)n.note=rt;return n;});}
+function evSpoken(list,label){
+  if(!list.length)return 'Nothing on your calendar '+label+'.';
+  var parts=list.slice(0,6).map(function(e){var who=e.title.replace(/:\s*/,', ');return (e.start.length<=10?'all day':'at '+t12(e.start.slice(11,16)))+', '+who;});
+  return (list.length===1?'You have one thing '+label+': ':'You have '+list.length+' things '+label+': ')+parts.join('. ')+'.';
+}
+async function cmdSchedule(q,off,label,opt){
+  var ds=etDay(off);beginAsk(q);doing('reading your calendar through Make');
+  var m=await getMcp();
+  if(!m&&STANDALONE){finish({headline:'Calendar is not connected in this version.',small:true,spoken:'The calendar is not connected in the standalone version. Use the Claude version for your schedule.',tags:[srcTag('na','Unavailable')],banners:[{kind:'na',bold:'NOT CONNECTED.',text:errCopy({code:'capability_disabled'})}]});return;}
+  if(!m){finish({headline:'Demo schedule shown. This is placeholder data.',small:true,spoken:'This is demo data, not your calendar.',rows:DEMO_EVENTS.map(function(d){return {t:t12(d.start.slice(1,6))+' – '+t12(d.end.slice(1,6)),n:d.title};}),tags:[srcTag('demo','Demo data')],banners:[{kind:'',bold:'DEMO.',text:errCopy({code:'capability_disabled'})}]});return;}
+  var r=await get('cal',{live:!!opt.live,maxAgeMin:opt.live?0:15});
+  if(!r.rec){finish({headline:'I could not read your calendar.',small:true,spoken:'I could not read your calendar. Nothing was checked.',tags:[srcTag('na','Unavailable')],banners:[{kind:'na',bold:'UNAVAILABLE.',text:errCopy(r.err,'Make')+' This is not an empty day; the lookup did not run.'}],acts:[{label:'Try again',pri:true,fn:function(){run(q,{live:true});}}]});return;}
+  var list=eventsOn(r.rec.data,ds).sort(function(a,b){return a.start<b.start?-1:1;});
+  var banners=[];if(r.err&&r.rec.saved)banners.push({kind:'warn',bold:'SAVED COPY.',text:'Live lookup failed ('+errCopy(r.err,'Make')+') so this is the saved copy from '+stampET(r.rec.at)+'.'});
+  finish({headline:list.length?prettyDay(ds)+': '+list.length+plural(list.length,' item',' items'):'Nothing on your calendar '+label+'.',spoken:(prettyDay(ds)+'. ')+evSpoken(list,label),rows:evRows(list),banners:banners,tags:[tagFor(r.rec),srcTag('live','Google Calendar via Make')],srcNote:list.length?'':'Verified empty: the lookup worked and found no events.',acts:[{label:'Refresh live',fn:function(){run(q,{live:true});}}]});
+}
+async function cmdWeek(q,opt){
+  beginAsk(q);doing('reading your calendar through Make');
+  var m=await getMcp();if(!m){finish({headline:'No connector bridge in this window.',small:true,tags:[srcTag('demo','Demo data')],banners:[{kind:'',bold:'DEMO.',text:errCopy({code:'capability_disabled'})}]});return;}
+  var r=await get('cal',{live:!!opt.live,maxAgeMin:opt.live?0:15});
+  if(!r.rec){finish({headline:'I could not read your calendar.',small:true,tags:[srcTag('na','Unavailable')],banners:[{kind:'na',bold:'UNAVAILABLE.',text:errCopy(r.err,'Make')}],acts:[{label:'Try again',pri:true,fn:function(){run(q,{live:true});}}]});return;}
+  var list=nextWeekEvents(r.rec.data);
+  finish({headline:list.length?'Next 7 days: '+list.length+plural(list.length,' item',' items'):'Nothing on your calendar the next 7 days.',spoken:list.length?'Over the next seven days you have '+list.length+' items. '+list.slice(0,4).map(function(e){return prettyDay(e.start.slice(0,10)).split(',')[0]+' '+(e.start.length>10?t12(e.start.slice(11,16)):'')+', '+e.title.replace(/:\s*/,', ');}).join('. ')+'.':'Nothing on your calendar the next seven days.',rows:list.map(function(e){return {t:prettyDay(e.start.slice(0,10)).replace(/,.*$/,'')+' '+e.start.slice(5,10).replace('-','/')+(e.start.length>10?' '+t12(e.start.slice(11,16)):''),n:e.title};}),tags:[tagFor(r.rec),srcTag('live','Google Calendar via Make')],acts:[{label:'Refresh live',fn:function(){run(q,{live:true});}}]});
+}
+async function jget(url){var c=new AbortController();var tm=setTimeout(function(){c.abort();},9000);try{var r=await fetch(url,{signal:c.signal});if(!r.ok)throw new Error('HTTP '+r.status);var j=await r.json();addUse('web',1);usageChip();return j;}finally{clearTimeout(tm);}}
+function failCopy(e){if(e&&e.name==='AbortError')return 'The lookup timed out.';var m=String(e&&e.message||'');if(/Failed to fetch|NetworkError|Load failed|blocked/i.test(m))return 'This window blocked the request or could not reach the service.';return m||'Unknown error.';}
+function lookupFail(q,what,e){finish({headline:'The live '+what+' lookup failed.',small:true,spoken:'The live '+what+' lookup failed. I do not have a current answer.',tags:[srcTag('na','Unavailable')],banners:[{kind:'na',bold:'LOOKUP FAILED.',text:failCopy(e)+' Nothing was guessed.'}],acts:[{label:'Try again',pri:true,fn:function(){run(q,{});}}]});}
+var WXC={0:'clear',1:'mostly clear',2:'partly cloudy',3:'overcast',45:'foggy',48:'foggy',51:'light drizzle',53:'drizzle',55:'heavy drizzle',56:'freezing drizzle',57:'freezing drizzle',61:'light rain',63:'rain',65:'heavy rain',66:'freezing rain',67:'freezing rain',71:'light snow',73:'snow',75:'heavy snow',77:'snow grains',80:'rain showers',81:'rain showers',82:'heavy rain showers',85:'snow showers',86:'heavy snow showers',95:'thunderstorms',96:'thunderstorms with hail',99:'thunderstorms with hail'};
+async function cmdWeather(q){
+  beginAsk(q);doing('checking live weather');
+  var m=q.match(/\b(?:in|for|at)\s+([A-Za-z .'-]+?)(?:\s+(?:today|tonight|tomorrow|right now|this (?:week|weekend)|now)\b|[?.!,]|$)/i);
+  var place=m?m[1].trim():'';if(/^(the|a|my)?\s*(morning|afternoon|evening|week|weekend)$/i.test(place))place='';
+  var loc={name:'Louisville, Kentucky',lat:38.2527,lon:-85.7585,def:true};
+  try{
+    if(place){var g=await jget('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name='+encodeURIComponent(place));var r0=g.results&&g.results[0];if(!r0)throw new Error('I could not find a place called '+place+'.');loc={name:r0.name+(r0.admin1?', '+r0.admin1:''),lat:r0.latitude,lon:r0.longitude,def:false};}
+    var w=await jget('https://api.open-meteo.com/v1/forecast?latitude='+loc.lat+'&longitude='+loc.lon+'&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=2');
+    var tom=/tomorrow/i.test(q),c=w.current,d=w.daily,i=tom?1:0;
+    var cond=WXC[tom?d.weather_code[1]:c.weather_code]||'mixed conditions';
+    var hi=Math.round(d.temperature_2m_max[i]),lo=Math.round(d.temperature_2m_min[i]),pp=d.precipitation_probability_max[i];
+    var short=loc.name.split(',')[0];var upd=String(c.time||'').slice(11,16);
+    var head=tom?'Tomorrow in '+loc.name+': '+cond+', '+hi+'° / '+lo+'°':Math.round(c.temperature_2m)+'° and '+cond+' in '+loc.name;
+    var spoken=tom?'Tomorrow in '+short+': '+cond+', a high of '+hi+' and a low of '+lo+', with a '+pp+' percent chance of precipitation.':'In '+short+' it is '+Math.round(c.temperature_2m)+' degrees and '+cond+', feels like '+Math.round(c.apparent_temperature)+'. Today\'s high is '+hi+', the low is '+lo+', with a '+pp+' percent chance of precipitation.';
+    var rows=[];if(!tom)rows.push({t:'Now',n:Math.round(c.temperature_2m)+'° · feels '+Math.round(c.apparent_temperature)+'° · wind '+Math.round(c.wind_speed_10m)+' mph'});
+    rows.push({t:tom?'Tomorrow':'Today',n:'High '+hi+'° · low '+lo+'° · '+cond});rows.push({t:'Precipitation',n:pp+'% chance'});
+    finish({headline:head,follow:'weather',small:true,spoken:spoken,rows:rows,tags:[srcTag('live','Open-Meteo'),srcTag('live','Updated '+(upd?t12(upd):'just now')+' local')],srcNote:loc.def?'Default location: Louisville, Kentucky. Say “weather in <city>” for another.':'',acts:[{label:'Refresh',fn:function(){run(q,{});}}]});
+  }catch(e){lookupFail(q,'weather',e);}
+}
+function gameLine(ev){
+  var c=ev.competitions&&ev.competitions[0];if(!c)return null;var h=c.competitors.filter(function(x){return x.homeAway==='home';})[0],a=c.competitors.filter(function(x){return x.homeAway==='away';})[0];
+  var st=ev.status&&ev.status.type||{};var hn=h.team.shortDisplayName||h.team.displayName,an=a.team.shortDisplayName||a.team.displayName;
+  var line,say;
+  if(st.state==='pre'){var when=new Date(ev.date).toLocaleString('en-US',{timeZone:ET,weekday:'short',hour:'numeric',minute:'2-digit'});line=an+' at '+hn+' · '+when+' ET';say=an+' plays at '+hn+', '+when+' Eastern.';}
+  else{var as=+a.score,hs=+h.score;line=an+' '+as+', '+hn+' '+hs+' · '+(st.shortDetail||st.detail||'');
+    if(st.state==='post')say='Final: '+(hs>as?hn+' beat '+an+' '+hs+' to '+as:(as>hs?an+' beat '+hn+' '+as+' to '+hs:'tied '+as+' to '+hs))+'.';
+    else say=(hs>as?hn+' leads '+an+' '+hs+' to '+as:(as>hs?an+' leads '+hn+' '+as+' to '+hs:'tied '+as+' to '+hs))+', '+(st.detail||'in progress')+'.';}
+  return {id:ev.id,line:line,say:say,names:[h.team.displayName,h.team.shortDisplayName,h.team.name,h.team.location,h.team.abbreviation,a.team.displayName,a.team.shortDisplayName,a.team.name,a.team.location,a.team.abbreviation].filter(Boolean).map(function(x){return String(x).toLowerCase();}),state:st.state};
+}
+async function cmdFootball(q,pickId){
+  beginAsk(q);doing('checking live football scores');
+  try{
+    var bs=await Promise.all([jget('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard'),jget('https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=200')]);
+    var games=[];bs.forEach(function(b,k){(b.events||[]).forEach(function(ev){var g=gameLine(ev);if(g){g.lg=k?'College':'NFL';games.push(g);}});});
+    var ql=' '+q.toLowerCase().replace(/[^a-z0-9 ]/g,' ')+' ';
+    var hit=pickId?games.filter(function(g){return g.id===pickId;}):games.filter(function(g){return g.names.some(function(n){return n.length>=3&&ql.indexOf(' '+n.replace(/[^a-z0-9 ]/g,' ')+' ')>=0;});});
+    var tags=[srcTag('live','ESPN scoreboard'),srcTag('live','Fetched '+clockET(Date.now())+' ET')];
+    if(hit.length){hit=hit.slice(0,3);finish({headline:hit[0].line,follow:'football',small:true,spoken:hit.map(function(g){return g.say;}).join(' '),rows:hit.map(function(g){return {t:g.lg,n:g.line};}),tags:tags,acts:[{label:'Refresh',fn:function(){cmdFootball(q,pickId);}}]});return;}
+    if(!games.length){finish({headline:'No football games are on the scoreboard right now.',small:true,spoken:'No football games are on the scoreboard right now.',tags:tags,srcNote:'Verified empty: the lookup worked.'});return;}
+    var live=games.filter(function(g){return g.state==='in';});var show=(live.length?live:games).slice(0,8);
+    convo.pending={kind:'football',orig:q,until:Date.now()+120000};
+    finish({headline:'Which game do you mean?',clarify:true,small:true,spoken:'Which game do you mean? Name a team, or pick one on screen.',tags:tags,banners:[{kind:'',bold:'NO TEAM NAMED.',text:'I do not have a game saved from earlier, so tell me a team (“How are the Lions doing?”) or pick below.'+(live.length?' Showing live games first.':'')}],acts:show.map(function(g){return {label:g.line.slice(0,46),fn:function(){cmdFootball(q,g.id);}};})});
+  }catch(e){lookupFail(q,'football score',e);}
+}
+var WEBSID='m1nt-'+Math.random().toString(36).slice(2)+Date.now().toString(36);
+async function cmdWeb(q,opt){
+  opt=opt||{};beginAsk(q);doing('searching the web');
+  var m=await getMcp(),srv=null;
+  try{if(m){var lt=await m.listTools();srv=((lt.servers||[]).filter(function(x){return /parallel/i.test(x.server);})[0])||null;}}catch(e){}
+  if(!srv){finish({headline:'General web lookup is not connected here.',small:true,spoken:'General web lookup is not connected in this window.',tags:[srcTag('na','Not connected')],banners:[{kind:'na',bold:'NOT AVAILABLE.',text:STANDALONE?'This standalone version has no connector bridge. Use the live-data version for web lookups.':'The Parallel Search connector is not available to this page. Connect it in claude.ai under Settings, Connectors, then reopen this page.'}]});return;}
+  var locHint=/\b(in|near|at)\s+[A-Z]/.test(q)||/louisville|kentucky|\bky\b/i.test(q)?'':' Louisville, Kentucky';
+  var base=q.replace(/[?.!]+$/,'');
+  var dn=function(o){return new Date(etDay(o)+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});};
+  var dayCtx='Today is '+dn(0)+'; tomorrow is '+dn(1)+'.';
+  var dayWord=(/\b(sun|mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?)\w*/i.exec(q)||[])[0]||(/tomorrow/i.test(q)?new Date(etDay(1)+'T12:00:00').toLocaleDateString('en-US',{weekday:'long'}):'');
+  var res;
+  try{
+    res=await call(srv.server,'web_search',{objective:'Answer this question for a business owner in Louisville, Kentucky (use Louisville unless another place is named). '+dayCtx+' Find the exact store or location asked about (match the road or address), prefer its official page, and note the date: '+q,search_queries:[(base+locHint).slice(0,90),(base+locHint+' official').slice(0,90),(base.replace(/\b(what time|when) (does|do|is)\b/i,'').trim()+locHint+' store hours '+dayWord).slice(0,90)],session_id:WEBSID});
+    addUse('web',1);usageChip();
+  }catch(e){finish({headline:'The live web lookup failed.',small:true,spoken:'The live web lookup failed. I do not have a current answer.',tags:[srcTag('na','Unavailable')],banners:[{kind:'na',bold:'LOOKUP FAILED.',text:errCopy(e,'Parallel Search')+' Nothing was guessed.'}],acts:[{label:'Try again',pri:true,fn:function(){run(q,{});}}]});return;}
+  if(typeof res==='string'){try{res=JSON.parse(res);}catch(e){res=null;}}
+  var list=(res&&res.results||[]).slice(0,6);
+  if(!list.length){finish({headline:'The search found nothing useful.',small:true,spoken:'The search came back with nothing useful.',tags:[srcTag('live','Parallel Search'),srcTag('live','Fetched '+clockET(Date.now())+' ET')],srcNote:'Verified empty: the search ran and returned no results.'});return;}
+  var hostOf=function(u){try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return u;}};
+  var srcRows=list.slice(0,3).map(function(r){return {t:hostOf(r.url),n:r.title||r.url,link:/^https:\/\//.test(r.url||'')?r.url:null,note:r.publish_date?'Page dated '+r.publish_date:''};});
+  var txt=list.map(function(r,i){return '['+(i+1)+'] '+hostOf(r.url)+(r.publish_date?' ('+r.publish_date+')':'')+'\n'+String((r.excerpts||[]).join(' ')).replace(/\s+/g,' ').slice(0,1100);}).join('\n\n');
+  var sm=await getSampler();
+  var short=null,err=null;
+  if(sm){
+    var nowET=new Date().toLocaleString('en-US',{timeZone:ET,weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'});
+    var rr=await askClaude('Today is '+nowET+' in Louisville, Kentucky. '+dayCtx+' Answer in at most 50 words, plain sentences, spoken style, using ONLY the search excerpts below. Resolve words like tomorrow or Sunday to the real date and give that day\'s hours. Confirm the excerpt is for the specific store or road in the question; if you cannot confirm that exact location, say you could not verify that store and give what the source says, naming it. End with the source, for example: According to walmart.com. Prefer official company pages over directories. If the excerpts do not answer it, say so. Question: '+q+'\n\nExcerpts:\n'+txt,'summarizing search results (uses your Claude usage)');
+    if(rr.error)err=rr.error;else short=rr.text;
+  }
+  var rows=srcRows.map(function(r){return {t:r.t,n:r.n,note:r.note,link:r.link};});
+  finish({headline:short||'I found results but could not summarize them.',follow:short?'web':null,small:true,spoken:short||'I found search results but could not summarize them here. The sources are on screen.',rows:rows,tags:[srcTag('live','Parallel Search'),srcTag('live','Fetched '+clockET(Date.now())+' ET'),srcTag(short?'live':'na',short?'Summarized by Claude':'Not summarized')],banners:err?[{kind:'warn',bold:'NO SUMMARY.',text:err}]:[],srcNote:'Web pages can be out of date; check the source for holiday hours.',acts:[{label:'Search again',fn:function(){run(q,{});}}]});
+}
+function jobsNext7(){return nextWeekEvents((D.cal&&D.cal.data)||[]).filter(isJob);}
+function leadsDue(){var by=etDay(1);return ((D.leads&&D.leads.data)||[]).filter(function(l){return l.nextfu&&l.nextfu<=by;});}
+async function cmdNeeds(q,opt){
+  beginAsk(q);
+  var m=await getMcp();
+  if(!m){finish({headline:'No connector bridge in this window, so nothing was checked.',small:true,tags:[srcTag('demo','Demo data')],banners:[{kind:'',bold:'DEMO.',text:'Open this page in the main Claude window and press Allow when asked. Nothing is shown from your real accounts here.'}]});return;}
+  var steps=[['pause','paused customer threads (Make)'],['quo','Quo inbox'],['cal','your calendar (Make)'],['book','saved bookings and deposits'],['leads','Notion leads']];
+  var res={};
+  for(var i=0;i<steps.length;i++){var k=steps[i][0];doing('checking '+steps[i][1]);res[k]=await get(k,{live:!!opt.live,maxAgeMin:k==='cal'?60:(k==='book'?30:(k==='leads'?30:0))});}
+  var cv=(res.pause.rec||res.quo.rec)?customerView():null;
+  var cn=cv?customerCount(cv):null;
+  var custTag=res.pause.rec&&res.quo.rec?tagFor(res.quo.rec):(res.pause.rec||res.quo.rec?srcTag('saved','Partial'):srcTag('na','Unavailable'));
+  var jobs=res.cal.rec?jobsNext7():null,due=res.leads.rec?leadsDue():null,miss=res.book.rec?missingDeposits():null;
+  var cards=[
+    {title:'Customers',view:'customers',tag:custTag,big:cn==null?'?':String(cn),line:cn==null?'Lookup unavailable':(cn?cn+' need a look':'None waiting (verified)')+(cv&&cv.expired.length?' · '+cv.expired.length+' expired pause'+(cv.expired.length===1?'':'s')+' ignored':'')},
+    {title:'Jobs',view:'jobs',tag:tagFor(res.cal.rec),big:jobs?String(jobs.length):'?',line:jobs?(jobs.length?'Next: '+jobs[0].title.split(':')[0]+' · '+prettyDay(jobs[0].start.slice(0,10)).replace(/,.*$/,'')+' '+t12(jobs[0].start.slice(11,16)):'No jobs in 7 days (verified)'):'Lookup unavailable'},
+    {title:'Deposits',view:'deposits',tag:res.book.rec?tagFor(res.book.rec):srcTag('na','Unavailable'),big:miss?String(miss.length):'?',line:miss?(miss.length?miss.length+' missing: '+miss.map(function(b){return b.name;}).join(', '):'No missing deposits (waivers applied)'):'Lookup unavailable'},
+    {title:'Leads',view:'leads',tag:tagFor(res.leads.rec),big:due?String(due.length):'?',line:due?(due.length?due.length+plural(due.length,' follow-up',' follow-ups')+' due by tomorrow ('+D.leads.data.length+' open)':'None due (verified)'):'Lookup unavailable'}
+  ];
+  var failed=[];['pause','quo','cal','book','leads'].forEach(function(k){if(!res[k].rec)failed.push(WHO[k]+': '+errCopy(res[k].err,WHO[k]));});
+  var stale=[];['pause','quo','cal','book','leads'].forEach(function(k){if(res[k].rec&&res[k].rec.saved&&res[k].err)stale.push(k);});
+  var banners=[];
+  if(failed.length)banners.push({kind:'na',bold:'UNAVAILABLE.',text:failed.filter(function(v,i,a){return a.indexOf(v)===i;}).join(' ')+' Those areas show “?”, not zero.'});
+  if(stale.length)banners.push({kind:'warn',bold:'SAVED COPY.',text:'Live lookup failed for '+stale.join(', ')+', so saved data with its timestamp is shown.'});
+  if(res.book.rec)banners.push({kind:'',bold:'SNAPSHOT.',text:'Bookings and payment status come from the booking-sync list saved '+(D.book.data.generated||'earlier')+'.'});
+  var headline=failed.length===5?'I could not check anything.':(cn?cn+plural(cn,' customer thread',' customer threads')+' need a look':'No customer threads need you')+'. '+(jobs?jobs.length+plural(jobs.length,' job',' jobs')+' in the next 7 days.':'Jobs unavailable.');
+  var sp='';
+  sp+=cn!=null?(cn?cn+plural(cn,' customer thread needs',' customer threads need')+' a look.':'No customer threads need you.')+' ':'I could not check customer threads. ';
+  sp+=jobs?(jobs.length?'You have '+jobs.length+plural(jobs.length,' job',' jobs')+' in the next seven days. The next is '+jobs[0].title.split(':')[0]+' on '+prettyDay(jobs[0].start.slice(0,10)).replace(/,.*$/,'')+' at '+t12(jobs[0].start.slice(11,16))+'.':'No jobs in the next seven days.')+' ':'I could not check jobs. ';
+  sp+=miss?(miss.length?'Missing deposits: '+miss.map(function(b){return b.name;}).join(', ')+'. ':'No deposits are missing. '):'I could not check deposits. ';
+  sp+=due?due.length+plural(due.length,' lead follow-up is',' lead follow-ups are')+' due by tomorrow.':'I could not check leads.';
+  var oldest=Math.min.apply(null,['pause','quo','cal','book','leads'].map(function(k){return res[k].rec?res[k].rec.at:Date.now();}));
+  var snap={customers:cv&&{needs:cv.needs.length,paused:cv.paused.length,unknown:cv.unknown.length,unanswered:cv.unanswered.length},jobs:jobs&&jobs.map(function(j){return j.title+' '+j.start;}),missingDeposits:miss&&miss.map(function(b){return b.name+' '+b.when;}),leadsDue:due&&due.map(function(l){return l.name+' ('+l.status+', due '+l.nextfu+'): '+l.nextaction.slice(0,140);})};
+  finish({headline:headline,small:true,spoken:sp,cards:cards,banners:banners,tags:[srcTag('live','Make · Quo · Notion'),srcTag(stale.length?'saved':'live','Oldest data '+stampET(oldest))],acts:[{label:'Refresh live',fn:function(){run(q,{live:true});}},{label:'Ask Claude what to do first',fn:function(){prioritize(q,snap);}}]});
+}
+async function prioritize(q,snap){
+  var rr=await askClaude('You are M1NT, assistant to Ali who owns a mobile car detailing business. Using ONLY this data, say in under 90 words what he should do first, second and third, and why. Plain sentences, no lists, no markdown. Data: '+JSON.stringify(snap),'asking Claude to prioritize (uses your Claude usage)');
+  var ex=$('extra');
+  if(rr.error){doneDoing('Claude did not answer');var b=el('div','banner na');b.appendChild(el('b',null,'CLAUDE. '));b.appendChild(document.createTextNode(rr.error));ex.insertBefore(b,ex.firstChild);setMode('idle');return;}
+  doneDoing('Claude answered · '+usageLine());var d=el('div','banner ok');d.appendChild(el('b',null,'CLAUDE ADVICE. '));d.appendChild(document.createTextNode(rr.text));ex.insertBefore(d,ex.firstChild);
+  pushHist({q:q+' (prioritize)',a:rr.text,tags:['Claude'],use:usageLine(),at:Date.now()});speak(rr.text,false);
+}
+function cmdOpen(q,view,title){beginAsk(q);doing('opening '+title);finish({headline:'Opened '+title+' (read-only).',small:true,spoken:'Opening '+title+'.',tags:[srcTag('live','Details open at right')]});openView(view);}
+function spokenBrief(t){return t.replace(/^([A-Z][A-Z ]{3,})$/gm,function(x){return x.charAt(0)+x.slice(1).toLowerCase()+'.';}).replace(/\n+/g,' ').replace(/\s+/g,' ').trim();}
+async function cmdBriefing(q,opt){
+  opt=opt||{};beginAsk(q);doing('reading your latest briefing text');
+  var m=await getMcp();
+  if(!m){finish({headline:'Briefings are not connected in this version.',small:true,spoken:'Briefings need the Claude version of M1NT.',tags:[srcTag('na','Unavailable')],banners:[{kind:'na',bold:'NOT CONNECTED.',text:errCopy({code:'capability_disabled'})}]});return;}
+  var r=await get('brief',{live:true});
+  if(!r.rec){finish({headline:'I could not read your briefings.',small:true,spoken:'I could not read your briefings. Nothing was checked.',tags:[srcTag('na','Unavailable')],banners:[{kind:'na',bold:'UNAVAILABLE.',text:errCopy(r.err,'Quo')+' This is not “no briefing”; the lookup did not run.'}],acts:[{label:'Try again',pri:true,fn:function(){run(q,{});}}]});return;}
+  var want=/evening|tonight|night/i.test(q)?'Evening':(/morning/i.test(q)?'Morning':null);
+  var list=r.rec.data.filter(function(x){return !want||x.kind===want;});
+  if(!list.length){finish({headline:'No '+(want?want.toLowerCase()+' ':'')+'briefing text found.',small:true,spoken:'I did not find a '+(want?want.toLowerCase()+' ':'')+'briefing in your recent texts.',tags:[tagFor(r.rec)],srcNote:'Verified empty: the last 100 texts were read.'});return;}
+  var b=list[0];
+  finish({headline:b.kind+' briefing · '+stampET(b.at),small:true,spoken:'Your '+b.kind.toLowerCase()+' briefing from '+clockET(b.at)+'. '+spokenBrief(b.text),rows:b.text.split(/\n\n+/).map(function(sec){var lines=sec.split('\n');var head=/^[A-Z][A-Z ]{3,}$/.test(lines[0])?lines.shift():'';return {t:head||'Note',n:lines.join('\n')};}),tags:[tagFor(r.rec),srcTag('live','Text sent to you via Quo')],acts:[{label:'Refresh',fn:function(){run(q,{});}}]});
+}
+function cmdLocked(q){beginAsk(q);finish({headline:'That one stays on your texts.',small:true,spoken:'That action needs your safety code. Text it to M1NT and it goes through the usual approval.',tags:[srcTag('snap','Rule')],banners:[{kind:'warn',bold:'LOCKED.',text:'Cancelling, booking, deleting, money, and pausing or resuming customers are not done from this screen. It is read-only; text it to M1NT and the same approval steps apply. “Hey Mint” only opens this screen.'}]});}
+function cmdUnknown(q){beginAsk(q);finish({headline:'I do not have a direct lookup for that.',small:true,spoken:'I do not have a direct lookup for that one. I can ask Claude, which uses your Claude usage.',tags:[srcTag('snap','No direct lookup')],banners:[{kind:'',bold:'TRY.',text:'“What needs me?”, “What’s on my schedule tomorrow?”, “today”, “this week”, “leads”, “deposits”, “system health”.'}],acts:[{label:'Ask Claude (uses your Claude usage)',fn:function(){freeClaude(q);}}]});}
+async function freeClaude(q){
+  var snap={calendar:D.cal&&D.cal.data&&nextWeekEvents(D.cal.data).map(function(e){return e.title+' '+e.start;}),leads:D.leads&&D.leads.data&&D.leads.data.slice(0,12)};
+  var rr=await askClaude('You are M1NT, Ali\'s business assistant (mobile detailing). Answer in under 80 words, plain sentences, only from this loaded data; say if it is not in the data. Question: '+q+' Data: '+JSON.stringify(snap),'asking Claude (uses your Claude usage)');
+  if(rr.error){doneDoing('Claude did not answer');var b=el('div','banner na');b.appendChild(el('b',null,'CLAUDE. '));b.appendChild(document.createTextNode(rr.error));$('extra').insertBefore(b,$('extra').firstChild);setMode('idle');return;}
+  doneDoing('Claude answered · '+usageLine());$('ans').textContent=rr.text;$('ans').className='ans small';pushHist({q:q,a:rr.text,tags:['Claude'],use:usageLine(),at:Date.now()});speak(rr.text,false);
+}
+function followUp(q,opt){
+  var L=convo.last,l=q.toLowerCase();
+  if(/\b(schedule|calendar|deposit|lead|customer|jobs?|brief|needs me)\b/.test(l))return false;
+  if(L.kind==='weather'){run('weather '+q,{voice:true,wake:true,reply:'x'});return true;}
+  if(L.kind==='football'){run(q+' football score',{voice:true,wake:true,reply:'x'});return true;}
+  if(L.kind==='web'){if(/\b(weather|forecast|football|score)\b/.test(l))return false;cmdWebFollow(q,L,opt);return true;}
+  return false;
+}
+async function cmdWebFollow(q,L,opt){
+  beginAsk(q);doing('working out what you mean');
+  var rr=await askClaude('Rewrite the follow-up as ONE standalone web-search question. Keep the store, place or address from the earlier question. Output only the question.\nEarlier question: '+L.q+'\nEarlier answer: '+L.a+'\nFollow-up: '+q,'working out your follow-up (uses your Claude usage)');
+  var sq=String(rr.text||'').split('\n')[0].trim();if(rr.error||sq.length<8)sq=L.q.replace(/[?.!]+$/,'')+' — '+q;
+  logMic('reply','follow-up as: '+sq.slice(0,80));
+  cmdWeb(sq,Object.assign({},opt,{clarified:true}));
+}
+function run(raw,opt){
+  opt=opt||{};var q=String(raw||'').trim();if(!q)return;$('hint').textContent='';
+  convo.armAfterSpeech=null;convo.armOk=!!opt.voice||wake.on;
+  if(opt.fresh){convo.pending=null;convo.last=null;}
+  if(convo.pending&&(opt.reply||shortReply(q))){var comp=completePending(q);if(comp){logMic('reply','completed: '+comp.slice(0,70));q=comp;opt.clarified=true;}}
+  else if(convo.pending&&Date.now()>convo.pending.until)convo.pending=null;
+  if(opt.reply==='follow'&&convo.last&&Date.now()-convo.last.at<300000&&followUp(q,opt))return;
+  var l=q.toLowerCase();
+  if(/\b(cancel|delete|refund|charge|transfer|send money|reschedule|resume|pause|book (a|an|me|him|her|them)|take (a )?payment|waive)\b/.test(l)){cmdLocked(q);return;}
+  if(SLEEP_RE.test(q)||/^\s*good\s?night\b/i.test(q)){sleepUi();return;}
+  if(/\b(weather|forecast|temperature|umbrella|how (hot|cold)|will it (rain|snow))\b/.test(l)){cmdWeather(q);return;}
+  if((/\b(football|nfl|score|scores|who won|touchdown|playing|game|halftime|quarter|kickoff)\b/.test(l)||/how (is|are) (the )?[a-z .]+ (doing|playing)|did (the )?[a-z .]+ (win|lose)/.test(l))&&!/schedule|calendar/.test(l)){cmdFootball(q);return;}
+  if((/^(search|look up|google|find out|news)\b|latest news|what('?s| is) the news|\b(what time|when) (does|do|is) .+ (close|open|closes|opens)\b|\bhours\b|\bis .+ open\b|\bphone number\b|\baddress (for|of)\b|\bhow (much|many|old|tall|far)\b|^who (is|was)\b|^what (is|are|was) (a|an|the)\b/.test(l))&&!/deposit|payment|\bjobs?\b|customer|credit|usage|schedule|calendar|appointment|lead/.test(l)){var ch=!opt.clarified&&needsPlace(q);if(ch){askPlace(q,ch);return;}cmdWeb(q,opt);return;}
+  if(/what('?s| is)? ?(needs|need) me|needs me|need my attention|waiting on me|what should i (do|handle)/.test(l)){cmdNeeds(q,opt);return;}
+  var sched=/(schedule|calendar|agenda|what'?s on|what is on|appointments?|jobs? (today|tomorrow)|what do i have)/.test(l);
+  if(sched&&/tomorrow/.test(l)){cmdSchedule(q,1,'tomorrow',opt);return;}
+  if(sched&&/today|tonight/.test(l)){cmdSchedule(q,0,'today',opt);return;}
+  if(sched&&/(week|next few|upcoming)/.test(l)){cmdWeek(q,opt);return;}
+  if(/\bleads?\b/.test(l)){cmdOpen(q,'leads','leads');return;}
+  if(/(customers?|texts?|messages?|inbox|threads?|handoffs?)/.test(l)){cmdOpen(q,'customers','customers');return;}
+  if(/(deposits?|square|payments?)/.test(l)){cmdOpen(q,'deposits','deposits');return;}
+  if(/(health|running|status|workflows?|scenarios?|make)\b/.test(l)){cmdOpen(q,'health','system health');return;}
+  if(/\bjobs?\b|upcoming/.test(l)){cmdOpen(q,'jobs','jobs');return;}
+  if(/brief/.test(l)){cmdBriefing(q,opt);return;}
+  if(sched){cmdSchedule(q,0,'today',opt);return;}
+  cmdUnknown(q);
+}
+$('cmdForm').addEventListener('submit',function(ev){ev.preventDefault();var v=$('cmd').value;$('cmd').value='';run(v,{});});
+$('cmd').addEventListener('focus',wakeUi);
+$('cmd').addEventListener('input',wakeUi);
+document.addEventListener('keydown',function(e){
+  if(drawer.classList.contains('show'))return;
+  if(app.getAttribute('data-state')==='asleep'&&e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.code!=='Space'&&document.activeElement&&document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='SELECT'){wakeUi();$('cmd').focus();}
+  else if(e.key==='Escape'&&app.getAttribute('data-state')!=='asleep'&&document.activeElement===document.body){sleepUi();}
+});
+["What's on my schedule today?","What's on my schedule tomorrow?","What needs me?"].forEach(function(t){var b=el('button','btn',t);b.type='button';b.addEventListener('click',function(){run(t,{});});$('sugs').appendChild(b);});
+var fold=el('button','btn foldbtn','Fold into core');fold.type='button';fold.addEventListener('click',sleepUi);$('sugs').appendChild(fold);
+
+/* ---------- side panels ---------- */
+function updatePanels(){
+  var cal=D.cal;
+  $('pCalTag').replaceChildren(cal?tagFor(cal):srcTag('snap','Live on ask'));
+  if(cal){var n=eventsOn(cal.data,etDay(1)).length;$('pCalBig').textContent='Tomorrow: '+n+plural(n,' item',' items');$('pCalSub').textContent=prettyDay(etDay(1))+' · '+ago(cal.at);}
+  var h=D.health;$('pSysTag').replaceChildren(h?tagFor(h):srcTag('snap','Not checked'));
+  if(h){var bad=h.data.filter(function(s){return s.invalid||s.dlq>0||s.paused;}).length;$('pSysBig').textContent=h.data.length+' workflows';$('pSysSub').textContent=bad?bad+' need a look':'All clear · '+ago(h.at);}
+  $('pEvmTag').replaceChildren(srcTag('snap','Snapshot'));
+  var bb=D.brief&&D.brief.data[0];$('pBrfTag').replaceChildren(D.brief?tagFor(D.brief):srcTag('snap','Live on ask'));$('pBrfBig').textContent=bb?bb.kind+' · '+clockET(bb.at):'Morning · Evening';$('pBrfSub').textContent=bb?'Latest text · '+stampET(bb.at):'Tap to read the latest';
+}
+$('pCal').addEventListener('click',function(){openView('calendar');});
+$('pEvm').addEventListener('click',function(){openView('elite');});
+$('pBrf').addEventListener('click',function(){openView('briefings');});
+$('pSys').addEventListener('click',function(){openView('health');});
+
+/* ---------- drawer ---------- */
+function showDrawer(title,meta){$('dTitle').textContent=title;var m=$('dMeta');clear(m);(meta||[]).forEach(function(x){m.appendChild(x);});drawer.classList.add('show');scrim.classList.add('show');lastFocus=document.activeElement;$('dClose').focus();}
+function closeDrawer(){drawer.classList.remove('show');scrim.classList.remove('show');curView=null;if(lastFocus&&lastFocus.focus)try{lastFocus.focus();}catch(e){}}
+$('dClose').addEventListener('click',closeDrawer);scrim.addEventListener('click',closeDrawer);
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&drawer.classList.contains('show')){e.preventDefault();closeDrawer();}});
+function item(k,title,sm){var i=el('div','item');if(k){var kk=el('div','k');(Array.isArray(k)?k:[k]).forEach(function(x){kk.appendChild(typeof x==='string'?document.createTextNode(x):x);});i.appendChild(kk);}i.appendChild(el('b',null,title));if(sm)i.appendChild(el('div','sm',sm));return i;}
+function details(i,label,text){var d=el('details');d.appendChild(el('summary',null,label));d.appendChild(el('div',null,text));i.appendChild(d);}
+function errBanner(k){var e=D['_err_'+k];if(!e)return;var b=el('div','banner na');b.appendChild(el('b',null,'UNAVAILABLE. '));b.appendChild(document.createTextNode(errCopy(e,WHO[k])+' This is a failed lookup, not an empty result.'));dBody.appendChild(b);D['_err_'+k]=null;}
+function refreshBtn(keys,label){
+  var b=el('button','btn pri',label||'Refresh live');b.type='button';
+  b.addEventListener('click',async function(){b.disabled=true;b.textContent='Checking…';var v=curView;for(var i=0;i<keys.length;i++){try{await FETCH[keys[i]]();}catch(e){D['_err_'+keys[i]]=e;}}updatePanels();openView(v);});
+  return b;
+}
+var TITLES={customers:'Customers',jobs:'Upcoming jobs',deposits:'Deposits & bookings',leads:'Open leads',health:'Make workflow health',calendar:'Calendar',elite:'Evermint Elite clients',briefings:'Briefings'};
+function metaFor(keys){var m=[];keys.forEach(function(k){m.push(D[k]?tagFor(D[k]):srcTag('na','Not loaded'));});m.push(el('span',null,'Read-only'));return m;}
+function openView(view){
+  if(!view)return;curView=view;clear(dBody);wakeUi();
+  var keys={customers:['pause','quo'],jobs:['cal'],deposits:['book'],leads:['leads'],health:['health'],calendar:['cal'],elite:['cal'],briefings:['brief']}[view]||[];
+  showDrawer(TITLES[view],metaFor(keys));
+  if(keys.length)dBody.appendChild(refreshBtn(keys,keys[0]==='cal'?'Refresh live (4 Make credits)':'Refresh live'));
+  keys.forEach(errBanner);
+  VIEWS[view]();
+}
+var VIEWS={
+  customers:function(){
+    if(!D.pause&&!D.quo){dBody.appendChild(el('div','empty','Not loaded yet. Refresh reads the pause list (free Make data-store read) and the last 72 hours of the Quo inbox (one Quo read).'));return;}
+    var v=customerView();
+    if(!D.quo)dBody.appendChild(el('div','banner na','UNAVAILABLE. Quo messages were not read, so “customer wrote last” threads are not checked.'));
+    if(!D.pause)dBody.appendChild(el('div','banner na','UNAVAILABLE. The pause list was not read.'));
+    var sections=[['needs','Needs Ali'],['unanswered','Customer wrote last, no reply'],['paused','Paused (hold)'],['unknown','Paused, reason unknown']];
+    var any=false;
+    sections.forEach(function(s){var arr=v[s[0]];if(!arr.length)return;any=true;dBody.appendChild(el('div','sec',s[1]+' · '+arr.length));arr.forEach(function(c){
+      var it=item([prettyPhone(c.phone),c.since?'since '+stampET(c.since)+' ('+ago(c.since)+')':''],c.why,c.last?(c.last.dir==='incoming'?'Customer: ':'Last text, sent from the Sales line: ')+c.last.text.slice(0,200):'No texts in the last 72 hours.');
+      var detail=(c.msgs||[]).map(function(m){return (m.dir==='incoming'?'IN  ':'OUT ')+stampET(m.at)+' '+m.id+'\n'+m.text.slice(0,120);}).join('\n');
+      if(detail)details(it,'Evidence (last texts, Quo ids)',detail);
+      dBody.appendChild(it);});});
+    if(!any&&D.pause&&D.quo)dBody.appendChild(el('div','empty','Verified empty: no active pauses, no handoffs, and no unanswered customer texts in the last 72 hours.'));
+    if(v.expired.length){dBody.appendChild(el('div','sec','Expired pause records · '+v.expired.length+' (no action needed)'));
+      v.expired.forEach(function(c){dBody.appendChild(item([prettyPhone(c.phone),'paused '+stampET(c.since)],c.why,c.last?'Last text there: '+(c.last.dir==='incoming'?'customer':'sent from the Sales line')+', '+ago(c.last.at)+'.':''));});
+      dBody.appendChild(el('div','empty','How these appear: scenario E writes a “takeover” pause for any text that leaves the Sales line without Mint’s message id (including Mint’s own Elite and intake texts), and it expires after 10 minutes. Quo marks every send with your user, so “you replied” cannot be proven; nothing here is called “Taken over by Ali”.'));}
+    dBody.appendChild(el('div','empty','To reply, resume, or hand a thread back, text M1NT. This view never sends or pauses anything.'));
+  },
+  jobs:function(){
+    var rec=D.cal;if(!rec){dBody.appendChild(el('div','empty','Not loaded yet. Refresh runs your calendar check once.'));return;}
+    var jobs=nextWeekEvents(rec.data).filter(isJob),later=rec.data.filter(function(e){return isJob(e)&&e.start.slice(0,10)>etDay(7);});
+    dBody.appendChild(el('div','empty','Jobs here are the bookings assigned to you that are on your Google Calendar. Unassigned Urable jobs are not included.'));
+    if(!jobs.length)dBody.appendChild(el('div','empty','Verified empty: no assigned jobs in the next 7 days.'));
+    jobs.forEach(function(e){dBody.appendChild(item(prettyDay(e.start.slice(0,10))+' · '+t12(e.start.slice(11,16))+' – '+t12(e.end.slice(11,16)),e.title,remText(e.rem)));});
+    if(later.length){dBody.appendChild(el('div','sec','Later · next 3'));later.slice(0,3).forEach(function(e){dBody.appendChild(item(prettyDay(e.start.slice(0,10))+' · '+t12(e.start.slice(11,16)),e.title,''));});}
+  },
+  calendar:function(){
+    var rec=D.cal;if(!rec){dBody.appendChild(el('div','empty','Not loaded yet. Refresh runs your calendar check once (about 4 Make credits).'));return;}
+    [0,1].forEach(function(off){var ds=etDay(off),l=eventsOn(rec.data,ds).sort(function(a,b){return a.start<b.start?-1:1;});dBody.appendChild(el('div','sec',(off?'Tomorrow':'Today')+' · '+prettyDay(ds)));if(!l.length)dBody.appendChild(el('div','empty','Verified empty.'));l.forEach(function(e){dBody.appendChild(item(e.start.length<=10?'All day':t12(e.start.slice(11,16))+' – '+t12(e.end.slice(11,16)),e.title,remText(e.rem)));});});
+    var wk=nextWeekEvents(rec.data).filter(function(e){return e.start.slice(0,10)>etDay(1);});
+    dBody.appendChild(el('div','sec','Rest of the next 7 days'));if(!wk.length)dBody.appendChild(el('div','empty','Nothing.'));wk.forEach(function(e){dBody.appendChild(item(prettyDay(e.start.slice(0,10))+(e.start.length>10?' · '+t12(e.start.slice(11,16)):''),e.title,''));});
+  },
+  elite:function(){
+    dBody.appendChild(el('div','banner','SNAPSHOT. Client list comes from the Elite setup, not a live lookup. Next visits are filled in from the calendar when it is loaded.'));
+    var plan=[['Richard Decker','2nd Tuesday · 12:00 PM'],['Marc Clark','2nd Tuesday · 3:30 PM'],['Rebecca Lucas','2nd Tuesday · 6:00 PM'],['David Wilson','Own monthly check-in']];
+    plan.forEach(function(p){var next=D.cal?D.cal.data.filter(function(e){return e.title.indexOf(p[0]+':')===0&&e.start.slice(0,10)>=etDay(0);}).sort(function(a,b){return a.start<b.start?-1:1;})[0]:null;dBody.appendChild(item('ELITE',p[0],p[1]+(next?' · next: '+prettyDay(next.start.slice(0,10))+' '+t12(next.start.slice(11,16)):(D.cal?' · next visit not on the calendar':''))));});
+  },
+  briefings:function(){
+    var rec=D.brief;if(!rec){dBody.appendChild(el('div','empty','Not loaded yet. Refresh reads your recent texts from M1NT (one free Quo read) and picks out the morning and evening briefings.'));return;}
+    if(!rec.data.length){dBody.appendChild(el('div','empty','Verified empty: no briefing texts in your last 100 messages.'));return;}
+    var rd=el('button','btn pri','Read the latest aloud');rd.type='button';rd.addEventListener('click',function(){var b=rec.data[0];speak('Your '+b.kind.toLowerCase()+' briefing from '+clockET(b.at)+'. '+spokenBrief(b.text),true);});dBody.appendChild(rd);
+    rec.data.slice(0,6).forEach(function(b){var it=item([b.kind.toUpperCase(),stampET(b.at)+' ('+ago(b.at)+')'],b.kind+' briefing','');var pre=el('div','sm');pre.style.whiteSpace='pre-wrap';pre.textContent=b.text;it.appendChild(pre);dBody.appendChild(it);});
+  },
+  deposits:function(){
+    var rec=D.book;if(!rec){dBody.appendChild(el('div','empty','Not loaded yet. Refresh reads the saved booking list, your waivers, and the Square payment records (free data-store reads).'));return;}
+    var d=rec.data,miss=missingDeposits();
+    dBody.appendChild(el('div','banner','SNAPSHOT. Bookings and payment status come from the booking-sync list saved '+(d.generated||'earlier')+' (Urable). Refresh re-reads that saved list; it does not re-run the sync.'));
+    dBody.appendChild(item(miss.length?'ALERT':'ALL CLEAR',miss.length?miss.length+' missing '+plural(miss.length,'deposit'):'No missing-deposit alerts',miss.length?miss.map(function(b){return b.name+' · '+b.when;}).join(' ; '):'Waivers and Elite clients are not counted as missing.'));
+    dBody.appendChild(el('div','sec','Upcoming bookings · '+d.rows.length));
+    d.rows.forEach(function(b){var s=bookingStatus(b,d.waivers);dBody.appendChild(item([b.dayLabel,srcTag(s.kind==='missing'?'na':(s.kind==='unknown'?'snap':'ok'),s.label)],b.name,b.vehicle+(s.note?' · '+s.note:'')));});
+    dBody.appendChild(el('div','sec','Square payments on record · '+d.payments.length));
+    if(!d.paymentsRead)dBody.appendChild(el('div','banner na','UNAVAILABLE. The Square payment list could not be read.'));
+    d.payments.forEach(function(p){var it=item(['SQUARE'],'Payment received, job match unverified','The record keeps only ids, not names, so I cannot prove which booking it paid for.');details(it,'Raw ids','Square payment: '+p.paymentId+'\nUrable job: '+p.jobId);dBody.appendChild(it);});
+    dBody.appendChild(el('div','sec','Waivers · '+d.waivers.length));
+    if(!d.waiversRead)dBody.appendChild(el('div','banner na','UNAVAILABLE. The waiver list could not be read, so waived bookings may show as missing.'));
+    d.waivers.forEach(function(w){dBody.appendChild(item(['WAIVED · '+w.on],w.name+' · '+w.when,w.note+' Applies only to this booking.'));});
+  },
+  leads:function(){
+    var rec=D.leads;if(!rec){dBody.appendChild(el('div','empty','Not loaded yet. Refresh runs one Notion query (open leads only).'));return;}
+    if(!rec.data.length){dBody.appendChild(el('div','empty','Verified empty: no open leads.'));return;}
+    var by=etDay(1);rec.data.forEach(function(l){var due=l.nextfu&&l.nextfu<=by;dBody.appendChild(item((due?'DUE ':'NEXT ')+(l.nextfu||'no date'),l.name+' · '+l.status,(l.vehicle?l.vehicle+'. ':'')+l.nextaction.slice(0,200)));});
+  },
+  health:function(){
+    var rec=D.health;if(!rec){dBody.appendChild(el('div','empty','Not loaded yet. Refresh reads the Make scenario list once (free read, no scenario run).'));return;}
+    var bad=rec.data.filter(function(s){return s.invalid||s.dlq>0||s.paused;}),act=rec.data.filter(function(s){return s.active;});
+    dBody.appendChild(item(bad.length?'ATTENTION':'ALL CLEAR',bad.length?bad.length+plural(bad.length,' workflow needs',' workflows need')+' a look':'No invalid, paused, or stuck workflows',rec.data.length+' total · '+act.length+' active'));
+    bad.forEach(function(s){dBody.appendChild(item('NEEDS A LOOK',s.name,(s.invalid?'Invalid. ':'')+(s.paused?'Paused. ':'')+(s.dlq?s.dlq+' incomplete run(s). ':'')));});
+    act.sort(function(a,b){return (a.next||'z')<(b.next||'z')?-1:1;}).slice(0,12).forEach(function(s){dBody.appendChild(item('ACTIVE',s.name,s.next?'Next run '+stampET(Date.parse(s.next)):'Runs when triggered'));});
+  }
+};
+
+/* ---------- history / usage / setup ---------- */
+$('histBtn').addEventListener('click',function(){
+  curView=null;clear(dBody);showDrawer('History',[el('span',null,'This device only · last 40')]);
+  if(!hist.length){dBody.appendChild(el('div','empty','No commands yet.'));return;}
+  var ul=el('ul','hist');hist.forEach(function(h){var li=el('li','item');li.appendChild(el('div','k',stampET(h.at)));li.appendChild(el('b',null,h.q));li.appendChild(el('div','sm',h.a));if(h.tags&&h.tags.length)li.appendChild(el('div','k',h.tags.join(' · ')));if(h.use)li.appendChild(el('div','sm','Usage: '+h.use));ul.appendChild(li);});dBody.appendChild(ul);
+  var c=el('button','btn','Clear history');c.type='button';c.addEventListener('click',function(){hist=[];store('hist',[]);$('histBtn').click();});dBody.appendChild(c);
+});
+function usageRows(u){
+  var ops=u.measured?String(u.ops)+(u.unmeasured?' (+ '+u.unmeasured+' run not measured)':''):(u.runs?'Unavailable':'0');
+  var cr=u.measured?(u.cc/100).toFixed(2).replace(/\.00$/,''):(u.runs?'Unavailable':'0');
+  return [['Make runs',String(u.runs)],['Make operations',ops],['Make credits',cr],['Free reads (data stores, Quo, Notion, scenario list)',String(u.reads)],['Claude calls (inside this Artifact)',String(u.claude)],['Direct web lookups (weather, scores; free, no Make)',String(u.web)],['Claude tokens','Unavailable (the page is not told)'],['Separately billed API calls','0 (this page has no API key and no outside network)']];
+}
+function renderUsage(){
+  clear(dBody);
+  var a=item('LAST COMMAND',use.lastQ||'None yet');var dl=el('dl','kv');usageRows(use.last).forEach(function(r){dl.appendChild(el('dt',null,r[0]));dl.appendChild(el('dd',null,r[1]));});a.appendChild(dl);dBody.appendChild(a);
+  var b=item('THIS SESSION',use.session.cmds+plural(use.session.cmds,' command',' commands')+' since the page opened');var dl2=el('dl','kv');usageRows(use.session).forEach(function(r){dl2.appendChild(el('dt',null,r[0]));dl2.appendChild(el('dd',null,r[1]));});b.appendChild(dl2);dBody.appendChild(b);
+  dBody.appendChild(item('HOW THIS IS MEASURED','Runs are counted here; operations and credits are read from Make’s execution history','Credits are Make’s centicredits divided by 100. Claude calls run inside your Claude usage through the Artifact, not a separate API account, and only when you press an “Ask Claude” button.'));
+  dBody.appendChild(item('DOLLAR COST','Unavailable','I will not estimate dollars without a known Make credit price and a measured Claude rate. Tell me your plan rate and I can add it.'));
+}
+$('useBtn').addEventListener('click',function(){curView=null;showDrawer('Usage',[el('span',null,'Session started '+stampET(sessionStart))]);renderUsage();});
+function renderSetup(){
+  clear(dBody);
+  var dg=mic.diag;
+  var rows=[
+    ['Microphone',mic.perm==='ready'?'Allowed in this window':mic.perm==='blocked'?'Blocked':mic.perm==='none'?'No device found':'Not checked yet'],
+    ['Speech input',micBackend==='dictation'?'Claude dictation':micBackend==='webspeech'?'Browser speech recognition':'None offered in this window'],
+    ['Hey Mint',wake.on?'On':'Off (works only while this window is open)'],
+    ['Voice output',tts&&pref.kind!=='local'?'Claude voices':(synth?'Windows/browser voices':'None available')],
+    ['Connectors',['Make','Quo','Notion'].map(function(n){return n+': '+(servers[n]||'unknown');}).join(' · ')]
+  ];
+  var it=el('div','item');it.appendChild(el('div','k','STATUS'));var dl=el('dl','kv');rows.forEach(function(r){dl.appendChild(el('dt',null,r[0]));dl.appendChild(el('dd',null,r[1]));});it.appendChild(dl);dBody.appendChild(it);
+  var mi=el('div','item');mi.appendChild(el('div','k','MICROPHONE'));
+  var eb=el('button','btn pri','Enable microphone');eb.type='button';eb.addEventListener('click',function(){eb.disabled=true;enableMic().then(function(){eb.disabled=false;});});
+  var tb=el('button','btn','Test speech recognition');tb.type='button';tb.addEventListener('click',async function(){tb.disabled=true;tb.textContent='Listening 4 s… speak';await initMic();wakeUi();var r=await testMicRecognition();mic.diag=mic.diag||{at:Date.now()};mic.diag.speechTest=r;renderSetup();});
+  var br=el('div');br.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:8px';br.appendChild(eb);br.appendChild(tb);mi.appendChild(br);
+  if(dg){var t=el('div','sm');t.style.marginTop='8px';t.textContent='Last check '+stampET(dg.at)+'. Mic access: '+(dg.result?(dg.result.kind==='ok'?'OK':'failed'+(dg.result.name?' ('+dg.result.name+(dg.result.msg?': '+dg.result.msg:'')+')':'')):'not tested')+'. Runs inside: '+(dg.standalone?'standalone page':(dg.inApp?'Claude desktop app':'a web browser'))+'. Browser permission state: '+(dg.perm||'unreadable')+'. Claude dictation offered: '+(dg.dictation?'yes':'no')+'. Browser speech recognition present: '+(dg.sr?'yes':'no')+'.';mi.appendChild(t);
+    if(dg.result){var cause=el('div','banner '+(dg.result.kind==='ok'?'ok':'na'));cause.appendChild(el('b',null,dg.result.kind==='ok'?'RESULT. ':'WHAT TO DO. '));cause.appendChild(document.createTextNode(dg.result.text));mi.appendChild(cause);}
+    if(dg.speechTest){var st=el('div','banner '+(dg.speechTest.ok?'ok':'na'));st.appendChild(el('b',null,'SPEECH TEST. '));st.appendChild(document.createTextNode(dg.speechTest.detail));mi.appendChild(st);}
+  }else{mi.appendChild(el('div','sm','Press Enable microphone first. It asks the window for the mic and tells you exactly why if it cannot.'));}
+  dBody.appendChild(mi);
+  var li=el('div','item');li.appendChild(el('div','k','MIC LOG (newest last)'));
+  var lg=el('div','sm');lg.style.cssText='font-family:var(--font-m);font-size:11px;white-space:pre-wrap;max-height:180px;overflow:auto';lg.textContent=micLog.length?micLog.slice(-30).map(function(x){return stampET(x.at).replace(' ET','')+'  '+x.kind+'  '+x.detail;}).join('\n'):'Nothing yet. Turn on Hey Mint to start logging.';li.appendChild(lg);
+  var cp=el('button','btn','Copy log');cp.type='button';cp.style.marginTop='8px';cp.addEventListener('click',function(){try{navigator.clipboard.writeText('M1NT build '+BUILD+' · '+navigator.userAgent+'\n'+lg.textContent);cp.textContent='Copied';}catch(e){cp.textContent='Copy failed';}});li.appendChild(cp);
+  li.appendChild(el('div','sm','Build '+BUILD+' · '+(STANDALONE?'standalone page':(INAPP?'Claude desktop app':'browser'))));dBody.appendChild(li);
+  var vi=el('div','item');vi.appendChild(el('div','k','VOICE'));
+  var sel=el('select','sel');sel.setAttribute('aria-label','Voice');
+  function addOpt(g,label,val){var o=el('option',null,label);o.value=val;g.appendChild(o);}
+  var haveAny=false;
+  if(tts){var g1=el('optgroup');g1.label='Claude voices';CLAUDE_VOICES.forEach(function(v){addOpt(g1,v.charAt(0).toUpperCase()+v.slice(1),'claude:'+v);});sel.appendChild(g1);haveAny=true;}
+  var lv=localVoices();
+  if(lv.length){var g2=el('optgroup');g2.label='Windows / browser voices ('+lv.length+')';lv.forEach(function(v){addOpt(g2,(v.nat?'★ ':'')+v.name+' · '+v.lang,'local:'+v.name);});sel.appendChild(g2);haveAny=true;}
+  var cursel=(pref.kind==='local'?'local:'+pref.name:(pref.kind==='claude'?'claude:'+pref.name:(tts?'claude:buttery':(lv[0]?'local:'+lv[0].name:''))));
+  if(haveAny){sel.value=cursel;vi.appendChild(sel);}else vi.appendChild(el('div','sm','No voices are available in this window. Answers stay on screen.'));
+  sel.addEventListener('change',function(){var p=sel.value.split(':');pref.kind=p[0];pref.name=p.slice(1).join(':');store('voice',pref);});
+  var ps=el('select','sel');ps.setAttribute('aria-label','Pace');[['Calm',0.92],['Conversational',0.98],['Brisk',1.08]].forEach(function(p){var o=el('option',null,p[0]);o.value=String(p[1]);ps.appendChild(o);});ps.value=String(pref.pace||0.98);if(!ps.value)ps.value='0.98';
+  ps.addEventListener('change',function(){pref.pace=parseFloat(ps.value);store('voice',pref);});
+  var row=el('div');row.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center';row.appendChild(ps);
+  var tv=el('button','btn','Test voice');tv.type='button';tv.addEventListener('click',function(){speak('Good afternoon, Ali. This is how I sound. Tomorrow you have one job at eleven. Everything else looks quiet.',true);});row.appendChild(tv);
+  var sp2=el('button','btn','Stop');sp2.type='button';sp2.addEventListener('click',stopSpeak);row.appendChild(sp2);
+  vi.appendChild(row);
+  function brit(g){var re=g==='m'?/ryan|thomas|george|daniel|oliver|arthur|male/i:/sonia|libby|maisie|hazel|susan|serena|female/i;var l=lv.filter(function(v){return /en[-_]GB/i.test(v.lang)&&re.test(v.name)&&(g==='m'?!/female/i.test(v.name):true);});l.sort(function(a,b){return b.nat-a.nat;});return l[0]||null;}
+  var bm=brit('m'),bf=brit('f');
+  vi.appendChild(el('div','sec','British voices (same sample)'));var br2=el('div');br2.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px';
+  [['Male',bm],['Female',bf]].forEach(function(x){var b=el('button','btn',x[1]?'▶ '+x[0]+': '+x[1].name.replace(/^Microsoft\s+/,'').slice(0,30):x[0]+': not found on this device');b.type='button';b.disabled=!x[1];if(x[1]){b.addEventListener('click',function(){speak(SAMPLE,true,{kind:'local',name:x[1].name,pace:pref.pace});});var u=el('button','btn','Use');u.type='button';u.addEventListener('click',function(){pref.kind='local';pref.name=x[1].name;store('voice',pref);renderSetup();});br2.appendChild(b);br2.appendChild(u);}else br2.appendChild(b);});vi.appendChild(br2);
+  var SAMPLE='Good afternoon, Ali. Tomorrow you have one job at eleven. Everything else looks quiet.';
+  var samples=[];if(tts)CLAUDE_VOICES.forEach(function(v){samples.push(['Claude · '+v,{kind:'claude',name:v,pace:pref.pace}]);});
+  lv.slice(0,5).forEach(function(v){samples.push([v.name.replace(/^Microsoft\s+/,'').slice(0,28),{kind:'local',name:v.name,pace:pref.pace}]);});
+  if(samples.length){vi.appendChild(el('div','sec','Same sample, each voice'));var sr2=el('div');sr2.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px';samples.forEach(function(x){var b=el('button','btn','▶ '+x[0]);b.type='button';b.addEventListener('click',function(){speak(SAMPLE,true,x[1]);});sr2.appendChild(b);});vi.appendChild(sr2);}
+  else vi.appendChild(el('div','banner na','NO VOICES HERE. This window offers neither Claude voices nor Windows voices'+(INAPP?' (the Claude desktop app reports an empty voice list)':'')+', so there is nothing to play. Answers stay readable in the center. In Chrome or Edge on Windows the same page lists the Windows voices, including the “Online (Natural)” ones in Edge.'));
+  var sil=el('select','sel');sil.setAttribute('aria-label','Silence before sending');[['0.8 s',800],['1.0 s (start)',1000],['1.4 s',1400],['1.8 s',1800]].forEach(function(p){var o=el('option',null,p[0]);o.value=String(p[1]);sil.appendChild(o);});sil.value=String(SIL);
+  sil.addEventListener('change',function(){SIL=parseInt(sil.value,10);store('sil',SIL);});
+  var sr3=el('div');sr3.style.cssText='display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap';sr3.appendChild(el('span','sm','Send after silence:'));sr3.appendChild(sil);vi.appendChild(sr3);
+  vi.appendChild(el('div','sm','Simplest better voice if these still sound robotic: an online text-to-speech service (for example OpenAI or ElevenLabs voices). Typical cost is a few dollars a month at your volume, billed by that service, plus about 1 Make credit per spoken answer if routed through Make. The answer text would go from this page to a small Make webhook, which calls the service and returns audio. I will not add it without your OK.'));
+  vi.appendChild(el('div','sm','Starred voices are the natural-sounding ones Windows or your browser reports (names containing Natural, Online or Neural). Claude voices appear only in the main Claude window. Muted answers stay readable in the center.'));
+  dBody.appendChild(vi);
+  dBody.appendChild(item('IPHONE · INSIDE CLAUDE','Typed commands work; voice may not','Claude’s mic and voice are not offered in the mobile apps. Tap the keyboard’s microphone key to dictate into the box and read answers on screen.'));
+  dBody.appendChild(item('SIRI · “ASK MINT”','Not built yet','It needs a new secured Make webhook that returns the answer text. That adds a public endpoint and about 1 credit per ask, so it waits for your OK.'));
+  dBody.appendChild(item('SAFETY','Read-only on this screen','“Hey Mint” only opens the screen. Cancels, bookings, deletes, money, pause and resume stay on your Quo texts with your safety code.'));
+}
+function renderSetupIfOpen(){if(drawer.classList.contains('show')&&$('dTitle').textContent==='Setup')renderSetup();}
+$('setBtn').addEventListener('click',function(){curView=null;showDrawer('Setup',[el('span',null,'Mic, voice and this device')]);renderSetup();});
+if(synth&&synth.addEventListener)synth.addEventListener('voiceschanged',renderSetupIfOpen);
+
+/* ---------- desktop install ---------- */
+(async function(){try{var d=await window.claude.use('desktop');if(d&&d.install){var s=await d.install.state();if(s==='available'){var b=$('installBtn');b.hidden=false;b.addEventListener('click',function(){d.install.request().catch(function(){});});}}}catch(e){}})();
+
+/* ---------- boot: quiet, nothing fetched ---------- */
+updatePanels();setUi('asleep');setMode('idle');micUi();
+(async function(){
+  await probeLink();await initMic();
+  try{if(navigator.permissions&&navigator.permissions.query){var ps=await navigator.permissions.query({name:'microphone'});if(ps.state==='granted'){mic.perm='ready';}else if(ps.state==='denied'){mic.perm='blocked';}ps.onchange=function(){mic.perm=ps.state==='granted'?'ready':(ps.state==='denied'?'blocked':'unknown');micUi();};}}catch(e){}
+  micUi();
+})();
+window.addEventListener('beforeunload',function(){try{micStop();}catch(e){}});
+})();
+</script>
