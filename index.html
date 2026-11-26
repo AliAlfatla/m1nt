@@ -220,7 +220,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v7-2026-11-26';
+var BUILD='v8-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -718,8 +718,8 @@ function micStart(sink,continuous,be){
   }
   if(be==='webspeech'){
     try{
-      webRec=new SR();webRec.lang='en-US';webRec.interimResults=true;webRec.continuous=!!continuous;
-      webRec.onresult=function(ev){var fin='',par='';for(var i=ev.resultIndex;i<ev.results.length;i++){var r=ev.results[i];if(r.isFinal)fin+=r[0].transcript+' ';else par+=r[0].transcript;}if(par&&sink.partial)sink.partial(par);if(fin&&sink.final)sink.final(fin.trim());};
+      webRec=new SR();webRec.lang='en-US';webRec.interimResults=true;webRec.continuous=!!continuous;webRec.maxAlternatives=5;
+      webRec.onresult=function(ev){var fin='',par='';for(var i=ev.resultIndex;i<ev.results.length;i++){var r=ev.results[i];var tx=r[0].transcript;for(var k=0;k<r.length;k++){if(WAKE_ANY.test(r[k].transcript)){tx=r[k].transcript;break;}}if(r.isFinal)fin+=tx+' ';else par+=tx;}if(par&&sink.partial)sink.partial(par);if(fin&&sink.final)sink.final(fin.trim());};
       webRec.onerror=function(ev){logMic('error',ev.error+(ev.message?' · '+ev.message:''));var e=sink.end;sink.end=null;if(e)e(ev.error==='not-allowed'||ev.error==='service-not-allowed'?'not_granted':(ev.error==='network'?'network':(ev.error||'upstream_error')));};
       webRec.onend=function(){logMic('end','session closed');var e=sink.end;sink.end=null;if(e)e('stopped');};
       webRec.onstart=function(){logMic('start',continuous?'continuous':'single');};
@@ -769,12 +769,13 @@ document.addEventListener('keyup',function(e){if(e.code==='Space'&&ptt.held){ptt
 /* ---------- two phrases, two jobs ----------
    "Wake up, Mint"  -> opens the folded core only (never a search)
    "Hey Mint ..."   -> listens for a question; question in one breath is sent once after silence */
-var NM='(?:mint|mince|minty|mynt|mind|m1nt|min|mid)';
+var NM='(?:mint|mints|mince|minty|mynt|mind|m1nt|min|mid|man|men|mean|meant|ment|mit|mitt|minh|mine|amen)';
 var WAKEUP_RE=new RegExp('\\b(?:wake\\s?up|wakeup)[,.!\\s]+'+NM+'\\b','i');
-var HEY_RE=new RegExp('\\b(?:hey|hay|hi|ok|okay)[,.!\\s]+'+NM+'\\b[,.!\\s]*','i');
+var HEY_RE=new RegExp('\\b(?:(?:hey|hay|hi|ok|okay|a)[,.!\\s]*'+NM+'|a\\s?men)\\b[,.!\\s]*','i');
+var WAKE_ANY=new RegExp('(?:'+HEY_RE.source+')|(?:wake\\s?up[,.!\\s]+'+NM+')|(?:good\\s?night[,.!\\s]+'+NM+')','i');
 var SLEEP_RE=new RegExp('\\bgood\\s?night[,.!\\s]+'+NM+'\\b','i');
 var LEAD_RE=new RegExp('^(?:(?:hey|hay|hi|ok|okay|wake\\s?up)[,.!\\s]*)?(?:'+NM+')?[,.!\\s]*','i');
-var JUNK=/^(mint|min|mid|mind|hey|hay|hi|ok|okay|uh|um|a|the|and|so|well|up)$/i;
+var JUNK=/^(mint|min|mid|mind|man|men|amen|mean|hey|hay|hi|ok|okay|uh|um|a|the|and|so|well|up)$/i;
 var SIL=store('sil')||1000, silTimer=0, wakePend=null;
 var convo={pending:null,last:null,armAfterSpeech:null,armOk:false};
 wake.reply=null;wake.temp=false;wake.replyT=0;wake.needTap=false;
