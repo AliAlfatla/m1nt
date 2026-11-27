@@ -423,7 +423,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v29-2026-11-26';
+var BUILD='v30-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1795,6 +1795,20 @@ function routeKnown(q,opt,dry){
     if(sw.made){showStopwatch(q);return true;}
     beginAsk(q);finish({headline:'No timers running.',small:true,spoken:'No, there is no timer running right now.',node:clockNode(),tags:[srcTag('live','On this screen')]});return true;}
   if(HELP_RE.test(s)){if(dry)return true;logMic('route','help');beginAsk(q);finish({headline:'Here is what I can do',small:true,spoken:'Here is what I can do. Tap any example to try it.',node:helpNode(),viz:'1',tags:[srcTag('live','Built in')]});return true;}
+  /* --- timer edits and window controls --- */
+  var hasDur=/\b(\d+(?:\.\d+)?|forty five|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|ninety)\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?)\b/.test(s);
+  if(tmrs.length&&hasDur&&/\b(change|switch|update|edit|adjust|make it|make that|make the|actually|instead|can you do|do a|set it)\b/.test(s)&&!/\b(another|also|(?:a|the|my) second timer|new|extra|additional)\b/.test(s)&&!/\b(add|extend)\b/.test(s)){
+    var ct=timerIntent(s.indexOf('timer')>=0||s.indexOf('alarm')>=0?s:s+' timer');
+    if(ct&&ct.ms){if(dry)return true;logMic('route','change timer');var tt=tmrs.filter(function(x){return !x.done;}).slice(-1)[0]||tmrs[tmrs.length-1];tt.end=Date.now()+ct.ms;tt.total=ct.ms;tt.label=ct.label;tt.done=false;renderDock();showTimerView(tt,q);try{speak('Okay, changed it to '+ct.label+'.',false);}catch(e){}return true;}
+  }
+  if(tmrs.length&&/\b(add|extend|give me|another)\b/.test(s)&&/\b(to|on)\b.*\b(timer|it)\b|\bmore (?:time|minutes?|seconds?)\b/.test(s)&&hasDur&&!/\bset\b/.test(s)){
+    var at=timerIntent(s+' timer');if(at&&at.ms){if(dry)return true;logMic('route','extend timer');var te=tmrs.filter(function(x){return !x.done;}).slice(-1)[0]||tmrs[tmrs.length-1];te.end+=at.ms;te.total+=at.ms;renderDock();showTimerView(te,q);try{speak('Added '+at.label+'.',false);}catch(e){}return true;}
+  }
+  var wcs=s.split(' ').length;
+  if(wcs<=9&&/\b(maximi[sz]e|expand|enlarge|bring (?:it |that |the timer )?(?:up|back|out)|pull (?:it |that |the timer )?up|open (?:up )?(?:the |my )?(?:timer|stopwatch|clock)|show me (?:the |my )?(?:timer|stopwatch)|(?:can i )?see (?:it|the timer|my timer|that|the stopwatch)|look (?:in )?(?:at )?the bottom left|bottom left)\b/.test(s)&&(tmrs.length||sw.made)){
+    if(dry)return true;logMic('route','maximize timer');if(tmrs.length&&!(sw.made&&/stopwatch/.test(s))){var tm0=tmrs.slice().sort(function(a,b){return a.end-b.end;})[0];showTimerView(tm0,q);}else showStopwatch(q);return true;}
+  if(wcs<=8&&(/\b(minimi[sz]e|shrink|put away|tuck|hide|close|take away|dismiss|get rid of)\s+(?:it|that|this|the (?:timer|calendar|weather|forecast|clock|stopwatch|schedule|screen|window|view|board|notes|text|simulation)|my (?:timer|calendar|schedule))\b/.test(s)||/^(?:minimi[sz]e|shrink|put it away|hide it)$/.test(s)||/\bmove (?:it|that|the timer) (?:to )?(?:the )?corner\b/.test(s))&&!/\b(mic|microphone|drawer|setup|history)\b/.test(s)&&app.getAttribute('data-state')==='answer'){
+    if(dry)return true;logMic('route','minimize');app.removeAttribute('data-viz');wxBackdropStop();setUi('awake');$('hint').textContent=(tmrs.length||sw.made)?'Minimized. Timers keep running in the corner.':'Ready. Ask me anything.';renderDock();return true;}
   var ti=timerIntent(s);
   if(ti){if(dry)return true;logMic('route','timer');
     if(ti.cancel){var nn=cancelTimers(ti.spec);beginAsk(q);finish({headline:nn?'Timer cancelled.':'No timer running.',small:true,spoken:nn?'Okay, timer cancelled.':'There is no timer running.',node:clockNode(),tags:[srcTag('live','On this screen')]});return true;}
@@ -1848,7 +1862,7 @@ function renderDock(){
   var d=dockEl();var full=app.getAttribute('data-state')==='answer'?document.querySelector('#extra .tmx,#extra .swx'):null;var items=[];
   if(!full){tmrs.forEach(function(t){items.push({k:'t',t:t});});if(sw.made)items.push({k:'s'});}
   else if(full.classList.contains('tmx')&&sw.made)items.push({k:'s'});
-  var key=items.map(function(i){return i.k==='t'?'t'+i.t.id+(i.t.done?'d':''):'s';}).join(',');
+  var key=items.map(function(i){return i.k==='t'?'t'+i.t.id+i.t.label+(i.t.done?'d':''):'s';}).join(',');
   if(d.getAttribute('data-key')!==key){d.setAttribute('data-key',key);clear(d);items.forEach(function(i){var c=el('button','tmchip');c.type='button';c.appendChild(el('span','tmc-i',i.k==='t'?'⏱':'⏲'));var tx=el('span','tmc-t','');c.appendChild(tx);c.appendChild(el('span','tmc-l',i.k==='t'?i.t.label:'stopwatch'));
     c.addEventListener('click',function(){if(i.k==='t'){if(i.t.done){tmrs=tmrs.filter(function(x){return x!==i.t;});renderDock();}else showTimerView(i.t);}else showStopwatch();});c._i=i;c._tx=tx;d.appendChild(c);});}
   Array.prototype.forEach.call(d.children,function(c){var i=c._i;if(!i)return;if(i.k==='t'){var left=i.t.end-Date.now();c._tx.textContent=i.t.done?'Done':hms(left);c.classList.toggle('done',i.t.done);}else{c._tx.textContent=swFmt(swElapsed()).slice(0,8);c.classList.toggle('run',sw.on);}});
