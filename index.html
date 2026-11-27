@@ -240,6 +240,22 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 @keyframes rtin{from{opacity:0;transform:translateY(-120px) scale(.6) rotate(12deg)}}
 @keyframes rtpulse{to{box-shadow:0 0 90px rgba(92,255,200,.95)}}
 .rf-lbl{position:absolute;left:0;right:0;bottom:12px;text-align:center;font:700 11px var(--font-m);letter-spacing:.24em;color:var(--mint);z-index:4}
+
+#lock{position:fixed;inset:0;z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(circle at 50% 40%,#0b3a31,#020d0b 70%);color:var(--mint);font-family:var(--font-m)}
+#lock.on{display:flex}
+#lock .lk-t{font:700 13px var(--font-m);letter-spacing:.3em}
+#lock .lk-s{font:500 12px var(--font-m);opacity:.8;min-height:16px;text-align:center;padding:0 20px}
+#lock .lk-d{display:flex;gap:14px;margin:6px 0}
+#lock .lk-d i{width:16px;height:16px;border-radius:50%;border:2px solid var(--mint);transition:background .15s}
+#lock .lk-d i.f{background:var(--mint);box-shadow:0 0 14px var(--mint)}
+#lock .lk-pad{display:grid;grid-template-columns:repeat(3,76px);gap:12px}
+#lock .lk-pad button{height:76px;border-radius:50%;border:1.5px solid rgba(92,255,200,.5);background:rgba(92,255,200,.07);color:var(--mint);font:600 26px var(--font-m);touch-action:manipulation}
+#lock .lk-pad button:active{background:rgba(92,255,200,.3)}
+#lock .lk-lk{width:84px;height:84px;border-radius:50%;border:2px solid var(--mint);display:grid;place-items:center;box-shadow:0 0 36px rgba(92,255,200,.5);font-size:32px;animation:lkpulse 2.4s ease-in-out infinite}
+@keyframes lkpulse{50%{box-shadow:0 0 60px rgba(92,255,200,.9)}}
+#lock.shake .lk-d{animation:lkshake .4s}
+@keyframes lkshake{20%{transform:translateX(-12px)}40%{transform:translateX(12px)}60%{transform:translateX(-8px)}80%{transform:translateX(8px)}}
+#lock .lk-skip{background:none;border:0;color:var(--muted);font:500 11px var(--font-m);text-decoration:underline;padding:6px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* ===== visual screens ===== */
 .app[data-state="answer"][data-viz] .center{padding:10px 24px 4px 230px}
@@ -502,6 +518,7 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 </style>
 <script type="application/json" id="claude-artifacts-manifest">{"permissions": []}</script>
 
+<div id="lock" role="dialog" aria-label="Enter code"><div class="lk-lk">🔒</div><div class="lk-t" id="lkT">M1NT LOCKED</div><div class="lk-d" id="lkD"></div><div class="lk-s" id="lkS"></div><div class="lk-pad" id="lkP"></div><button class="lk-skip" id="lkSkip" type="button" hidden>Skip for now</button></div>
 <div class="app" id="app" data-state="asleep">
   <header class="top">
     <div class="chips">
@@ -683,7 +700,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v41-2026-11-26';
+var BUILD='v42-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -800,12 +817,12 @@ function bootAnim(){
   for(var i=0;i<3;i++){var r=el('i','boot-r');r.style.animationDelay=(i*.22)+'s';b.appendChild(r);}
   b.appendChild(el('div','boot-sc'));b.appendChild(el('div','boot-t','M1NT  ONLINE'));document.body.appendChild(b);setTimeout(function(){if(b.parentNode)b.remove();},2200);
 }
-function wakeUi(){if(app.getAttribute('data-state')==='asleep'){setUi('awake');sfx('wake');bootAnim();}}
+function wakeUi(){if(typeof LOCKED!=='undefined'&&LOCKED){try{showLock('enter');}catch(e){}return;}if(app.getAttribute('data-state')==='asleep'){setUi('awake');sfx('wake');bootAnim();}}
 function etHour(){try{return parseInt(new Intl.DateTimeFormat('en-US',{hour:'numeric',hour12:false,timeZone:'America/New_York'}).format(new Date()),10)%24;}catch(e){return new Date().getHours();}}
 function greetWord(){var h=etHour();return h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
 var standby=false;
 function byeSleep(t){var k=sleepKind(t)||'goodnight';if(k==='standby'){if(standby)return;standby=true;wxBackdropStop();stopSpeak();closeDrawer();setUi('awake');setMode('listening');$('hint').textContent='Standing by. Say “Hey, Mint” and then talk as long as you like. Say “Stand by, Mint” to pause again.';try{speak('Standing by, Ali.');}catch(e){}return;}standby=false;sleepUi();var n=etHour();var m=k==='standby'?'Standing by':k==='thatsall'?(n>=17?'See you later':'Okay'):(n>=17||n<5?'Goodnight':'Goodbye');$('hint').textContent='';try{speak(m+', Ali.');}catch(e){}}
-function sleepUi(){sfx('sleep');wxBackdropStop();stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
+function sleepUi(){sfx('sleep');if(typeof pinSet==='function'&&pinSet()){LOCKED=true;setTimeout(function(){showLock('enter');},700);}wxBackdropStop();stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
 var idleT=0;
 function armIdle(){clearTimeout(idleT);if(S.mode!=='idle'||app.getAttribute('data-state')!=='answer')return;var dl=document.querySelector('#extra .cv,#extra .wx,#extra .sb,#extra .sim,#extra .needs,#extra .notes')?45000:20000;idleT=setTimeout(function(){if(S.mode==='idle'&&app.getAttribute('data-state')==='answer'&&!drawer.classList.contains('show')&&!ptt.on){wxBackdropStop();setUi('awake');$('hint').textContent=standby?'Standing by. Say “Hey, Mint” to talk.':'Ready. Ask me anything.';renderDock();}},dl);}
 ['pointerdown','keydown'].forEach(function(n){document.addEventListener(n,function(){armIdle();},true);});
@@ -1383,7 +1400,7 @@ function capArm(){wake.cap=true;setMode('listening');micUi();$('hint').textConte
 function submitWake(text){clearTimeout(silTimer);wakePend=null;if(Date.now()<wake.ignoreUntil)return;wake.ignoreUntil=Date.now()+2500;runFromWake(text);}
 function isAwake(){return app.getAttribute('data-state')!=='asleep';}
 function submitHeard(text){
-  clearTimeout(silTimer);wakePend=null;if(Date.now()<wake.ignoreUntil)return;wake.ignoreUntil=Date.now()+2500;
+  if(LOCKED){return;}clearTimeout(silTimer);wakePend=null;if(Date.now()<wake.ignoreUntil)return;wake.ignoreUntil=Date.now()+2500;
   var reply=convo.pending?'clarify':((convo.last&&Date.now()-convo.last.at<120000)?'follow':undefined);
   wake.pausedForSpeech=false;wake.cap=false;if(wakeBE()!=='dictation')micStop();stopSpeak();$('cmd').value='';
   run(text,{voice:true,wake:true,reply:reply});
@@ -2363,6 +2380,8 @@ function routeKnown(q,opt,dry){
   if(/\breminders?\b/.test(s)&&/\b(?:clear|cancel|delete|remove|erase|wipe)\b/.test(s)&&!/\bremind me\b/.test(s)){if(dry)return true;logMic('route','clear reminders');REMS=REMS.filter(function(r){return r.done;});saveRems();showRems(q,'Okay, I cleared your reminders.');return true;}
   if((/^(?:my )?(?:upcoming )?reminders$/.test(s)||/\b(?:what|which|show|list|read|pull up|check|any|see|open|bring up)\b.*\breminders?\b/.test(s))&&!/\bremind me\b/.test(s)){if(dry)return true;logMic('route','reminders list');showRems(q);return true;}
   if(/\bremind me\b|\bset (?:a |an |another )?reminders?\b|\b(?:add|make|create|put) (?:in )?(?:a |an )?reminder\b|\breminder (?:for|to|at|in|that)\b|\bdon'?t let me forget\b|\bping me\b.*\b(?:at|in|tomorrow|tonight)\b/.test(s)&&!/\b(text|message|call|email)\b.*\bremind\b/.test(s.replace(/\bremind me\b/g,''))){if(dry)return true;logMic('route','reminder');addReminder(q,s);return true;}
+  if(wcq<=9&&/\b(?:set|change|reset|update|create|add|new)\b.*\b(?:pin|passcode|pass code|wake code|lock code|lock)\b|\b(?:pin|passcode|wake code)\b.*\b(?:set|change|reset)\b/.test(s)&&!/\b(safety|waiver|waive)\b/.test(s)){if(dry)return true;logMic('route','set pin');showLock('create');return true;}
+  if(wcq<=9&&/\b(?:remove|turn off|disable|delete|clear|get rid of|drop)\b.*\b(?:pin|passcode|pass code|wake code|lock|the code)\b/.test(s)&&!/\b(safety|waiver)\b/.test(s)){if(dry)return true;logMic('route','remove pin');try{localStorage.removeItem('m1nt.pinh');}catch(e){}beginAsk(q);finish({headline:'Wake code removed.',small:true,spoken:'Okay. M1NT will wake without a code on this device.',tags:[srcTag('saved','This device only')]});return true;}
   var wcs0=s.split(' ').length;var _viz=app.getAttribute('data-viz')||'';
   if(wcs0<=8&&/^(?:(?:ok(?:ay)?|alright|cool|great|yeah|yep|perfect)[, ]+)?(?:thanks?(?: so much| a lot| mint)?|thank you(?: so much| mint)?|all done|i'?m done|we'?re done|done|got it|that works|sounds good|nice|perfect|awesome|all good|we'?re good|good to go|that'?s perfect|looks good|that looks good)(?: mint)?$/.test(s)&&!/\b(?:all done|done|all set|all good)\s+mint$/.test(s)&&/^(cal|board|wx)$/.test(_viz)&&!/^(?:ok(?:ay)?[, ]+)?(?:yes|no)$/.test(s)){if(dry)return true;logMic('route','hub back');cmdHub(q,{back:true});return true;}
   if(wcs0<=7&&/^(?:(?:ok(?:ay)?|alright|now)[, ]+)?(?:(?:go |take me |bring me )?(?:back|home)(?: to (?:the )?(?:menu|tabs|home|main(?: menu)?|options|selection))?|(?:the |main )?menu|show (?:me )?(?:the )?(?:menu|tabs|options|everything|home|selection)|(?:what|which) (?:can|do) (?:you|i) (?:do|have|open)|what do you have|what are my options|home screen|main screen|selection|tabs|options|all (?:the )?tabs)(?: mint)?$/.test(s)){if(dry)return true;logMic('route','hub');cmdHub(q);return true;}
@@ -2500,6 +2519,26 @@ function tossNode(kind,result){
   setTimeout(function(){if(kind==='dice'){var n=0,iv=setInterval(function(){obj.textContent=String(1+Math.floor(Math.random()*6));if(++n>10){clearInterval(iv);obj.textContent=String(result);}},70);}r.textContent=String(result).toUpperCase();r.classList.add('on');},1100);
   return w;
 }
+
+/* ---------- wake code (PIN) ---------- */
+var LOCKED=false,lkMode='enter',lkBuf='',lkNew='',lkFails=0,lkUntil=0;
+function pinSet(){return !!store('pinh');}
+async function pinHash(p){var salt=store('pins')||(function(){var x=String(Math.random()).slice(2)+Date.now();store('pins',x);return x;})();var data=new TextEncoder().encode(salt+':'+p);try{var h=await crypto.subtle.digest('SHA-256',data);return Array.from(new Uint8Array(h)).map(function(b){return ('0'+b.toString(16)).slice(-2);}).join('');}catch(e){var n=0;for(var i=0;i<data.length;i++)n=(n*31+data[i])|0;return 'x'+n;}}
+(function(){var P=$('lkP');['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(function(k){var b=el('button',null,k);b.type='button';if(!k){b.style.visibility='hidden';}b.addEventListener('click',function(){lkKey(k);});P.appendChild(b);});
+  document.addEventListener('keydown',function(e){if(!$('lock').classList.contains('on'))return;if(/^\d$/.test(e.key))lkKey(e.key);else if(e.key==='Backspace')lkKey('⌫');});
+  $('lkSkip').addEventListener('click',function(){hideLock();});})();
+function lkDraw(){var d=$('lkD');clear(d);for(var i=0;i<4;i++){d.appendChild(el('i',i<lkBuf.length?'f':''));}}
+function showLock(mode){lkMode=mode||(pinSet()?'enter':'create');lkBuf='';lkNew='';lkDraw();$('lkT').textContent=lkMode==='enter'?'M1NT LOCKED':(lkMode==='confirm'?'CONFIRM YOUR CODE':'CHOOSE A 4-DIGIT CODE');$('lkS').textContent=lkMode==='enter'?'Enter your code to wake M1NT.':(lkMode==='create'?'This code will be needed to wake M1NT on this device.':'Enter it once more.');$('lkSkip').hidden=lkMode==='enter';$('lock').classList.add('on');if(lkMode==='enter')LOCKED=true;}
+function hideLock(){$('lock').classList.remove('on');}
+async function lkKey(k){
+  if(Date.now()<lkUntil){$('lkS').textContent='Too many tries. Wait '+Math.ceil((lkUntil-Date.now())/1000)+' seconds.';return;}
+  if(k==='⌫'){lkBuf=lkBuf.slice(0,-1);lkDraw();return;}if(lkBuf.length>=4)return;lkBuf+=k;lkDraw();sfx('tick');if(lkBuf.length<4)return;
+  var code=lkBuf;
+  if(lkMode==='enter'){var h=await pinHash(code);if(h===store('pinh')){lkFails=0;LOCKED=false;hideLock();sfx('wake');try{wakeUi();}catch(e){}setTimeout(remCheck,800);}else{lkFails++;$('lock').classList.remove('shake');void $('lock').offsetWidth;$('lock').classList.add('shake');lkBuf='';setTimeout(lkDraw,300);$('lkS').textContent=lkFails>=5?'Too many tries. Locked for 30 seconds.':'Wrong code.';if(lkFails>=5){lkUntil=Date.now()+30000;lkFails=0;}}return;}
+  if(lkMode==='create'){lkNew=code;lkMode='confirm';lkBuf='';lkDraw();$('lkT').textContent='CONFIRM YOUR CODE';$('lkS').textContent='Enter it once more.';return;}
+  if(lkMode==='confirm'){if(code===lkNew){store('pinh',await pinHash(code));hideLock();LOCKED=false;beginAsk('Set wake code');finish({headline:'Wake code set.',small:true,spoken:'Done. M1NT will ask for your code every time it wakes on this device.',tags:[srcTag('saved','This device only')],srcNote:'Say remove the code to turn it off.'});}else{$('lock').classList.remove('shake');void $('lock').offsetWidth;$('lock').classList.add('shake');lkMode='create';lkBuf='';lkNew='';lkDraw();$('lkT').textContent='CHOOSE A 4-DIGIT CODE';$('lkS').textContent='Those did not match. Try again.';}}
+}
+if(pinSet()){LOCKED=true;showLock('enter');}else if(!store('pinasked')){store('pinasked',true);setTimeout(function(){if(!pinSet())showLock('create');},1200);}
 /* ---------- reminders (fire while this screen is open) ---------- */
 var REMS=store('rems')||[];var remAdvised=false;
 function saveRems(){store('rems',REMS);}
@@ -2544,7 +2583,7 @@ function remNode(main,fire){
 }
 function showRems(q,say,main,fire){beginAsk(q);var up=REMS.filter(function(r){return !r.done;});finish({headline:fire?'Reminder':(main?'Reminder set':(up.length?up.length+plural(up.length,' reminder',' reminders'):'No reminders')),small:true,viz:'board',spoken:say||(up.length?'You have '+up.length+plural(up.length,' reminder. ',' reminders. ')+up.slice(0,4).map(function(r){return r.t+', '+fmtWhen(r.at);}).join('. '):'You have no reminders.'),node:remNode(main,fire),tags:[srcTag('saved','Saved on this device'),srcTag('na','Fires while this screen is open')],srcNote:'Reminders go off only while M1NT is open on this device.',acts:fire?[{label:'Snooze 10 min',fn:function(){REMS.push({id:Date.now(),t:main.t,at:Date.now()+600000,done:false});saveRems();run('show my reminders',{});}},{label:'Done',fn:function(){run('show my reminders',{});}}]:[{label:'Clear all',fn:function(){REMS=[];saveRems();run('show my reminders',{});}}]});}
 function remCheck(){
-  var now=Date.now();var due=REMS.filter(function(r){return !r.done&&r.at<=now;});if(!due.length)return;
+  if(LOCKED)return;var now=Date.now();var due=REMS.filter(function(r){return !r.done&&r.at<=now;});if(!due.length)return;
   due.forEach(function(r){r.done=true;});saveRems();var r=due[0];
   try{wakeUi();}catch(e){}sfx('unlock');try{beep();}catch(e){}
   try{if(window.Notification&&Notification.permission==='granted')new Notification('M1NT reminder',{body:r.t});}catch(e){}
@@ -2617,7 +2656,7 @@ async function cmdNeedsBoard(q,force){
 }
 
 function run(raw,opt){
-  opt=opt||{};var q=String(raw||'').trim();if(!q)return;$('hint').textContent='';if(!opt.voice&&standby)standby=false;
+  if(LOCKED){showLock('enter');return;}opt=opt||{};var q=String(raw||'').trim();if(!q)return;$('hint').textContent='';if(!opt.voice&&standby)standby=false;
   convo.armAfterSpeech=null;convo.armOk=!!opt.voice||wake.on;
   if(opt.fresh){convo.pending=null;convo.last=null;}
   if(convo.pending&&(opt.reply||shortReply(q)||convo.pending.kind==='textbody'||convo.pending.kind==='remwhen')){var comp=completePending(q);if(comp){logMic('reply','completed: '+comp.slice(0,70));q=comp;opt.clarified=true;}}
