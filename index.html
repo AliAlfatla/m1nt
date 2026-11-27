@@ -233,7 +233,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v21-2026-11-26';
+var BUILD='v22-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -800,12 +800,11 @@ var HEY_RE=new RegExp('\\b(?:(?:hey|hay|hi|ok|okay|a)[,.!\\s]*'+NM+'|a\\s?men)\\
 var WAKE_ANY=new RegExp('(?:'+HEY_RE.source+')|(?:wake\\s?up[,.!\\s]+'+NM+')|(?:good\\s?night[,.!\\s]+'+NM+')','i');
 var SNM='(?:mint|mints|mince|minty|mynt|m1nt|mind|min|mid|man|men|amen|moment|mitt|meant|mean|mine|mm+|minute|me|my|may|mate|mud|mod)';
 var SLC='(?:stand\\s?by|good\\s?night|that(?:\'s|\\s+is|\\s+will\\s+be)\\s+all)';
-var SLEEP_RE=new RegExp('(?:\\b'+SLC+'\\b[,.!\\s]*(?:for\\s+now[,.!\\s]*)?\\b'+SNM+'\\b)|(?:\\b'+SNM+'\\b[,.!\\s]+'+SLC+'\\b)','i');
+var SLEEP_RE=new RegExp('^\\W*(?:(?:hey|ok|okay)[,.!\\s]+)?(?:(?:'+SLC+'\\W+(?:for\\s+now\\W+)?'+SNM+')|(?:'+SNM+'\\W+'+SLC+'(?:\\W+for\\s+now)?))\\W*$','i');
 function sleepKind(t){t=String(t||'').trim();if(t.split(/\s+/).length>7)return null;
   var k=/\bstand\s?by\b/i.test(t)?'standby':/\bthat(?:'s|\s+is|\s+will\s+be)\s+all\b/i.test(t)?'thatsall':/\bgood\s?night\b/i.test(t)?'goodnight':null;
   if(!k)return null;
   if(SLEEP_RE.test(t))return k;
-  if(k!=='goodnight'&&/^\W*(?:stand\s?by|that(?:'s|\s+is|\s+will\s+be)\s+all)(?:\W+\w+)?\W*$/i.test(t))return k;   /* loose: standby / that's all + one misheard word */
   return null;}
 function isGoodnight(t){return !!sleepKind(t);}
 var MICOFF_RE=new RegExp('^\\s*(?:(?:hey|ok|okay)[,.!\\s]*)?(?:(?:'+SNM+'[,.!\\s]+)?(?:please\\s+)?turn\\s+(?:my\\s+|the\\s+)?(?:mic|microphone)\\s+off[,.!\\s]*'+SNM+'|(?:please\\s+)?turn\\s+(?:my\\s+|the\\s+)?(?:mic|microphone)\\s+off[,.!\\s]*(?:please)?)[.!\\s]*$','i');
