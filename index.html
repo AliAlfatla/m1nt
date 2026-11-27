@@ -233,7 +233,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v16-2026-11-26';
+var BUILD='v17-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -795,7 +795,7 @@ var NM='(?:mint|mints|mince|minty|mynt|mind|m1nt|min|mid|man|men|mean|meant|ment
 var WAKEUP_RE=new RegExp('\\b(?:wake\\s?up|wakeup)[,.!\\s]+'+NM+'\\b','i');
 var HEY_RE=new RegExp('\\b(?:(?:hey|hay|hi|ok|okay|a)[,.!\\s]*'+NM+'|a\\s?men)\\b[,.!\\s]*','i');
 var WAKE_ANY=new RegExp('(?:'+HEY_RE.source+')|(?:wake\\s?up[,.!\\s]+'+NM+')|(?:good\\s?night[,.!\\s]+'+NM+')','i');
-var SNM='(?:mint|mints|mince|minty|mynt|m1nt|mind|min|mid)';
+var SNM='(?:mint|mints|mince|minty|mynt|m1nt|mind|min|mid|man|men|amen|moment|mitt|meant|mean|mine|mm+|minute)';
 var SLC='(?:stand\\s?by|good\\s?night|that(?:\'s|\\s+is|\\s+will\\s+be)\\s+all)';
 var SLEEP_RE=new RegExp('(?:\\b'+SLC+'\\b[,.!\\s]*(?:for\\s+now[,.!\\s]*)?\\b'+SNM+'\\b)|(?:\\b'+SNM+'\\b[,.!\\s]+'+SLC+'\\b)','i');
 function isGoodnight(t){return SLEEP_RE.test(t)&&String(t).trim().split(/\s+/).length<=7;}
@@ -1160,7 +1160,7 @@ async function freeClaude(q){
   if(rr.error){doneDoing('Claude did not answer');var b=el('div','banner na');b.appendChild(el('b',null,'CLAUDE. '));b.appendChild(document.createTextNode(rr.error));$('extra').insertBefore(b,$('extra').firstChild);setMode('idle');return;}
   doneDoing('Claude answered · '+usageLine());$('ans').textContent=rr.text;$('ans').className='ans small';pushHist({q:q,a:rr.text,tags:['Claude'],use:usageLine(),at:Date.now()});speak(rr.text,false);
 }
-function histText(){return 'NOTE: Ali speaks to you through automatic speech-to-text, so words and names can be misheard (business words: Evermint, Urable, Quo, Square, detailing, ceramic coating). Interpret sensibly and ask only if truly unclear.\n'+convo.hist.slice(-8).map(function(h){return 'Ali: '+h.q+'\nM1NT: '+String(h.a).slice(0,500);}).join('\n');}
+function histText(){return 'NOTE: Ali speaks to you through automatic speech-to-text, so words and names can be misheard (business words: Evermint, Urable, Quo, Square, detailing, ceramic coating). Interpret sensibly and ask only if truly unclear.\nSTYLE: Answer only what Ali just asked, in short spoken sentences. Never repeat or re-mention anything already said earlier in this conversation (appointments, weather, reminders, schedule items); mention a given upcoming appointment at most once, and only if it is relevant or asked about. If Ali is only saying thanks, goodnight or goodbye, reply with one short friendly line and nothing else.\n'+convo.hist.slice(-8).map(function(h){return 'Ali: '+h.q+'\nM1NT: '+String(h.a).slice(0,500);}).join('\n');}
 async function wxBlurb(){
   var w=await jget('https://api.open-meteo.com/v1/forecast?latitude=38.2527&longitude=-85.7585&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=3');
   var d=w.daily;return [0,1,2].map(function(i){return wxDayName(i)+': '+(WXC[d.weather_code[i]]||'mixed')+', high '+Math.round(d.temperature_2m_max[i])+', low '+Math.round(d.temperature_2m_min[i])+', '+d.precipitation_probability_max[i]+'% precipitation';}).join('; ');
