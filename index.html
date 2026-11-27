@@ -408,6 +408,7 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 .boot-t{position:relative;font:600 13px 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.7em;color:var(--mint);text-shadow:0 0 14px rgba(92,255,200,.8);opacity:0;animation:bootT 1.6s ease-in-out .15s forwards}
 @keyframes bootT{20%,70%{opacity:1}100%{opacity:0;letter-spacing:1em}}
 @keyframes bootOut{to{opacity:0}}
+.ltabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}.ltab{background:rgba(92,255,200,.06);border:1px solid var(--line);color:var(--mint);border-radius:10px;padding:8px 14px;font:600 11px var(--font-m);letter-spacing:.1em;cursor:pointer;display:flex;gap:8px;align-items:center}.ltab b{font-size:15px}.ltab.on{background:rgba(92,255,200,.2);box-shadow:0 0 18px rgba(92,255,200,.45)}.nc-empty{padding:30px;opacity:.7;font:12px var(--font-m)}
 .bd-pill{display:inline-block;margin-top:6px;font:600 10px var(--font-m);letter-spacing:.12em;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--mint)}
 .bd-pill.warn{color:var(--warn);border-color:rgba(255,200,87,.6)}.bd-pill.bad{color:var(--bad);border-color:rgba(255,123,114,.6)}
 .nc-OK .nc-ic{color:var(--mint)}.nc-WARN{border-color:rgba(255,200,87,.55)}.nc-WARN .nc-ic{color:var(--warn);border-color:var(--warn)}.nc-BAD{border-color:rgba(255,123,114,.6)}.nc-BAD .nc-ic{color:var(--bad);border-color:var(--bad);animation:pulse 1.3s ease-in-out infinite}
@@ -490,7 +491,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v36-2026-11-26';
+var BUILD='v37-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -596,7 +597,7 @@ function setUi(state){
 var sfxOn=store('sfx')!==false,sfxCtx=null;
 function sfx(kind){
   if(!sfxOn)return;try{var A=window.AudioContext||window.webkitAudioContext;if(!A)return;sfxCtx=sfxCtx||new A();var a=sfxCtx;if(a.state==='suspended')a.resume();
-    var seqs={open:[[660,0,.09],[990,.07,.12]],wake:[[392,0,.12],[587,.1,.12],[784,.2,.22]],sleep:[[587,0,.14],[440,.12,.14],[294,.24,.26]],pick:[[880,0,.07]],whoosh:null};
+    var seqs={open:[[660,0,.09],[990,.07,.12]],wake:[[392,0,.12],[587,.1,.12],[784,.2,.22]],sleep:[[587,0,.14],[440,.12,.14],[294,.24,.26]],pick:[[880,0,.07]],tick:[[1200,0,.03]],whoosh:null};
     var now=a.currentTime,vol=.03;
     if(kind==='whoosh'){var len=Math.floor(a.sampleRate*.5),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);for(var i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.sin(Math.PI*i/len);var src=a.createBufferSource();src.buffer=buf;var f=a.createBiquadFilter();f.type='bandpass';f.Q.value=1.2;f.frequency.setValueAtTime(400,now);f.frequency.exponentialRampToValueAtTime(3200,now+.45);var g=a.createGain();g.gain.value=.05;src.connect(f);f.connect(g);g.connect(a.destination);src.start(now);return;}
     (seqs[kind]||[]).forEach(function(n){var o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=n[0];g.gain.setValueAtTime(0,now+n[1]);g.gain.linearRampToValueAtTime(vol,now+n[1]+.015);g.gain.exponentialRampToValueAtTime(.0008,now+n[1]+n[2]+.12);o.connect(g);g.connect(a.destination);o.start(now+n[1]);o.stop(now+n[1]+n[2]+.15);});
@@ -822,10 +823,18 @@ function tagFor(rec){
   return srcTag('live','Live '+stampET(rec.at));
 }
 var bridgeAbort=null;
+var txGhost=null;
+function killGhost(g){try{if(g&&g.parentNode){var a=g.animate?g.animate([{opacity:1},{opacity:0}],{duration:200,fill:'forwards'}):null;if(a)a.onfinish=function(){if(g.parentNode)g.parentNode.removeChild(g);};else g.parentNode.removeChild(g);}}catch(e){}}
+function mkGhost(){
+  if(txGhost){killGhost(txGhost);txGhost=null;}
+  try{var ex=$('extra'),pv=app.getAttribute('data-viz')||'';if(!ex.firstChild||!/^(cal|board|center|wx)$/.test(pv))return;var r0=ex.getBoundingClientRect();if(r0.width<120||r0.height<80)return;
+    var g=ex.cloneNode(true);g.removeAttribute('id');g.className='tx-ghost';g.style.cssText='position:fixed;left:'+r0.left+'px;top:'+r0.top+'px;width:'+r0.width+'px;height:'+r0.height+'px;margin:0;z-index:70;pointer-events:none;overflow:hidden;transform-origin:50% 50%;border:1px solid var(--mint);border-radius:6px;background:rgba(6,20,18,.6)';document.body.appendChild(g);
+    var gw=Math.min(r0.width,r0.height)*0.26,sx=gw/r0.width,sy=gw/r0.height;g.animate([{transform:'scale(1)',borderRadius:'6px'},{transform:'scale('+sx+','+sy+')',borderRadius:'22px'}],{duration:480,easing:'cubic-bezier(.6,0,.3,1)',fill:'forwards'});txGhost=g;sfx('tick');}catch(e){txGhost=null;}
+}
 function beginAsk(q){
   newCommandUse(q);wakeUi();setUi('answer');
   if(bridgeAbort){try{bridgeAbort.abort();}catch(e){}bridgeAbort=null;}
-  cur={q:q};app.removeAttribute('data-viz');simClear();wxBackdropStop();var oqb=$('qbar');if(oqb)oqb.remove();
+  mkGhost();cur={q:q};app.removeAttribute('data-viz');simClear();wxBackdropStop();var oqb=$('qbar');if(oqb)oqb.remove();
   $('asked').textContent='';$('asked').appendChild(el('b',null,'You asked  '));$('asked').appendChild(document.createTextNode(q));
   $('doing').className='doing';$('doing').textContent='';$('ans').textContent='';clear($('extra'));clear($('srcRow'));clear($('acts'));
   setMode('thinking');renderDock();
@@ -836,7 +845,9 @@ function usageLine(){var u=use.last;var parts=[];if(u.runs)parts.push(u.runs+' M
 function finish(o){
   doneDoing('Done · '+clockET(Date.now())+' ET · '+usageLine());sfx('open');
   var a=$('ans');a.textContent=o.headline;a.className='ans'+(o.small?' small':'');
-  var ex=$('extra');clear(ex);
+  var ex=$('extra');var ghost=txGhost;txGhost=null;if(ghost&&!o.node){killGhost(ghost);ghost=null;}
+  if(ghost){setTimeout(function(){killGhost(ghost);},520);}
+  clear(ex);
   if(o.node){var ncl=String(o.node.className||'');var isCv=/\bcv\b/.test(ncl);app.setAttribute('data-viz',o.viz||(isCv?'cal':(/\b(clk|tmx|swx|calc|toss)\b/.test(ncl)?'center':(/\b(sim|needs)\b/.test(ncl)?'board':'1'))));ex.appendChild(o.node);
     var fxk=isCv?'grid':(/\bbd-health\b/.test(ncl)?'pulse':(/\bbd-cust\b/.test(ncl)?'net':(/\bbd-leads\b/.test(ncl)?'stream':(/\bneeds\b/.test(ncl)?'radar':(/\b(clk|tmx|swx|calc|toss)\b/.test(ncl)?'rings':(/\bsim\b/.test(ncl)?'chat':null))))));if(fxk){try{wxBackdrop(fxk);}catch(e){}}if(isCv)hudify(o.node);}
   if(o.rows&&o.rows.length){var rs=el('div','rows');o.rows.forEach(function(r){var row=el('div','row');row.appendChild(el('div','t',r.t));var n=el('div','n');if(r.link){var al=el('a',null,r.n);al.href=r.link;al.target='_blank';al.rel='noopener noreferrer';al.style.color='var(--mint)';n.appendChild(al);}else n.appendChild(document.createTextNode(r.n));if(r.note)n.appendChild(el('div','note',r.note));row.appendChild(n);rs.appendChild(row);});ex.appendChild(rs);}
@@ -847,6 +858,7 @@ function finish(o){
   var stp=el('button','btn','Stop talking');stp.type='button';stp.addEventListener('click',function(){stopSpeak();});if(!muted)ac.appendChild(stp);
   var sp=el('button','btn','Speak again');sp.type='button';sp.addEventListener('click',function(){speak(spoken,true);});ac.appendChild(sp);
   (o.acts||[]).forEach(function(x){var b=el('button','btn'+(x.pri?' pri':''),x.label);b.type='button';b.addEventListener('click',x.fn);ac.appendChild(b);});
+  if(ghost&&ex.animate){try{ex.animate([{transform:'scale(.2)',opacity:0,filter:'blur(6px)'},{transform:'scale(.2)',opacity:0,filter:'blur(6px)',offset:.25},{transform:'scale(1)',opacity:1,filter:'blur(0)'}],{duration:700,easing:'cubic-bezier(.2,.8,.2,1)'});}catch(e){}}
   cur.spoken=spoken;
   pushHist({q:cur.q,a:o.headline+(o.rows&&o.rows.length?' · '+o.rows.map(function(r){return r.t+' '+r.n;}).join('; '):''),tags:(o.tags||[]).map(function(t){return t.textContent;}),use:usageLine(),at:Date.now()});
   updatePanels();renderDock();
@@ -1407,8 +1419,26 @@ async function cmdCustomers(q,opt){
     finish({headline:items.length+(items.length===1?' customer':' customers')+' coming up',small:true,spoken:'You have '+items.length+(items.length===1?' customer':' customers')+' coming up in the next 30 days. '+rows.slice(0,5).map(function(p){return p[0]+', '+p[2];}).join('. ')+'.'+(due?' '+due+' still '+(due===1?'needs':'need')+' payment attention.':''),node:boardNode('bd-cust',[[items.length,'Customers'],[due,'Payment']].filter(function(c){return c[0]>0;}),items),tags:[srcTag('live','Claude via Make'),srcTag('live','Read '+clockET(Date.now())+' ET')],srcNote:'Next 30 days from your calendar snapshot and booked jobs. Read-only.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}}]});
   }catch(e){if(cur!==my)return;bridgeFail(q,failCopy(e));}
 }
-function cmdLeads(q){
-  beginAsk(q);finish({headline:'Leads are not connected to this screen yet.',small:true,spoken:'Leads live in Quo, and this screen is not connected to Quo yet, so I have nothing real to show. I will not make anything up.',node:boardNode('bd-leads',[[0,'Leads']],[{type:'WARN',icon:'?',k:'NOT CONNECTED',who:'No lead feed yet',detail:'Texting and Quo are still simulation-only here. When you say the word, I can connect read-only lead data.',pill:'SIMULATION ONLY',pillk:'warn'}]),tags:[srcTag('na','Not connected')]});
+var leadsCache=null;
+var LEADS_Q='[LEADS REQUEST] Using only the Leads snapshot from Notion in the business data, list every OPEN lead. Output ONLY lines in the form NAME|VEHICLE|STATUS|STAGE|RECEIVED|NEXT FOLLOW-UP|NOTE, copied from the snapshot. NOTE must be under 14 words. If the snapshot is missing or empty output only the word NONE. No other words.';
+function leadGroup(p){var t=(p[2]+' '+p[3]).toLowerCase();if(/future|interested|thinking/.test(t))return 'future';if(/quote sent/.test(t))return 'quoted';if(/awaiting|follow-up|follow up/.test(t))return 'waiting';if(/new lead|first contact|second contact|third contact|contacted|call attempted/.test(t))return 'new';return 'other';}
+async function cmdLeads(q,opt){
+  beginAsk(q);doing('reading your leads from Notion through Make');var my=cur;
+  if(!BR){finish({headline:'Leads need the Claude link.',small:true,spoken:'Leads need the Claude link in Setup.',tags:[srcTag('na','Unavailable')]});return;}
+  try{var t;if(!(opt&&opt.live)&&leadsCache&&Date.now()-leadsCache.at<300000)t=leadsCache.t;else{t=await bridgePost(LEADS_Q,'NOTE: machine-readable request from the screen. Output exactly the lines requested.',50000);leadsCache={at:Date.now(),t:t};addUse('claude',1);usageChip();}
+    if(cur!==my)return;var rows=String(t).split(/\n+/).map(function(l){return l.split('|').map(function(x){return x.trim();});}).filter(function(p){return p.length>=6&&p[0];});
+    if(!rows.length){finish({headline:'I cannot see your leads yet.',small:true,spoken:'The leads snapshot is not connected to this screen yet, so I have nothing real to show. I will not make anything up.',node:boardNode('bd-leads',[[0,'Leads']],[{type:'WARN',icon:'?',k:'NOT CONNECTED',who:'Leads snapshot not readable',detail:'The data is saved in Make, but the screen bridge has not been allowed to read it yet.',pill:'NEEDS YES',pillk:'warn'}]),tags:[srcTag('na','Not connected')]});return;}
+    var G={new:'New',quoted:'Quoted',waiting:'Waiting',future:'Later'};
+    var recs=rows.map(function(p){var g=leadGroup(p);var due=/^nov 2[67]$|today|tomorrow/i.test(p[5]||'');return {g:g,due:due,type:due?'WARN':'CUSTOMER',icon:p[0].split(/\s+/).map(function(w){return w.charAt(0);}).join('').slice(0,2).toUpperCase(),k:(p[2]||'').toUpperCase(),who:p[0],detail:p[1]+(p[6]?' · '+p[6]:''),pill:(p[5]&&!/none/i.test(p[5]))?'NEXT '+p[5].toUpperCase():'NO DATE',pillk:due?'warn':''};});
+    var cnt=function(k){return recs.filter(function(r){return r.g===k;}).length;};
+    var w=el('div','needs bd-leads');var tabs=el('div','ltabs');var holder=el('div','lhold');
+    var defs=[['all','All',recs.length],['new','New',cnt('new')],['quoted','Quoted',cnt('quoted')],['waiting','Waiting',cnt('waiting')],['future','Later',cnt('future')],['due','Due now',recs.filter(function(r){return r.due;}).length]];
+    function show(k,anim){clear(holder);var list=recs.filter(function(r){return k==='all'||(k==='due'?r.due:r.g===k);});var inner=boardNode('bd-leads',[],list).querySelector('.needs-grid');if(!list.length){inner=el('div','nc-empty','Nothing in this tab.');}holder.appendChild(inner);if(anim&&holder.animate)holder.animate([{opacity:0,transform:'translateY(10px) scale(.98)'},{opacity:1,transform:'none'}],{duration:320,easing:'ease-out'});[].forEach.call(tabs.children,function(b){b.classList.toggle('on',b.getAttribute('data-k')===k);});sfx('tick');}
+    defs.forEach(function(d){var b=el('button','ltab');b.type='button';b.setAttribute('data-k',d[0]);b.appendChild(el('b',null,String(d[2])));b.appendChild(el('span',null,d[1]));b.addEventListener('click',function(){show(d[0],true);});tabs.appendChild(b);});
+    w.appendChild(tabs);w.appendChild(holder);show('all',false);
+    var due=recs.filter(function(r){return r.due;}).length;
+    finish({headline:recs.length+' open leads',small:true,spoken:'You have '+recs.length+' open leads. '+cnt('quoted')+' have a quote out, '+cnt('waiting')+' are waiting on a reply, '+cnt('new')+' are new or in first contact, and '+cnt('future')+' are for later.'+(due?' '+due+' '+(due===1?'is':'are')+' due for follow-up by tomorrow.':'')+' Tap a tab to filter.',node:w,tags:[srcTag('live','Notion via Make'),srcTag('live','Snapshot, not live')],srcNote:'From your Leads CRM snapshot. Read-only. Say refresh leads to re-read.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}}]});
+  }catch(e){if(cur!==my)return;bridgeFail(q,failCopy(e));}
 }
 function gameLine(ev){
   var c=ev.competitions&&ev.competitions[0];if(!c)return null;var h=c.competitors.filter(function(x){return x.homeAway==='home';})[0],a=c.competitors.filter(function(x){return x.homeAway==='away';})[0];
@@ -1939,7 +1969,7 @@ function winText(w,off,a,b,lab){
   return lab+': '+(lo===hi?'about '+hi:lo+' to '+hi)+' degrees and '+txt+'.';
 }
 function flipFrom(rect,sel){
-  sfx('whoosh');document.querySelectorAll('.wx-ghost').forEach(function(g){var an=g.animate?g.animate([{opacity:1,transform:'scale(1)'},{opacity:0,transform:'scale(1.05)'}],{duration:900,easing:'ease-in',fill:'forwards'}):null;if(an)an.onfinish=function(){g.remove();};else g.remove();});
+  document.querySelectorAll('.wx-ghost').forEach(function(g){var an=g.animate?g.animate([{opacity:1,transform:'scale(1)'},{opacity:0,transform:'scale(1.05)'}],{duration:900,easing:'ease-in',fill:'forwards'}):null;if(an)an.onfinish=function(){g.remove();};else g.remove();});
   if(!rect)return;setTimeout(function(){var nw=document.querySelector(sel);if(!nw||!nw.animate)return;var nr=nw.getBoundingClientRect();if(!nr.width)return;
     var dx=rect.l-nr.left,dy=rect.t-nr.top,sx=Math.max(.05,rect.w/nr.width),sy=Math.max(.05,rect.h/nr.height);
     nw.style.transformOrigin='0 0';nw.animate([{transform:'translate('+dx+'px,'+dy+'px) scale('+sx+','+sy+')',opacity:0,offset:0},{opacity:.85,offset:.35},{transform:'none',opacity:1,offset:1}],{duration:1500,easing:'cubic-bezier(.22,.9,.25,1)',fill:'backwards'});
@@ -2113,7 +2143,7 @@ function routeKnown(q,opt,dry){
   /* --- boards, sounds --- */
   if(/\b(system health|health check|diagnostics?|system status|status check|how(?:'?s| is) (?:everything|the system|it all) (?:running|working|looking|going)|is (?:everything|the system|it all|everything running) (?:working|running|ok|okay|fine|good|up)|check (?:the |my |all )?(?:system|connections?|everything)|are (?:we|you|things|all systems) (?:up|online|working|good)|all systems)\b/.test(s)&&!/\b(weather|timer|calendar)\b/.test(s)){if(dry)return true;logMic('route','health');cmdHealth(q);return true;}
   if(/\b(?:my|our|the) (?:upcoming )?(?:customers|clients)\b|\b(?:customer|client) list\b|\bwho(?:'?s| is| are) (?:coming|booked|on (?:the )?books)\b|\bshow (?:me )?(?:all )?(?:customers|clients)\b|\bpull up (?:the |my )?(?:customers|clients)\b/.test(s)&&!/\b(text|message|call|email|send|tell|remind)\b/.test(s)&&wcq<=12){if(dry)return true;logMic('route','customers');cmdCustomers(q,opt);return true;}
-  if(/\b(?:my|our|the|new|any|show me|pull up) leads?\b|\blead list\b|\bany new leads\b/.test(s)&&!/\b(text|message|call|email|send)\b/.test(s)&&wcq<=10){if(dry)return true;logMic('route','leads');cmdLeads(q);return true;}
+  if(/\b(?:my|our|the|new|any|show me|pull up|open|check|see|about|status of|how are|how r|what are) (?:my |our |the )?leads?\b|\bleads? (?:look|looking|status|board|list|pipeline|update|today)\b|\blead list\b|\bany (?:new )?leads\b|\bwho(?:'s| is)? (?:are )?(?:my )?(?:new )?leads\b|\bsales pipeline\b|\brefresh (?:my )?leads\b/.test(s)&&!/\b(text|message|call|email|send)\b/.test(s)&&wcq<=10){if(dry)return true;logMic('route','leads');cmdLeads(q,/refresh/.test(s)?{live:true}:undefined);return true;}
   var sfm=/\b(?:turn|switch|set)?\s*(?:the )?(?:sounds?|sound effects|chimes?|sfx)\s+(on|off)\b|\b(mute|unmute)\s+(?:the )?(?:sounds?|sound effects|chimes?|sfx)\b|\bturn (on|off) (?:the )?(?:sounds?|sound effects|chimes?)\b/.exec(s);
   if(sfm&&wcq<=8){if(dry)return true;var on=(sfm[1]||sfm[3]||'')==='on'||sfm[2]==='unmute';sfxOn=on;store('sfx',on);logMic('route','sounds '+(on?'on':'off'));beginAsk(q);finish({headline:'Sounds '+(on?'on':'off')+'.',small:true,spoken:on?'Okay, sounds are on.':'Okay, sounds are off.',tags:[srcTag('live','On this screen')]});if(on)sfx('wake');return true;}
   /* --- timer edits and window controls --- */
