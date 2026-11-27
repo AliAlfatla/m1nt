@@ -784,7 +784,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v92-2026-11-27';
+var BUILD='v93-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -3865,7 +3865,7 @@ function run(raw,opt){
   var lx=(simCtl&&simCtl.node.isConnected)?null:lexTalk(q);if(lx){logMic('route','chat '+lx.lang);beginAsk(q);SPK_LANG=lx.lang==='en'?null:LANGTAG[lx.lang];finish({headline:lx.text,small:true,spoken:lx.text,tags:[srcTag('live','Just talking')]});setTimeout(function(){SPK_LANG=null;},9000);return;}
   var stk=smallTalk(q);if(stk){logMic('route','small talk');beginAsk(q);finish({headline:stk,small:true,spoken:stk,tags:[srcTag('live','Just talking')]});return;}
   if(routeKnown(q,opt))return;
-  if(BR&&!opt.live&&!opt.nocache&&!opt.reply&&store('autoclaude')===false&&wcq>=2&&!wxCtxNow()){
+  if(BR&&!opt.live&&!opt.nocache&&!opt.reply&&store('autoclaude')!==true&&wcq>=2&&!wxCtxNow()){
     if(/^(?:always ask claude|ask claude (?:automatically|without asking)|stop asking before claude|don'?t ask before claude)/i.test(q)){store('autoclaude',true);beginAsk(q);finish({headline:'Okay. I will ask Claude without checking first.',small:true,spoken:'Okay. From now on I will ask Claude without checking with you first.',tags:[srcTag('live','Setting saved')]});return;}
     convo.askC={q:q,opt:opt,until:Date.now()+90000};beginAsk(q);
     finish({headline:'I do not have that one built in. Want me to ask Claude?',small:true,spoken:'I do not have that one built in. Want me to ask Claude?',acts:[{label:'Yes, ask Claude',pri:true,fn:function(){var a=convo.askC;convo.askC=null;if(a)cmdBridge(a.q,a.opt);}},{label:'No',fn:function(){convo.askC=null;beginAsk('never mind');finish({headline:'Okay, I will leave it.',small:true,spoken:'',tags:[srcTag('live','Just talking')]});}}],tags:[srcTag('live','Asking you first')]});
