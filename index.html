@@ -17,8 +17,8 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%}
-html.tv body{font-size:21px;overflow:hidden}
-html.tv .app{padding:var(--tvin,5vh 5vw);box-sizing:border-box;height:100vh}
+html.tv body{overflow:hidden}
+html.tv .app{position:fixed;left:50%;top:50%;width:1280px;height:720px;max-width:none;box-sizing:border-box;transform:translate(-50%,-50%) scale(var(--tvk,1));transform-origin:center center}
 html.tv{cursor:none}
 html.tv .hint,html.tv .banner{display:none}
 
@@ -714,7 +714,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v49-2026-11-27';
+var BUILD='v50-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -2726,7 +2726,8 @@ function remCheck(){
 
 /* ---------- TV mode ---------- */
 var TV={on:false,inset:+(store('tvInset')||5),t:null};
-function tvApply(){var h=document.documentElement;h.classList.toggle('tv',TV.on);h.style.setProperty('--tvin',TV.inset+'vh '+TV.inset+'vw');}
+function tvApply(){var h=document.documentElement;h.classList.toggle('tv',TV.on);var k=Math.min(window.innerWidth/1280,window.innerHeight/720)*(1-2*TV.inset/100);h.style.setProperty('--tvk',Math.max(.2,k).toFixed(4));}
+window.addEventListener('resize',function(){if(TV.on)tvApply();});
 function tvRotate(){
   if(!TV.on)return;var qs=["what's on my schedule today","what needs me","how's the system doing"];TV.i=((TV.i||0)+1)%qs.length;
   tvQuiet=true;try{run(qs[TV.i],{});}catch(e){}setTimeout(function(){tvQuiet=false;},25000);
