@@ -531,7 +531,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v38-2026-11-26';
+var BUILD='v39-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -868,8 +868,9 @@ function killGhost(g){try{if(g&&g.parentNode){var a=g.animate?g.animate([{opacit
 function mkGhost(){
   if(txGhost){killGhost(txGhost);txGhost=null;}
   try{var ex=$('extra'),pv=app.getAttribute('data-viz')||'';if(!ex.firstChild||!/^(cal|board|center|wx)$/.test(pv))return;var r0=ex.getBoundingClientRect();if(r0.width<120||r0.height<80)return;
-    var g=ex.cloneNode(true);g.removeAttribute('id');g.className='tx-ghost';g.style.cssText='position:fixed;left:'+r0.left+'px;top:'+r0.top+'px;width:'+r0.width+'px;height:'+r0.height+'px;margin:0;z-index:70;pointer-events:none;overflow:hidden;transform-origin:50% 50%;border:1px solid var(--mint);border-radius:6px;background:rgba(6,20,18,.6)';document.body.appendChild(g);
-    var gw=Math.min(r0.width,r0.height)*0.26,sx=gw/r0.width,sy=gw/r0.height;g.animate([{transform:'scale(1)',borderRadius:'6px'},{transform:'scale('+sx+','+sy+')',borderRadius:'22px'}],{duration:480,easing:'cubic-bezier(.6,0,.3,1)',fill:'forwards'});txGhost=g;sfx('tick');}catch(e){txGhost=null;}
+    var g=ex.cloneNode(true);g.removeAttribute('id');g.className='tx-ghost';g.style.cssText='position:fixed;left:'+r0.left+'px;top:'+r0.top+'px;width:'+r0.width+'px;height:'+r0.height+'px;margin:0;z-index:70;pointer-events:none;overflow:hidden;transform-origin:50% 50%;border:1px solid var(--mint);border-radius:6px;background:rgba(6,20,18,.7)';document.body.appendChild(g);
+    var gw=MOB?78:104,sx=gw/r0.width,sy=gw/r0.height;var tx=(MOB?18:150)+gw/2,ty=(MOB?150:150)+gw/2;var dx=tx-(r0.left+r0.width/2),dy=ty-(r0.top+r0.height/2);
+    g.animate([{transform:'translate(0,0) scale(1)',borderRadius:'6px',boxShadow:'0 0 0 rgba(92,255,200,0)'},{transform:'translate('+dx+'px,'+dy+'px) scale('+sx+','+sy+')',borderRadius:'18px',boxShadow:'0 0 26px rgba(92,255,200,.6)'}],{duration:520,easing:'cubic-bezier(.6,0,.3,1)',fill:'forwards'});txGhost=g;g._t0=Date.now();sfx('tick');}catch(e){txGhost=null;}
 }
 function beginAsk(q){
   newCommandUse(q);wakeUi();setUi('answer');
@@ -886,10 +887,9 @@ function finish(o){
   doneDoing('Done · '+clockET(Date.now())+' ET · '+usageLine());sfx('open');
   var a=$('ans');a.textContent=o.headline;a.className='ans'+(o.small?' small':'');
   var ex=$('extra');var ghost=txGhost;txGhost=null;if(ghost&&!o.node){killGhost(ghost);ghost=null;}
-  if(ghost){setTimeout(function(){killGhost(ghost);},520);}
   clear(ex);
   if(o.node){var ncl=String(o.node.className||'');var isCv=/\bcv\b/.test(ncl);app.setAttribute('data-viz',o.viz||(isCv?'cal':(/\b(clk|tmx|swx|calc|toss)\b/.test(ncl)?'center':(/\b(sim|needs)\b/.test(ncl)?'board':'1'))));ex.appendChild(o.node);
-    var fxk=isCv?'grid':(/\bbd-health\b/.test(ncl)?'pulse':(/\bbd-cust\b/.test(ncl)?'net':(/\bbd-leads\b/.test(ncl)?'stream':(/\bneeds\b/.test(ncl)?'radar':(/\b(clk|tmx|swx|calc|toss)\b/.test(ncl)?'rings':(/\bsim\b/.test(ncl)?'chat':null))))));if(fxk){try{wxBackdrop(fxk);}catch(e){}}if(isCv)hudify(o.node);}
+    var fxk=isCv?'grid':(/\bbd-health\b/.test(ncl)?'pulse':(/\bbd-cust\b/.test(ncl)?'net':(/\bbd-leads\b/.test(ncl)?'stream':(/\bbd-elite\b/.test(ncl)?'rings':(/\bneeds\b/.test(ncl)?'radar':(/\b(clk|tmx|swx|calc|toss)\b/.test(ncl)?'rings':(/\bsim\b/.test(ncl)?'chat':null)))))));if(fxk){try{wxBackdrop(fxk);}catch(e){}}if(isCv)hudify(o.node);}
   if(o.rows&&o.rows.length){var rs=el('div','rows');o.rows.forEach(function(r){var row=el('div','row');row.appendChild(el('div','t',r.t));var n=el('div','n');if(r.link){var al=el('a',null,r.n);al.href=r.link;al.target='_blank';al.rel='noopener noreferrer';al.style.color='var(--mint)';n.appendChild(al);}else n.appendChild(document.createTextNode(r.n));if(r.note)n.appendChild(el('div','note',r.note));row.appendChild(n);rs.appendChild(row);});ex.appendChild(rs);}
   if(o.cards){var cs=el('div','cards');o.cards.forEach(function(c){var b=el('button','card');b.type='button';var h=el('h3');h.appendChild(el('span',null,c.title));h.appendChild(c.tag);b.appendChild(h);b.appendChild(el('div','big',c.big));b.appendChild(el('div','l1',c.line));b.addEventListener('click',function(){openView(c.view);});cs.appendChild(b);});ex.appendChild(cs);}
   (o.banners||[]).forEach(function(b){var d=el('div','banner '+(b.kind||''));d.appendChild(el('b',null,b.bold+' '));d.appendChild(document.createTextNode(b.text));ex.appendChild(d);});
@@ -898,7 +898,18 @@ function finish(o){
   var stp=el('button','btn','Stop talking');stp.type='button';stp.addEventListener('click',function(){stopSpeak();});if(!muted)ac.appendChild(stp);
   var sp=el('button','btn','Speak again');sp.type='button';sp.addEventListener('click',function(){speak(spoken,true);});ac.appendChild(sp);
   (o.acts||[]).forEach(function(x){var b=el('button','btn'+(x.pri?' pri':''),x.label);b.type='button';b.addEventListener('click',x.fn);ac.appendChild(b);});
-  if(ghost&&ex.animate){try{ex.animate([{transform:'scale(.2)',opacity:0,filter:'blur(6px)'},{transform:'scale(.2)',opacity:0,filter:'blur(6px)',offset:.25},{transform:'scale(1)',opacity:1,filter:'blur(0)'}],{duration:700,easing:'cubic-bezier(.2,.8,.2,1)'});}catch(e){}}
+  if(ghost&&ex.animate){try{
+    var wait=Math.max(0,540-(Date.now()-(ghost._t0||0)));var er=ex.getBoundingClientRect();
+    var tx=window.innerWidth*(MOB?0.74:0.8),ty=window.innerHeight*(0.28+Math.random()*0.3);var dx=tx-(er.left+er.width/2),dy=ty-(er.top+er.height/2);
+    var gs=(MOB?80:110)/Math.max(er.width,1),gh=(MOB?80:110)/Math.max(er.height,1);var sq='translate('+dx+'px,'+dy+'px) scale('+gs+','+gh+')';
+    ex.style.transformOrigin='50% 50%';
+    var an=ex.animate([{transform:sq,opacity:0,borderRadius:'18px',boxShadow:'0 0 0 rgba(92,255,200,0)'},{transform:sq+' scale(1.12)',opacity:1,borderRadius:'18px',boxShadow:'0 0 30px rgba(92,255,200,.7)',offset:.16},{transform:sq,opacity:1,borderRadius:'18px',boxShadow:'0 0 26px rgba(92,255,200,.6)',offset:.3},{transform:sq,opacity:1,borderRadius:'18px',boxShadow:'0 0 26px rgba(92,255,200,.6)',offset:.52},{transform:sq+' scale(.9)',opacity:1,borderRadius:'18px',boxShadow:'0 0 40px rgba(92,255,200,.9)',offset:.6},{transform:'none',opacity:1,borderRadius:'0px',boxShadow:'0 0 0 rgba(92,255,200,0)'}],{duration:1700,delay:wait,easing:'cubic-bezier(.45,.05,.2,1)',fill:'both'});
+    var ring=document.createElement('div');ring.style.cssText='position:fixed;left:'+(tx-45)+'px;top:'+(ty-45)+'px;width:90px;height:90px;border:2px solid var(--mint);border-radius:50%;pointer-events:none;z-index:71;opacity:0';document.body.appendChild(ring);
+    ring.animate([{opacity:0,transform:'scale(.4)'},{opacity:.95,transform:'scale(1)',offset:.3},{opacity:0,transform:'scale(2.2)'}],{duration:520,delay:wait+1700*0.5,fill:'both'}).onfinish=function(){ring.remove();};
+    setTimeout(function(){sfx('pick');},wait+1700*0.55);
+    setTimeout(function(){killGhost(ghost);},wait+1700*0.58);
+    an.onfinish=function(){try{an.cancel();}catch(e){}};
+  }catch(e){killGhost(ghost);}}
   cur.spoken=spoken;
   pushHist({q:cur.q,a:o.headline+(o.rows&&o.rows.length?' · '+o.rows.map(function(r){return r.t+' '+r.n;}).join('; '):''),tags:(o.tags||[]).map(function(t){return t.textContent;}),use:usageLine(),at:Date.now()});
   updatePanels();renderDock();
@@ -1481,6 +1492,19 @@ async function cmdLeads(q,opt){
     var due=recs.filter(function(r){return r.due;}).length;
     finish({headline:recs.length+' open leads',small:true,spoken:'You have '+recs.length+' open leads. '+cnt('quoted')+' have a quote out, '+cnt('waiting')+' are waiting on a reply, '+cnt('new')+' are new or in first contact, and '+cnt('future')+' are for later.'+(due?' '+due+' '+(due===1?'is':'are')+' due for follow-up by tomorrow.':'')+' Tap a tab to filter.',node:w,tags:[srcTag('live','Notion via Make'),srcTag('live','Snapshot, not live')],srcNote:'From your Leads CRM snapshot. Read-only. Say refresh leads to re-read.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}}]});
   }catch(e){if(cur!==my)return;bridgeFail(q,failCopy(e));}
+}
+var ELITE=[{n:'Richard Decker',v:'2026 Subaru Outback Limited',tag:'MONTHLY DAY'},{n:'Marc Clark',v:'2019 Nissan Sentra SR',tag:'MONTHLY DAY'},{n:'Rebecca Lucas',v:'2023 Kia K5 GT-Line',tag:'MONTHLY DAY'},{n:'David Wilson',v:'2024 Rivian R1T',tag:'CONCIERGE'}];
+async function cmdElite(q,opt){
+  beginAsk(q);doing('checking your Elite clients on the calendar');var my=cur;var evs=null;
+  if(BR){try{var cr=await calBridgeFetch(etDay(0),addDays(etDay(0),150),!!(opt&&opt.live));if(cur!==my)return;evs=cr.events;}catch(e){evs=null;}}
+  if(cur!==my)return;
+  var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmt(st){var d=new Date(st.slice(0,10)+'T12:00:00Z');return WD[d.getUTCDay()]+' '+MO[d.getUTCMonth()]+' '+d.getUTCDate()+(st.length>10?' · '+t12(st.slice(11,16)):'');}
+  var items=ELITE.map(function(c){var nx=null;if(evs){var f=evs.filter(function(e){return e.title.indexOf(c.n)===0&&e.start>=etDay(0);});nx=f[0]||null;}
+    return {type:'CUSTOMER',icon:c.n.split(/\s+/).map(function(w){return w.charAt(0);}).join(''),k:nx?'NEXT '+fmt(nx.start).toUpperCase():(evs?'NOTHING BOOKED':'CALENDAR NOT READ'),who:c.n,detail:c.v,pill:c.tag,pillk:nx?'':'warn',nx:nx};});
+  var booked=items.filter(function(i){return i.nx;}).length;
+  var sp='You have '+ELITE.length+' Elite clients. '+items.map(function(i){return i.nx?i.who+', '+fmt(i.nx.start).replace(' · ',' at ').replace(/^(\w+) (\w+) (\d+)/,'$1, $2 $3'):i.who+', nothing booked';}).join('. ')+'.';
+  finish({headline:ELITE.length+' Elite clients',small:true,spoken:sp,node:boardNode('bd-elite',[[ELITE.length,'Elite'],[booked,'Booked']],items),tags:[srcTag(evs?'live':'na',evs?'Calendar snapshot':'Calendar not read'),srcTag('live','Read '+clockET(Date.now())+' ET')],srcNote:'Roster from your Elite setup. Next visits from the calendar. Read-only.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}}]});
 }
 function gameLine(ev){
   var c=ev.competitions&&ev.competitions[0];if(!c)return null;var h=c.competitors.filter(function(x){return x.homeAway==='home';})[0],a=c.competitors.filter(function(x){return x.homeAway==='away';})[0];
@@ -2183,9 +2207,11 @@ function routeKnown(q,opt,dry){
     beginAsk(q);finish({headline:'No timers running.',small:true,spoken:'No, there is no timer running right now.',node:clockNode(),tags:[srcTag('live','On this screen')]});return true;}
   if(HELP_RE.test(s)){if(dry)return true;logMic('route','help');beginAsk(q);finish({headline:'Here is what I can do',small:true,spoken:'Here is what I can do. Tap any example to try it.',node:helpNode(),viz:'1',tags:[srcTag('live','Built in')]});return true;}
   /* --- boards, sounds --- */
-  if(/\b(system health|health check|diagnostics?|system status|status check|how(?:'?s| is) (?:everything|the system|it all) (?:running|working|looking|going)|is (?:everything|the system|it all|everything running) (?:working|running|ok|okay|fine|good|up)|check (?:the |my |all )?(?:system|connections?|everything)|are (?:we|you|things|all systems) (?:up|online|working|good)|all systems)\b/.test(s)&&!/\b(weather|timer|calendar)\b/.test(s)){if(dry)return true;logMic('route','health');cmdHealth(q);return true;}
+  var _sysSubj=/\b(systems?|connections?|the bridge|the setup|everything|all systems|the screen|the app)\b/.test(s),_sysQ=/\b(how|what|is|are|check|status|health|running|looking|look|doing|working|ok|okay|fine|good|diagnos|pull up|show|run|up|online|connected|healthy|alive|go)\b/.test(s);
+  if((/\b(system health|health check|health report|diagnostics?|system status|status check|status report|all systems|anything (?:broken|wrong|down|failing)|any (?:problems|issues|errors|bugs)|what.s (?:broken|down|wrong|not working)|is anything (?:broken|down|wrong))\b/.test(s)||(_sysSubj&&_sysQ&&wcq<=10&&!/\b(you|your|i|my day|schedule|business)\b.*\b(doing|going)\b/.test(s.replace(/\b(the system|system)\b/g,''))))&&!/\b(weather|timer|calendar|text|message|send|book|cancel)\b/.test(s)){if(dry)return true;logMic('route','health');cmdHealth(q);return true;}
   if(/\b(?:my|our|the) (?:upcoming )?(?:customers|clients)\b|\b(?:customer|client) list\b|\bwho(?:'?s| is| are) (?:coming|booked|on (?:the )?books)\b|\bshow (?:me )?(?:all )?(?:customers|clients)\b|\bpull up (?:the |my )?(?:customers|clients)\b/.test(s)&&!/\b(text|message|call|email|send|tell|remind)\b/.test(s)&&wcq<=12){if(dry)return true;logMic('route','customers');cmdCustomers(q,opt);return true;}
-  if(/\b(?:my|our|the|new|any|show me|pull up|open|check|see|about|status of|how are|how r|what are) (?:my |our |the )?leads?\b|\bleads? (?:look|looking|status|board|list|pipeline|update|today)\b|\blead list\b|\bany (?:new )?leads\b|\bwho(?:'s| is)? (?:are )?(?:my )?(?:new )?leads\b|\bsales pipeline\b|\brefresh (?:my )?leads\b/.test(s)&&!/\b(text|message|call|email|send)\b/.test(s)&&wcq<=10){if(dry)return true;logMic('route','leads');cmdLeads(q,/refresh/.test(s)?{live:true}:undefined);return true;}
+  if(/\b(leads?|lead list|lead pipeline|sales pipeline|pipeline|prospects?|inquiries|enquiries)\b/.test(s)&&!/\b(text|message|call|email|send|add|create|delete|remove|book|cancel|how do i|generate|get more|google ads|ads)\b/.test(s)&&wcq<=13&&!/\bwhat (?:is|does) (?:a )?lead\b/.test(s)){if(dry)return true;logMic('route','leads');cmdLeads(q,/refresh|reload|update/.test(s)?{live:true}:undefined);return true;}
+  if(/\b(elite|vips?|v i p|v\.i\.p|evermint elite|top (?:tier )?clients|best clients|premium clients|members?|membership)\b/.test(s)&&/\b(clients?|customers?|members?|people|list|board|status|looking|look|going|doing|how|what|show|pull up|check|any|who|see|tell|update|up with)\b/.test(s)&&!/\b(text|message|call|email|send|book|cancel|reschedule|price|cost|how much|sign up|join|what is (?:the )?(?:elite|vip)|package)\b/.test(s)&&wcq<=13){if(dry)return true;logMic('route','elite');cmdElite(q,opt);return true;}
   var sfm=/\b(?:turn|switch|set)?\s*(?:the )?(?:sounds?|sound effects|chimes?|sfx)\s+(on|off)\b|\b(mute|unmute)\s+(?:the )?(?:sounds?|sound effects|chimes?|sfx)\b|\bturn (on|off) (?:the )?(?:sounds?|sound effects|chimes?)\b/.exec(s);
   if(sfm&&wcq<=8){if(dry)return true;var on=(sfm[1]||sfm[3]||'')==='on'||sfm[2]==='unmute';sfxOn=on;store('sfx',on);logMic('route','sounds '+(on?'on':'off'));beginAsk(q);finish({headline:'Sounds '+(on?'on':'off')+'.',small:true,spoken:on?'Okay, sounds are on.':'Okay, sounds are off.',tags:[srcTag('live','On this screen')]});if(on)sfx('wake');return true;}
   /* --- timer edits and window controls --- */
