@@ -714,7 +714,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v52-2026-11-27';
+var BUILD='v53-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1829,7 +1829,7 @@ async function cmdBriefing(q,opt){
 function cmdLocked(q){beginAsk(q);finish({headline:'That one stays on your texts.',small:true,spoken:'That action needs your safety code. Text it to M1NT and it goes through the usual approval.',tags:[srcTag('snap','Rule')],banners:[{kind:'warn',bold:'LOCKED.',text:'Cancelling, booking, deleting, money, and pausing or resuming customers are not done from this screen. It is read-only; text it to M1NT and the same approval steps apply. “Voice” only opens this screen.'}]});}
 var ST_PICK=function(a){return a[Math.floor(Math.random()*a.length)];};
 function smallTalk(q){
-  var l=String(q).toLowerCase().replace(/[^a-z' ]/g,' ').replace(/\s+/g,' ').trim();var w=l.split(' ').length;if(w>9||w<1)return null;
+  var l=String(q).toLowerCase().replace(/[^a-z' ]/g,' ').replace(/\s+/g,' ').trim();var w=l.split(' ').length;if(w>10||w<1)return null;
   l=l.replace(/\b(mint|man|dude|bro|buddy|my guy|homie|boss|partner|there)\b/g,'').replace(/^(?:hey|hi|hello|yo|ok|okay)\s+(?=\w)/,'').replace(/\s+/g,' ').trim();
   var R=[
    [/^(?:hey|hi|hello|yo|sup|howdy|hiya|what'?s up|whats up|what up|wassup|wazzup|what'?s good|whats good|what'?s going on|how'?s it going|hows it going|how are you|how are ya|how you doing|how you been|how have you been|you good|you doing ok(?:ay)?|you alright|you ok(?:ay)?|what you up to|what are you up to|what'?s new)(?: today| tonight| this morning)?$/,['Hey Ali. All good here, everything is running. What do you need?','Not much, Ali. Keeping an eye on the system for you. What are we doing?','Doing great, Ali. Glad you are here. What can I do for you?','Hey. I am good, and the business is humming along. Whatever you need.']],
@@ -1844,6 +1844,12 @@ function smallTalk(q){
    [/^(?:i love you|love you mint)$/,['Aw, thanks Ali. I am pretty fond of you too, and of the business.']]
   ];
   for(var i=0;i<R.length;i++){if(R[i][0].test(l))return ST_PICK(R[i][1]);}
+  if(!/\b(text|send|schedule|calendar|remind|what|what's|how|when|who|where|why|which|can you|could you|would you|will you|please|show|tell me|pull|check|set|start|stop|cancel|book|call|weather|timer)\b/.test(l)){
+    if(/\b(thank|thanks|thx|ty|appreciate|appreciated|awesome|amazing|the best|great job|good job|nice work|well done|love it|love you|you rock|legend|goat|fantastic|incredible|brilliant|lifesaver|perfect|nice one|cheers|good stuff|that works|got it|sounds good|nailed it|killing it|crushing it|impressive|beautiful|sweet|nice)\b/.test(l))return ST_PICK(['Anytime, Ali. That is what I am here for.','Happy to, Ali. We make a good team.','Always, Ali. Let me know what is next.','Glad I could help, Ali.','You got it, Ali.']);
+    if(/\b(good morning|good afternoon|good evening|morning|evening|afternoon)\b/.test(l)&&w<=4)return ST_PICK(['Hey Ali. Good to see you. What do you need?','Hey Ali. Ready when you are.']);
+    if(/\b(sorry|my bad|oops|never ?mind|forget it|no worries|no problem|all good)\b/.test(l))return ST_PICK(['No problem at all, Ali.','All good, Ali.']);
+    if(/\b(ok|okay|alright|cool|yep|yeah|yes|right|true|exactly|makes sense|i see|hm+|huh|wow)\b/.test(l)&&w<=4)return ST_PICK(['Alright.','Got it, Ali.','Sounds good.']);
+  }
   return null;
 }
 async function cmdTextMe(q){
