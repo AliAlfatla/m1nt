@@ -253,12 +253,8 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 #lock .lk-t{font:700 13px var(--font-m);letter-spacing:.3em}
 #lock .lk-s{font:500 12px var(--font-m);opacity:.8;min-height:16px;text-align:center;padding:0 20px}
 #lock .lk-d{display:flex;gap:10px;margin:6px 0;position:relative}
-#lock .lk-d i{width:44px;height:56px;border-radius:10px;border:2px solid rgba(92,255,200,.55);display:grid;place-items:center;font:700 26px var(--font-m);font-style:normal;color:var(--mint);transition:background .15s,box-shadow .15s,transform .15s;animation:lkbox .6s ease backwards}
-#lock .lk-d i:nth-child(2){animation-delay:.08s}#lock .lk-d i:nth-child(3){animation-delay:.16s}#lock .lk-d i:nth-child(4){animation-delay:.24s}#lock .lk-d i:nth-child(5){animation-delay:.32s}#lock .lk-d i:nth-child(6){animation-delay:.4s}
-@keyframes lkbox{from{opacity:0;transform:translateY(24px) scale(.6)}}
-#lock .lk-d i.f{background:rgba(92,255,200,.16);box-shadow:0 0 18px rgba(92,255,200,.7);transform:scale(1.06)}
-#lock .lk-d::after{content:'';position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,var(--mint),transparent);animation:lkscan 2.2s linear infinite;opacity:.7}
-@keyframes lkscan{from{top:0}to{top:100%}}
+#lock .lk-d i{width:44px;height:56px;border-radius:10px;border:2px solid rgba(92,255,200,.55);display:grid;place-items:center;font:700 26px var(--font-m);font-style:normal;color:var(--mint);transition:background .15s,box-shadow .15s}
+#lock .lk-d i.f{background:rgba(92,255,200,.16);box-shadow:0 0 18px rgba(92,255,200,.7)}
 #lock.ok .lk-d i{background:var(--mint);color:#02130f;box-shadow:0 0 26px var(--mint);transition-delay:calc(var(--n)*70ms)}
 #lock.ok .lk-lk{transform:scale(1.2);transition:transform .4s}
 #lock.ok{}
@@ -557,6 +553,11 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 #doors i:first-child{left:0;border-right:2px solid var(--mint);box-shadow:8px 0 40px rgba(60,255,200,.35);animation-name:dL}
 #doors i:last-child{right:0;border-left:2px solid var(--mint);box-shadow:-8px 0 40px rgba(60,255,200,.35);animation-name:dR;background:radial-gradient(circle at 0 40%,#0b3a31,#020d0b 80%)}
 @keyframes dL{0%{transform:none}10%{transform:none}100%{transform:translateX(-102%)}}@keyframes dR{0%{transform:none}10%{transform:none}100%{transform:translateX(102%)}}
+
+#lock>*{position:relative;z-index:1}#lock>#lkRain{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;opacity:.42;pointer-events:none}
+@keyframes dCL{from{transform:translateX(-102%)}to{transform:none}}@keyframes dCR{from{transform:translateX(102%)}to{transform:none}}
+#doors.close i:first-child{animation-name:dCL;animation-duration:.8s}#doors.close i:last-child{animation-name:dCR;animation-duration:.8s}
+#doors.close{transition:opacity .35s ease}#doors.close.fade{opacity:0}
 </style>
 <script type="application/json" id="claude-artifacts-manifest">{"permissions": []}</script>
 
@@ -742,7 +743,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v76-2026-11-27';
+var BUILD='v77-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -874,7 +875,26 @@ function nvSound(){if(!sfxOn)return;try{var A=window.AudioContext||window.webkit
   [[.82,1500],[.9,2100]].forEach(function(c){var p=a.createOscillator(),q=a.createGain();p.type='square';p.frequency.value=c[1];q.gain.setValueAtTime(.02,n+c[0]);q.gain.exponentialRampToValueAtTime(.0006,n+c[0]+.06);p.connect(q);q.connect(a.destination);p.start(n+c[0]);p.stop(n+c[0]+.07);});}catch(e){}}
 function nightVision(){var o=document.getElementById('nv');if(o)o.remove();o=el('div');o.id='nv';o.setAttribute('aria-hidden','true');var sc=el('div','nvs');o.appendChild(sc);o.appendChild(el('div','nvc'));o.appendChild(el('div','nvc b'));document.body.appendChild(o);nvSound();setTimeout(function(){if(o.parentNode)o.remove();},2000);}
 function openDoors(){var d=document.getElementById('doors');if(d)d.remove();d=el('div');d.id='doors';d.appendChild(el('i'));d.appendChild(el('i'));document.body.appendChild(d);try{sfx('whoosh');}catch(e){}setTimeout(function(){if(d.parentNode)d.remove();},1300);}
-function doLock(t){try{stopSpeak();closeDrawer();wxBackdropStop();standby=false;}catch(e){}if(app.getAttribute('data-state')!=='asleep'){try{sfx('sleep');setUi('asleep');setMode('idle');}catch(e){}}$('hint').textContent='';LOCKED=true;lkBusy=false;try{var ll=lockLine(t);if(ll)speak(ll);}catch(e){}try{nightVision();}catch(e){}setTimeout(function(){showLock();},1900);}
+
+var rainRaf=0;
+function lkRain(on){var c=document.getElementById('lkRain');
+  if(!on){if(rainRaf){cancelAnimationFrame(rainRaf);rainRaf=0;}return;}
+  if(!c){c=document.createElement('canvas');c.id='lkRain';}if(c.parentNode!==$('lock'))$('lock').insertBefore(c,$('lock').firstChild);
+  if(rainRaf)return;var x=c.getContext('2d'),W=0,H=0,cols=[],fs=15;
+  function size(){W=c.width=c.clientWidth||innerWidth;H=c.height=c.clientHeight||innerHeight;var n=Math.ceil(W/fs);cols=[];for(var i=0;i<n;i++)cols.push({y:Math.random()*-H/fs,v:.25+Math.random()*.55,t:Math.random()<.5?0:1});}
+  size();var chars='01{}();=>[]<>/*+-&|!?#$%ABCDEF0123456789'.split(''),words=['const','let','if','for','def','int','null','true','func','=>','0x','</>'];
+  function frame(){if(!$('lock').classList.contains('on')){rainRaf=0;return;}
+    if(c.width!==(c.clientWidth||W))size();
+    x.fillStyle='rgba(2,13,11,.16)';x.fillRect(0,0,W,H);x.font=fs+'px monospace';
+    cols.forEach(function(k,i){var ch=Math.random()<.04?words[(Math.random()*words.length)|0]:chars[(Math.random()*chars.length)|0];
+      x.fillStyle=Math.random()<.06?'#d9fff2':'rgba(92,255,200,.85)';x.fillText(ch,i*fs,k.y*fs);k.y+=k.v;if(k.y*fs>H&&Math.random()>.975){k.y=Math.random()*-20;k.v=.25+Math.random()*.55;}});
+    rainRaf=requestAnimationFrame(frame);}
+  rainRaf=requestAnimationFrame(frame);}
+function closeDoors(){var d=document.getElementById('doors');if(d)d.remove();d=el('div');d.id='doors';d.className='close';d.appendChild(el('i'));d.appendChild(el('i'));document.body.appendChild(d);
+  try{sfx('whoosh');}catch(e){}
+  if(sfxOn){try{var A=window.AudioContext||window.webkitAudioContext;sfxCtx=sfxCtx||new A();var a=sfxCtx,n=a.currentTime+.62,o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.setValueAtTime(130,n);o.frequency.exponentialRampToValueAtTime(38,n+.35);g.gain.setValueAtTime(.07,n);g.gain.exponentialRampToValueAtTime(.0006,n+.4);o.connect(g);g.connect(a.destination);o.start(n);o.stop(n+.45);}catch(e){}}
+  setTimeout(function(){d.classList.add('fade');},900);setTimeout(function(){if(d.parentNode)d.remove();},1300);}
+function doLock(t){try{stopSpeak();closeDrawer();wxBackdropStop();standby=false;}catch(e){}if(app.getAttribute('data-state')!=='asleep'){try{sfx('sleep');setUi('asleep');setMode('idle');}catch(e){}}$('hint').textContent='';LOCKED=true;lkBusy=false;try{var ll=lockLine(t);if(ll)speak(ll);}catch(e){}try{closeDoors();}catch(e){}setTimeout(function(){showLock();},850);}
 function byeSleep(t){var k=sleepKind(t)||'goodnight';if(k==='standby'){if(standby)return;standby=true;wxBackdropStop();stopSpeak();closeDrawer();setUi('awake');setMode('listening');$('hint').textContent='Standing by. Say “Hey, Mint” and then talk as long as you like. Say “Stand by, Mint” to pause again.';try{speak('Standing by, Ali.');}catch(e){}return;}standby=false;sleepUi(LOCK_RE.test(t));var n=etHour();var m=k==='standby'?'Standing by':k==='thatsall'?(n>=17?'See you later':'Okay'):(n>=17||n<5?'Goodnight':'Goodbye');$('hint').textContent='';try{speak(m+', Ali.');}catch(e){}}
 function sleepUi(lk){sfx('sleep');if(TV.on){try{TV.lastUser=0;stopSpeak();setUi('awake');setMode('idle');dashShow(true);}catch(e){}return;}if(LOCKON&&lk){LOCKED=true;lkBusy=false;setTimeout(function(){showLock();},700);}wxBackdropStop();stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
 var idleT=0;
@@ -3053,7 +3073,7 @@ function lkFit(){
   w.style.transform='scale('+k.toFixed(3)+')';
 }
 window.addEventListener('resize',function(){if($('lock').classList.contains('on'))lkFit();});
-function showLock(){if(lkBusy)return;lkBuf='';lkDraw();$('lkT').textContent='M1NT LOCKED';$('lkS').textContent='Say your 6 digits out loud, or tap them.';$('lkSkip').hidden=true;$('lock').classList.remove('ok');$('lock').classList.add('on');LOCKED=true;lkFit();setTimeout(lkFit,300);}
+function showLock(){if(lkBusy)return;lkBuf='';lkDraw();$('lkT').textContent='M1NT LOCKED';$('lkS').textContent='Say your 6 digits out loud, or tap them.';$('lkSkip').hidden=true;$('lock').classList.remove('ok');$('lock').classList.add('on');LOCKED=true;lkFit();try{lkRain(true);}catch(e){}setTimeout(lkFit,300);}
 function lkFail(){lkFails++;var L=$('lock');L.classList.remove('shake');void L.offsetWidth;L.classList.add('shake');sfx('sleep');lkBuf='';setTimeout(function(){lkDraw();},350);$('lkS').textContent=lkFails>=5?'ACCESS DENIED. Locked for 30 seconds.':'Access denied. Try again.';if(lkFails>=5){lkUntil=Date.now()+30000;lkFails=0;}}
 async function lkTry(){
   var code=lkBuf;if(code.length<LKN)return;lkBusy=true;var ok=await lkCheck(code);
