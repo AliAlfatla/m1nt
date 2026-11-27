@@ -716,7 +716,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v71-2026-11-27';
+var BUILD='v72-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -2601,6 +2601,7 @@ function helpNode(){
      ['show my elite clients','Evermint Elite members, their vehicles and monthly day.'],
      ['my customers','Upcoming booked customers and what is booked.'],
      ['give me the briefing','The morning or evening rundown.'],
+     ['what is low in inventory','Your Notion inventory as an animated board: needs attention, on order, and every category. Also: show my inventory.'],
      ['how many leads did we win this month','Win and loss stats from your full lead history.']
    ]],
    ['Texting','✉',[
@@ -2637,7 +2638,6 @@ function helpNode(){
      ['sounds off','Mutes or restores the chimes. Also: listen in Spanish, Arabic, French or English.']
    ]],
    ['Coming next','◇',[
-     ['Inventory','Your Notion inventory as an animated board: low stock, out, broken, on order.'],
      ['Call records','Pull up call notes for any customer.'],
      ['Pause and resume','Pause follow-ups or the deposit reminder by voice.'],
      ['Bank and income','Money in and out once the business account is connected.']
