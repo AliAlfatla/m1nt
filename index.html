@@ -4,7 +4,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{
   --ink:#02100d; --glass:rgba(8,44,39,.62); --line:rgba(92,255,200,.26);
@@ -213,6 +213,33 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 @keyframes stampin{20%{opacity:1;transform:translate(-50%,-50%) rotate(-8deg) scale(1.15)}35%{transform:translate(-50%,-50%) rotate(-8deg) scale(1)}85%{opacity:1}100%{opacity:0}}
 .app[data-viz="board"] .sim-phone{width:min(400px,92vw);min-height:min(60vh,560px)}
 .app[data-viz="board"] .sim{gap:30px;align-items:stretch}
+
+.pad{position:relative;width:min(680px,100%);margin:14px auto;padding:22px 26px 22px 70px;border:1px solid var(--mint);border-radius:16px;background:repeating-linear-gradient(to bottom,transparent 0 38px,rgba(92,255,200,.16) 38px 39px),linear-gradient(160deg,rgba(8,40,35,.9),rgba(3,18,15,.92));box-shadow:0 0 40px rgba(92,255,200,.22);min-height:min(52vh,420px);animation:padin .7s cubic-bezier(.2,.9,.3,1.1)}
+@keyframes padin{from{transform:translateY(60px) rotate(-3deg) scale(.9);opacity:0}}
+.pad::before{content:'';position:absolute;left:22px;top:20px;bottom:20px;width:14px;background:radial-gradient(circle,var(--mint) 0 4px,transparent 5px) 0 0/14px 38px repeat-y;opacity:.7}
+.pad::after{content:'';position:absolute;left:52px;top:0;bottom:0;width:1px;background:rgba(255,123,114,.45)}
+.pad-h{font:700 12px var(--font-m);letter-spacing:.24em;color:var(--mint);height:38px;line-height:30px}
+.pad-r{display:flex;align-items:center;gap:10px;min-height:39px;font:500 26px/39px 'Caveat',cursive;color:#e6fff6;cursor:pointer}
+.pad-r.done .pad-x{text-decoration:line-through;opacity:.45}
+.pad-b{width:18px;height:18px;border:2px solid var(--mint);border-radius:5px;display:grid;place-items:center;font:700 13px var(--font-m);color:var(--mint);flex:none}
+.pad-r.new .pad-x{animation:penglow 1.6s ease-out}
+@keyframes penglow{0%{text-shadow:0 0 18px var(--mint)}100%{text-shadow:none}}
+.pad-pen{display:inline-block;width:2px;height:24px;background:var(--mint);margin-left:2px;vertical-align:middle;animation:blink .5s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.pad-e{font:500 24px/39px 'Caveat',cursive;opacity:.6}
+.pad-del{margin-left:auto;background:none;border:0;color:var(--muted);font-size:14px;cursor:pointer}
+.rf{position:relative;width:min(900px,100%);height:min(480px,60vh);margin:10px auto;overflow:hidden;border-radius:18px}
+.rt{position:absolute;min-width:180px;max-width:250px;padding:12px 14px;border:1px solid var(--mint);border-radius:12px;background:rgba(6,34,29,.82);box-shadow:0 0 22px rgba(92,255,200,.3);animation:rtfloat var(--dur,6s) ease-in-out infinite alternate,rtin .8s cubic-bezier(.2,.9,.3,1.2) both;animation-delay:0s,var(--dl,0s)}
+.rt b{display:block;font:700 10px var(--font-m);letter-spacing:.16em;color:var(--mint);margin-bottom:5px}
+.rt span{font:500 15px/1.3 var(--font-d);color:#fff}
+.rt::before{content:'';position:absolute;top:-6px;left:16px;width:12px;height:12px;border-radius:50%;background:var(--mint);box-shadow:0 0 12px var(--mint)}
+.rt.main{left:50%;top:46%;margin:-60px 0 0 -140px;max-width:280px;padding:18px 20px;border-width:2px;box-shadow:0 0 60px rgba(92,255,200,.6);z-index:3}
+.rt.main span{font-size:20px}
+.rt.fire{animation:rtin .8s cubic-bezier(.2,.9,.3,1.2) both,rtpulse 1s ease-in-out infinite alternate}
+@keyframes rtfloat{from{transform:translate(0,0) rotate(var(--r,-3deg))}to{transform:translate(var(--fx,14px),var(--fy,-22px)) rotate(calc(var(--r,-3deg) * -1))}}
+@keyframes rtin{from{opacity:0;transform:translateY(-120px) scale(.6) rotate(12deg)}}
+@keyframes rtpulse{to{box-shadow:0 0 90px rgba(92,255,200,.95)}}
+.rf-lbl{position:absolute;left:0;right:0;bottom:12px;text-align:center;font:700 11px var(--font-m);letter-spacing:.24em;color:var(--mint);z-index:4}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* ===== visual screens ===== */
 .app[data-state="answer"][data-viz] .center{padding:10px 24px 4px 230px}
@@ -656,7 +683,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v40-2026-11-26';
+var BUILD='v41-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1261,11 +1288,11 @@ document.addEventListener('keyup',function(e){if(e.code==='Space'&&ptt.held){ptt
    "Wake up, Mint"  -> opens the folded core only (never a search)
    "Hey Mint ..."   -> listens for a question; question in one breath is sent once after silence */
 var NM='(?:mint|mints|mince|minty|mynt|mind|m1nt|min|mid|man|men|mean|meant|ment|mit|mitt|minh|mine|amen)';
-var WAKEUP_RE=new RegExp('\\b(?:wake\\s?up|wakeup)[,.!\\s]+'+NM+'\\b','i');
+var WAKEUP_RE=new RegExp('\\b(?:wake\\s?up|wakeup|get\\s?up|rise\\s+and\\s+shine|come\\s+back|i.?m\\s+back|good\\s+morning)[,.!\\s]+'+NM+'\\b','i');
 var HEY_RE=new RegExp('\\b(?:(?:hey|hay|hi|ok|okay|a)[,.!\\s]*'+NM+'|a\\s?men)\\b[,.!\\s]*','i');
-var WAKE_ANY=new RegExp('(?:'+HEY_RE.source+')|(?:wake\\s?up[,.!\\s]+'+NM+')|(?:good\\s?night[,.!\\s]+'+NM+')','i');
+var WAKE_ANY=new RegExp('(?:'+HEY_RE.source+')|(?:(?:wake\\s?up|wakeup|get\\s?up|rise\\s+and\\s+shine|come\\s+back|i.?m\\s+back|good\\s+morning)[,.!\\s]+'+NM+')|(?:good\\s?night[,.!\\s]+'+NM+')','i');
 var SNM='(?:mint|mints|mince|minty|mynt|m1nt|mind|min|mid|man|men|amen|moment|mitt|meant|mean|mine|mm+|minute|me|my|may|mate|mud|mod)';
-var SLC='(?:stand\\s?by|good\\s?night|that(?:\'s|\\s+is|\\s+will\\s+be)\\s+all)';
+var SLC='(?:stand\\s?by|good\\s?night|that(?:\'s|s|\\s+is|\\s+will\\s+be|\\s?ll\\s+be|\\s+would\\s+be)\\s+all|that(?:\'s|s|\\s+is)\\s+it|all\\s+done|all\\s+set|(?:i.?m|i\\s+am|we.?re|we\\s+are)\\s+done|done\\s+for\\s+(?:now|today|tonight)|see\\s+(?:you|ya)(?:\\s+(?:later|soon|tomorrow))?|catch\\s+you\\s+later|talk\\s+to\\s+you\\s+(?:later|soon|tomorrow)|talk\\s+later|good\\s?bye|bye(?:\\s+bye)?|take\\s+care|peace(?:\\s+out)?|later)';
 var SLEEP_RE=new RegExp('^\\W*(?:(?:hey|ok|okay)[,.!\\s]+)?(?:(?:'+SLC+'\\W+(?:for\\s+now\\W+)?'+SNM+')|(?:'+SNM+'\\W+'+SLC+'(?:\\W+for\\s+now)?))\\W*$','i');
 
 /* ---------- retractions: "I didn't say anything", "never mind", "wasn't talking to you" are dropped locally, free ---------- */
@@ -1274,7 +1301,7 @@ function stripRetract(t){t=String(t||'');var o=t,n=0;while(n++<3){var r=t.replac
 function retractOnly(t){var r=stripRetract(t);return r!==String(t||'').trim()&&!r.replace(/\W/g,'').length;}
 function dropHeard(t){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;wake.ignoreUntil=Date.now()+1200;wake.pausedForSpeech=false;logMic('ignored','retraction: '+String(t).slice(0,40));if(isAwake()){setMode('listening');$('hint').textContent='Okay, ignoring that.';}}
 function sleepKind(t){t=stripRetract(String(t||'').trim());if(t.split(/\s+/).length>7)return null;
-  var k=/\bstand\s?by\b/i.test(t)?'standby':/\bthat(?:'s|\s+is|\s+will\s+be)\s+all\b/i.test(t)?'thatsall':/\bgood\s?night\b/i.test(t)?'goodnight':null;
+  var k=/\bstand\s?by\b/i.test(t)?'standby':/\bgood\s?night\b/i.test(t)?'goodnight':'thatsall';
   if(!k)return null;
   if(SLEEP_RE.test(t))return k;
   if(k==='standby'&&/^\W*(?:(?:hey|ok|okay)\W+)?stand\s?by\W*$/i.test(t))return k;
@@ -1304,6 +1331,7 @@ function completePending(q){
   var r=q.replace(/^(?:(?:um|uh|it'?s|it is|that'?s|that is|the one|the|one)\s+)+/i,'').replace(/[.!?]+$/,'').trim();if(!r)return null;
   if(p.kind==='football')return p.orig+' '+r;
   if(p.kind==='textbody')return 'text '+p.name+' that '+r;
+  if(p.kind==='remwhen')return 'remind me '+r+(p.text?' to '+p.text:'');
   var base=p.orig.replace(/[?.!]+$/,'');
   var pre=/^(on|at|in|near|off|by|across|next to)\b/i.test(r)?'':(/\b(road|rd|street|st|avenue|ave|highway|hwy|boulevard|blvd|pike|parkway|pkwy|lane|ln|drive|dr)\b/i.test(r)?'on ':'in ');
   return base+' '+pre+r;
@@ -2332,8 +2360,11 @@ function routeKnown(q,opt,dry){
     beginAsk(q);finish({headline:'No timers running.',small:true,spoken:'No, there is no timer running right now.',node:clockNode(),tags:[srcTag('live','On this screen')]});return true;}
   if(HELP_RE.test(s)){if(dry)return true;logMic('route','help');beginAsk(q);finish({headline:'Here is what I can do',small:true,spoken:'Here is what I can do. Tap any example to try it.',node:helpNode(),viz:'1',tags:[srcTag('live','Built in')]});return true;}
   /* --- boards, sounds --- */
+  if(/\breminders?\b/.test(s)&&/\b(?:clear|cancel|delete|remove|erase|wipe)\b/.test(s)&&!/\bremind me\b/.test(s)){if(dry)return true;logMic('route','clear reminders');REMS=REMS.filter(function(r){return r.done;});saveRems();showRems(q,'Okay, I cleared your reminders.');return true;}
+  if((/^(?:my )?(?:upcoming )?reminders$/.test(s)||/\b(?:what|which|show|list|read|pull up|check|any|see|open|bring up)\b.*\breminders?\b/.test(s))&&!/\bremind me\b/.test(s)){if(dry)return true;logMic('route','reminders list');showRems(q);return true;}
+  if(/\bremind me\b|\bset (?:a |an |another )?reminders?\b|\b(?:add|make|create|put) (?:in )?(?:a |an )?reminder\b|\breminder (?:for|to|at|in|that)\b|\bdon'?t let me forget\b|\bping me\b.*\b(?:at|in|tomorrow|tonight)\b/.test(s)&&!/\b(text|message|call|email)\b.*\bremind\b/.test(s.replace(/\bremind me\b/g,''))){if(dry)return true;logMic('route','reminder');addReminder(q,s);return true;}
   var wcs0=s.split(' ').length;var _viz=app.getAttribute('data-viz')||'';
-  if(wcs0<=8&&/^(?:(?:ok(?:ay)?|alright|cool|great|yeah|yep|perfect)[, ]+)?(?:thanks?(?: so much| a lot| mint)?|thank you(?: so much| mint)?|all done|i'?m done|we'?re done|done|got it|that works|sounds good|nice|perfect|awesome|all good|we'?re good|good to go|that'?s perfect|looks good|that looks good)(?: mint)?$/.test(s)&&/^(cal|board|wx)$/.test(_viz)&&!/^(?:ok(?:ay)?[, ]+)?(?:yes|no)$/.test(s)){if(dry)return true;logMic('route','hub back');cmdHub(q,{back:true});return true;}
+  if(wcs0<=8&&/^(?:(?:ok(?:ay)?|alright|cool|great|yeah|yep|perfect)[, ]+)?(?:thanks?(?: so much| a lot| mint)?|thank you(?: so much| mint)?|all done|i'?m done|we'?re done|done|got it|that works|sounds good|nice|perfect|awesome|all good|we'?re good|good to go|that'?s perfect|looks good|that looks good)(?: mint)?$/.test(s)&&!/\b(?:all done|done|all set|all good)\s+mint$/.test(s)&&/^(cal|board|wx)$/.test(_viz)&&!/^(?:ok(?:ay)?[, ]+)?(?:yes|no)$/.test(s)){if(dry)return true;logMic('route','hub back');cmdHub(q,{back:true});return true;}
   if(wcs0<=7&&/^(?:(?:ok(?:ay)?|alright|now)[, ]+)?(?:(?:go |take me |bring me )?(?:back|home)(?: to (?:the )?(?:menu|tabs|home|main(?: menu)?|options|selection))?|(?:the |main )?menu|show (?:me )?(?:the )?(?:menu|tabs|options|everything|home|selection)|(?:what|which) (?:can|do) (?:you|i) (?:do|have|open)|what do you have|what are my options|home screen|main screen|selection|tabs|options|all (?:the )?tabs)(?: mint)?$/.test(s)){if(dry)return true;logMic('route','hub');cmdHub(q);return true;}
   if(/\b(?:morning|evening|nightly|daily|day|today'?s|tomorrow'?s|end of day|start of day)\s+(?:briefing|brief|rundown|recap|debrief|summary|report|update)\b|\b(?:briefing|brief me|rundown|catch me up|start my day|end my day|wrap up (?:my|the) day|end of day|how does my (?:day|tomorrow) look)\b/.test(s)&&!/\b(text|send|message|read me the text|last text)\b/.test(s)&&wcq<=14){if(dry)return true;logMic('route','briefing');var _hr=+new Date().toLocaleString('en-US',{timeZone:ET,hour:'numeric',hour12:false});var _ev=/\b(evening|tonight|night|end of day|end my day|wrap|tomorrow)\b/.test(s)?true:(/\b(morning|start|today)\b/.test(s)?false:_hr>=14);cmdBrief2(q,_ev?'evening':'morning',/refresh/.test(s)?{live:true}:undefined);return true;}
   if(/\b(deposits?|unpaid|outstanding|who (?:has|hasn'?t|have|haven'?t|owes?|still owes?) (?:paid|me|a deposit)|payments? due|payment status|who owes)\b/.test(s)&&!/\b(send|request|text|waive|refund|charge|take|link|remind|remove|cancel|record|mark|log)\b/.test(s)&&wcq<=13){if(dry)return true;logMic('route','deposits');cmdDeposits(q,/refresh/.test(s)?{live:true}:undefined);return true;}
@@ -2374,7 +2405,7 @@ function routeKnown(q,opt,dry){
   var nt=noteIntent(s);
   if(nt){if(dry)return true;logMic('route','notes');
     if(nt.clear){NOTES=[];saveNotes();showNotes(q,'Okay, I cleared your notes.');return true;}
-    if(nt.add){NOTES.push({t:nt.add.charAt(0).toUpperCase()+nt.add.slice(1),at:Date.now(),done:false});saveNotes();showNotes(q,'Got it. I added that to your notes.');return true;}
+    if(nt.add){NOTES.push({t:nt.add.charAt(0).toUpperCase()+nt.add.slice(1),at:Date.now(),done:false});saveNotes();showNotes(q,'Got it. I added that to your notes.',NOTES.length-1);return true;}
     showNotes(q);return true;}
   if(BR&&NEED_RE.test(s)&&!/\b(weather|forecast|calendar)\b/.test(s)){if(dry)return true;logMic('route','needs board');cmdNeedsBoard(q);return true;}
   if(/\b(flip|toss)\b.*\bcoin\b|\bheads or tails\b|\bcoin (?:flip|toss)\b/.test(s)){if(dry)return true;logMic('route','coin');var hd=Math.random()<0.5?'Heads':'Tails';beginAsk(q);finish({headline:hd,small:true,spoken:hd+'.',node:tossNode('coin',hd),tags:[srcTag('live','On this screen')],acts:[{label:'Flip again',fn:function(){run('flip a coin',{});}}]});return true;}
@@ -2469,16 +2500,79 @@ function tossNode(kind,result){
   setTimeout(function(){if(kind==='dice'){var n=0,iv=setInterval(function(){obj.textContent=String(1+Math.floor(Math.random()*6));if(++n>10){clearInterval(iv);obj.textContent=String(result);}},70);}r.textContent=String(result).toUpperCase();r.classList.add('on');},1100);
   return w;
 }
+/* ---------- reminders (fire while this screen is open) ---------- */
+var REMS=store('rems')||[];var remAdvised=false;
+function saveRems(){store('rems',REMS);}
+function parseWhen(s){
+  var now=new Date(),rest=' '+s+' ',m,at=null;
+  var DAYS=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+  if((m=/\bin (an?|\d+(?:\.\d+)?|half an?|a couple of|couple) ?(second|sec|minute|min|hour|hr|day)s?\b/.exec(rest))){var n=/^half/.test(m[1])?0.5:(/^(an?)$/.test(m[1])?1:(/couple/.test(m[1])?2:parseFloat(m[1])));var u=m[2].charAt(0)==='s'?1000:(m[2].charAt(0)==='m'?60000:(m[2].charAt(0)==='h'?3600000:86400000));at=new Date(now.getTime()+n*u);rest=rest.replace(m[0],' ');return {at:at.getTime(),rest:rest};}
+  var dayOff=null,part=null;
+  if(/\btomorrow\b/.test(rest)){dayOff=1;rest=rest.replace(/\btomorrow\b/,' ');}
+  else if(/\btonight\b/.test(rest)){dayOff=0;part='night';rest=rest.replace(/\btonight\b/,' ');}
+  else if((m=/\b(?:on |next |this )?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/.exec(rest))){var want=DAYS.indexOf(m[1]);dayOff=(want-now.getDay()+7)%7;if(dayOff===0&&/\bnext\b/.test(m[0]))dayOff=7;rest=rest.replace(m[0],' ');}
+  if((m=/\b(?:this |in the )?(morning|afternoon|evening|night)\b/.exec(rest))){part=part||m[1];rest=rest.replace(m[0],' ');}
+  var h=null,mi=0,mer=null;
+  if((m=/\bat (noon|midnight)\b/.exec(rest))||(m=/\b(noon|midnight)\b/.exec(rest))){h=m[1]==='noon'?12:0;mer='x';rest=rest.replace(m[0],' ');}
+  else if((m=/\b(?:at |around |by |for )?(\d{1,2})(?::| )?(\d{2})? ?(a\.? ?m\.?|p\.? ?m\.?|am|pm|o'?clock)?(?=\s|$)/.exec(rest.replace(/\b(\d+) (?:minutes?|mins?|hours?|days?)\b/g,' '))) && /\b(?:at|around|by|for) \d|\d ?(?:a\.? ?m|p\.? ?m|am|pm)\b|\d:\d\d/.test(rest)){
+    var mm=/\b(?:at |around |by |for )?(\d{1,2})(?::| )?(\d{2})? ?(a\.? ?m\.?|p\.? ?m\.?|am|pm|o'?clock)?(?=\s|$)/.exec(rest);
+    // prefer explicit "at X" form
+    var ex=/\b(?:at|around|by) (\d{1,2})(?::| )?(\d{2})? ?(a\.? ?m\.?|p\.? ?m\.?|am|pm|o'?clock)?\b/.exec(rest)||/\b(\d{1,2})(?::(\d{2}))? ?(a\.? ?m\.?|p\.? ?m\.?|am|pm)\b/.exec(rest)||/\b(\d{1,2}):(\d{2})\b/.exec(rest);
+    if(ex){h=+ex[1];mi=ex[2]?+ex[2]:0;mer=ex[3]?(/p/.test(ex[3])?'pm':(/a/.test(ex[3])?'am':null)):null;rest=rest.replace(ex[0],' ');}
+  }
+  if(h==null&&!part&&dayOff==null)return null;
+  if(h==null){h={morning:9,afternoon:14,evening:18,night:20}[part]||9;mer='x';}
+  else if(mer==='pm'&&h<12)h+=12;else if(mer==='am'&&h===12)h=0;
+  else if(mer==null&&h<=12){
+    if(part==='morning'){}else if(part==='afternoon'||part==='evening'||part==='night'){if(h<12)h+=12;}
+    else{var base=new Date(now);base.setDate(base.getDate()+(dayOff||0));var ca=new Date(base);ca.setHours(h%12,mi,0,0);var cp=new Date(base);cp.setHours((h%12)+12,mi,0,0);
+      if((dayOff||0)===0){h=ca>now?h%12:(cp>now?(h%12)+12:((h>=7&&h<=11)?h:(h%12)+12));}else{h=(h>=7&&h<=11)?h:((h%12)+12===24?12:(h%12)+12);if(h===12+12)h=12;if(h<7&&h>0)h=h+12;}}
+  }
+  if(part==='night'&&dayOff===0&&h===20&&mer==='x'){var t8=new Date(now);t8.setHours(20,0,0,0);if(t8<=now)h=23;}
+  var d=new Date(now);d.setDate(d.getDate()+(dayOff||0));d.setHours(h,mi,0,0);if(d<=now){if(dayOff==null||dayOff===0)d.setDate(d.getDate()+1);else d.setDate(d.getDate()+7);}
+  return {at:d.getTime(),rest:rest};
+}
+function remText(rest){return rest.replace(/\b(?:please|can you|could you|mint|hey|for me|set (?:a |an )?reminder|add (?:a )?reminder|make (?:a )?reminder|create (?:a )?reminder|remind me|reminder|don'?t let me forget)\b/g,' ').replace(/\b(?:to|that|about|for|at|on|in|by)\s*$/,' ').replace(/^\s*(?:to|that|about|for)\s+/,'').replace(/\s+/g,' ').replace(/^[\s,.:\-]+|[\s,.:\-]+$/g,'').replace(/^(?:to|that|about|for)\s+/,'').replace(/\b(?:at|on|in|by|around)\s*$/,'').trim();}
+function fmtWhen(ms){var d=new Date(ms),n=new Date(),tm=new Date(n);tm.setDate(tm.getDate()+1);var same=function(a,b){return a.toDateString()===b.toDateString();};var t=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});return same(d,n)?'Today '+t:(same(d,tm)?'Tomorrow '+t:d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+' '+t);}
+function remNode(main,fire){
+  var w=el('div','rf');var up=REMS.filter(function(r){return !r.done;}).sort(function(a,b){return a.at-b.at;});
+  var spots=[[6,8],[68,6],[10,58],[70,60],[38,2],[40,72],[2,34],[78,34]];var i=0;
+  up.forEach(function(r){if(main&&r.id===main.id)return;if(i>=spots.length)return;var t=el('div','rt');t.style.left=spots[i][0]+'%';t.style.top=spots[i][1]+'%';t.style.setProperty('--dur',(5+Math.random()*4)+'s');t.style.setProperty('--dl',(0.15*i)+'s');t.style.setProperty('--fx',(Math.random()*30-15)+'px');t.style.setProperty('--fy',(-10-Math.random()*22)+'px');t.style.setProperty('--r',(Math.random()*6-3)+'deg');t.appendChild(el('b',null,fmtWhen(r.at).toUpperCase()));t.appendChild(el('span',null,r.t));w.appendChild(t);i++;});
+  if(main){var m=el('div','rt main'+(fire?' fire':''));m.appendChild(el('b',null,fire?'REMINDER · NOW':'SET FOR '+fmtWhen(main.at).toUpperCase()));m.appendChild(el('span',null,main.t));w.appendChild(m);}
+  w.appendChild(el('div','rf-lbl',up.length?(fire?'REMINDER':up.length+' UPCOMING'):'NO REMINDERS'));
+  return w;
+}
+function showRems(q,say,main,fire){beginAsk(q);var up=REMS.filter(function(r){return !r.done;});finish({headline:fire?'Reminder':(main?'Reminder set':(up.length?up.length+plural(up.length,' reminder',' reminders'):'No reminders')),small:true,viz:'board',spoken:say||(up.length?'You have '+up.length+plural(up.length,' reminder. ',' reminders. ')+up.slice(0,4).map(function(r){return r.t+', '+fmtWhen(r.at);}).join('. '):'You have no reminders.'),node:remNode(main,fire),tags:[srcTag('saved','Saved on this device'),srcTag('na','Fires while this screen is open')],srcNote:'Reminders go off only while M1NT is open on this device.',acts:fire?[{label:'Snooze 10 min',fn:function(){REMS.push({id:Date.now(),t:main.t,at:Date.now()+600000,done:false});saveRems();run('show my reminders',{});}},{label:'Done',fn:function(){run('show my reminders',{});}}]:[{label:'Clear all',fn:function(){REMS=[];saveRems();run('show my reminders',{});}}]});}
+function remCheck(){
+  var now=Date.now();var due=REMS.filter(function(r){return !r.done&&r.at<=now;});if(!due.length)return;
+  due.forEach(function(r){r.done=true;});saveRems();var r=due[0];
+  try{wakeUi();}catch(e){}sfx('unlock');try{beep();}catch(e){}
+  try{if(window.Notification&&Notification.permission==='granted')new Notification('M1NT reminder',{body:r.t});}catch(e){}
+  var late=now-r.at>120000;showRems('Reminder',(late?'Missed reminder. ':'Reminder. ')+due.map(function(x){return x.t;}).join('. ')+'.',r,true);
+}
+window.__t={sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText};setInterval(remCheck,3000);setTimeout(remCheck,2500);
+function addReminder(q,s){
+  var pw=parseWhen(s);var txt=remText(pw?pw.rest:s);
+  if(!pw){convo.pending={kind:'remwhen',text:txt,orig:q,until:Date.now()+120000};beginAsk(q);finish({headline:'When should I remind you?',small:true,spoken:'When should I remind you'+(txt?' to '+txt:'')+'?',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say a time, like in 20 minutes, or tomorrow at 9.'}]});return;}
+  if(!txt)txt='Reminder';txt=txt.charAt(0).toUpperCase()+txt.slice(1);
+  var r={id:Date.now(),t:txt,at:pw.at,done:false};REMS.push(r);saveRems();
+  var adv=remAdvised?'':' I will remind you as long as this screen is open.';remAdvised=true;
+  showRems(q,'Okay. I will remind you '+fmtWhen(pw.at).replace('Today ','today at ').replace('Tomorrow ','tomorrow at ')+' to '+txt.charAt(0).toLowerCase()+txt.slice(1)+'.'+adv,r,false);
+}
 /* ---------- notes ---------- */
 var NOTES=store('notes')||[];
 function saveNotes(){store('notes',NOTES);}
-function notesNode(){
-  var w=el('div','notes');
-  function draw(){clear(w);if(!NOTES.length){w.appendChild(el('div','notes-e','Nothing on your list. Say “add a note: …” to put something here.'));return;}
-    NOTES.forEach(function(n,i){var c=el('div','note'+(n.done?' done':''));c.style.setProperty('--d',(0.06*i)+'s');var ck=el('button','note-ck',n.done?'✓':'');ck.type='button';ck.addEventListener('click',function(){n.done=!n.done;saveNotes();draw();});c.appendChild(ck);var tx=el('div','note-t');tx.appendChild(el('div','note-x',n.t));tx.appendChild(el('div','note-a',new Date(n.at).toLocaleString('en-US',{timeZone:ET,weekday:'short',hour:'numeric',minute:'2-digit'})));c.appendChild(tx);var rm=el('button','note-rm','✕');rm.type='button';rm.setAttribute('aria-label','Remove');rm.addEventListener('click',function(){NOTES.splice(i,1);saveNotes();draw();});c.appendChild(rm);w.appendChild(c);});}
+function notesNode(newIdx){
+  var w=el('div','pad');w.appendChild(el('div','pad-h','NOTES · '+NOTES.filter(function(n){return !n.done;}).length+' OPEN'));var list=el('div');w.appendChild(list);
+  function draw(){clear(list);if(!NOTES.length){list.appendChild(el('div','pad-e','Nothing here yet. Say “add a note…”'));return;}
+    NOTES.forEach(function(n,i){var r=el('div','pad-r'+(n.done?' done':'')+(i===newIdx?' new':''));var ck=el('div','pad-b',n.done?'✓':'');r.appendChild(ck);var tx=el('span','pad-x');r.appendChild(tx);
+      if(i===newIdx){var k=0;var pen=el('i','pad-pen');tx.appendChild(pen);(function step(){if(!w.isConnected)return;if(k<=n.t.length){tx.firstChild===pen&&0;tx.textContent=n.t.slice(0,k);tx.appendChild(pen);k++;simTimers.push(setTimeout(step,34));if(k%3===0)sfx('tick');}else{pen.remove();}})();}
+      else tx.textContent=n.t;
+      var rm=el('button','pad-del','✕');rm.type='button';rm.setAttribute('aria-label','Remove');rm.addEventListener('click',function(e){e.stopPropagation();NOTES.splice(i,1);saveNotes();newIdx=-1;draw();});r.appendChild(rm);
+      r.addEventListener('click',function(){n.done=!n.done;saveNotes();newIdx=-1;draw();sfx(n.done?'pick':'tick');});list.appendChild(r);});}
   draw();return w;
 }
-function showNotes(q,say){beginAsk(q);finish({headline:NOTES.length?(NOTES.length+plural(NOTES.length,' note',' notes')):'No notes yet',small:true,spoken:say||(NOTES.length?'You have '+NOTES.length+plural(NOTES.length,' note. ',' notes. ')+NOTES.filter(function(n){return !n.done;}).slice(0,4).map(function(n){return n.t;}).join('. '):'Your list is empty.'),node:notesNode(),tags:[srcTag('saved','Saved on this device')]});}
+function showNotes(q,say,newIdx){beginAsk(q);finish({headline:NOTES.length?(NOTES.length+plural(NOTES.length,' note',' notes')):'No notes yet',small:true,viz:'board',spoken:say||(NOTES.length?'You have '+NOTES.length+plural(NOTES.length,' note. ',' notes. ')+NOTES.filter(function(n){return !n.done;}).slice(0,4).map(function(n){return n.t;}).join('. '):'Your list is empty.'),node:notesNode(newIdx),tags:[srcTag('saved','Saved on this device')]});}
 function noteIntent(s){
   var m;
   if(/\b(?:clear|delete|erase|wipe|empty)\b\s+(?:all\s+)?(?:of\s+)?(?:my\s+|the\s+)?(?:notes|to ?do(?: list)?|list|tasks|reminders)\b/.test(s))return {clear:true};
@@ -2526,7 +2620,7 @@ function run(raw,opt){
   opt=opt||{};var q=String(raw||'').trim();if(!q)return;$('hint').textContent='';if(!opt.voice&&standby)standby=false;
   convo.armAfterSpeech=null;convo.armOk=!!opt.voice||wake.on;
   if(opt.fresh){convo.pending=null;convo.last=null;}
-  if(convo.pending&&(opt.reply||shortReply(q)||convo.pending.kind==='textbody')){var comp=completePending(q);if(comp){logMic('reply','completed: '+comp.slice(0,70));q=comp;opt.clarified=true;}}
+  if(convo.pending&&(opt.reply||shortReply(q)||convo.pending.kind==='textbody'||convo.pending.kind==='remwhen')){var comp=completePending(q);if(comp){logMic('reply','completed: '+comp.slice(0,70));q=comp;opt.clarified=true;}}
   else if(convo.pending&&Date.now()>convo.pending.until)convo.pending=null;
   var wxCtx=wxCtxNow();
   if(wxCtx&&BR&&!opt.noFrag&&isWxChat(q)){logMic('route','weather chat to Claude');cmdBridge(q,opt);return;}
