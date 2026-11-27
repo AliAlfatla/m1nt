@@ -784,7 +784,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v80-2026-11-27';
+var BUILD='v91-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1563,10 +1563,11 @@ function handleWake(t,isFinal){
   var q=cleanQ(t);if(!q)return;
   if(!standby&&isFinal&&lockReq(q)){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;doLock(q);return;}
   if(q.split(/\s+/).length>=5&&looksLikeEcho(q)){if(isFinal)logMic('ignored','echo of M1NT: '+q.slice(0,40));return;}
-  if(q.split(/\s+/).length<=2&&!convo.pending&&!(convo.askC&&Date.now()<convo.askC.until)&&!(simCtl&&simCtl.node&&simCtl.node.isConnected)&&!(convo.last&&Date.now()-convo.last.at<120000)&&!routeKnown(q,{},true)){if(isFinal)logMic('ignored','unclear fragment: '+q.slice(0,30));return;}
+  if(q.split(/\s+/).length<=2&&!YESNO_RE.test(q.trim())&&!convo.pending&&!(convo.askC&&Date.now()<convo.askC.until)&&!(simCtl&&simCtl.node&&simCtl.node.isConnected)&&!(convo.last&&Date.now()-convo.last.at<120000)&&!routeKnown(q,{},true)){if(isFinal)logMic('ignored','unclear fragment: '+q.slice(0,30));return;}
   clearTimeout(silTimer);wakePend=q;
   if(isFinal)submitHeard(q);else silTimer=setTimeout(function(){submitHeard(wakePend);},SIL);
 }
+var YESNO_RE=/^(?:yes|yea|yeah|yep|yup|ya|yah|uh huh|mhm|mm hmm|sure|ok|okay|alright|all right|correct|right|definitely|go ahead|send it|do it|please|absolutely|of course|no|nope|nah|naw|negative|wrong|wrong number|not right|cancel|never ?mind|stop|skip|not now|no thanks|maybe|idk|i don'?t know|dunno|not sure)[\s.!?,]*$/i;
 function wakeSink(be){
   var started=Date.now();
   return {
@@ -2507,6 +2508,7 @@ function phoneNode(name,msg,live){
   function deliver(){go.disabled=true;snd.disabled=true;inp.textContent='iMessage / text';st.textContent='Sending…';st.className='sim-st';bub.classList.remove('fly');void bub.offsetWidth;bub.classList.add('fly');ph.appendChild(el('div','sim-ripple'));sfx('open');
     if(live){
       var t0=Date.now();
+      if(!BR){simTimers.push(setTimeout(function(){anim(false,'Not sent','NOT SENT');var w0='This window is locked or not connected, so nothing went out. Unlock it and say send it again.';$('hint').textContent=w0;try{speak(w0,false);}catch(e){}if(simCtl)simCtl.done=false;},500));return;}
       fetch(live.explicit?SEND_NUM_URL:SEND_URL,{method:'POST',body:new URLSearchParams({code:BR.code,action:live.explicit?'sendnum':'send',to:live.to,text:msg,confirmed:live.explicit?'yes':''})}).then(function(r){return r.text();}).catch(function(){return 'NETERR';}).then(function(t){
         var wait=Math.max(0,1100-(Date.now()-t0));
         simTimers.push(setTimeout(function(){
@@ -3013,6 +3015,7 @@ function routeKnown(q,opt,dry){
     var si=simIntentWords(s);
     if(si==='cancel'||(simCtl.armed&&/^(?:no|nope|nah|wrong|wrong number|not right|that'?s wrong)\b/.test(s))){if(dry)return true;logMic('route','sim cancel');simClear();simCtl.done=true;$('hint').textContent='Draft dropped.';try{speak('Okay, dropped it.',false);}catch(e){}return true;}
     if(si==='redo'){if(dry)return true;logMic('route','sim redraft');cmdTextSim(q,{name:simCtl.name,num:simCtl.num,body:simCtl.body+' (Adjust the message like this: '+q+')'});return true;}
+    if(!si&&wcq>=2&&!/^(?:what|who|when|where|how|why|is|are|do|does|did|can|could)\b/.test(s)&&!simCtl.done){if(dry)return true;logMic('route','sim edit by conversation');cmdTextSim(q,{name:simCtl.name,num:simCtl.num,body:simCtl.body+' (Adjust the message like this: '+q+')'});return true;}
     if(si==='send'){if(dry)return true;logMic('route','sim send');if(!simCtl.done){var lv=simCtl.live;simCtl.deliver();if(!lv){$('hint').textContent='Simulated send. Nothing was actually sent.';try{speak('Sent. That was a simulation, so nothing actually went out.',false);}catch(e){}}}return true;}
   }
   if(TSTAT_RE.test(s)&&!WX_RE.test(s)&&!/\b(set|start|make|create)\b.*\b\d/.test(s)){if(dry)return true;logMic('route','timer status');
@@ -3845,7 +3848,7 @@ function run(raw,opt){
   var lx=(simCtl&&simCtl.node.isConnected)?null:lexTalk(q);if(lx){logMic('route','chat '+lx.lang);beginAsk(q);SPK_LANG=lx.lang==='en'?null:LANGTAG[lx.lang];finish({headline:lx.text,small:true,spoken:lx.text,tags:[srcTag('live','Just talking')]});setTimeout(function(){SPK_LANG=null;},9000);return;}
   var stk=smallTalk(q);if(stk){logMic('route','small talk');beginAsk(q);finish({headline:stk,small:true,spoken:stk,tags:[srcTag('live','Just talking')]});return;}
   if(routeKnown(q,opt))return;
-  if(BR&&!opt.live&&!opt.nocache&&!opt.reply&&store('autoclaude')!==true&&wcq>=2&&!wxCtxNow()){
+  if(BR&&!opt.live&&!opt.nocache&&!opt.reply&&store('autoclaude')===false&&wcq>=2&&!wxCtxNow()){
     if(/^(?:always ask claude|ask claude (?:automatically|without asking)|stop asking before claude|don'?t ask before claude)/i.test(q)){store('autoclaude',true);beginAsk(q);finish({headline:'Okay. I will ask Claude without checking first.',small:true,spoken:'Okay. From now on I will ask Claude without checking with you first.',tags:[srcTag('live','Setting saved')]});return;}
     convo.askC={q:q,opt:opt,until:Date.now()+90000};beginAsk(q);
     finish({headline:'I do not have that one built in. Want me to ask Claude?',small:true,spoken:'I do not have that one built in. Want me to ask Claude?',acts:[{label:'Yes, ask Claude',pri:true,fn:function(){var a=convo.askC;convo.askC=null;if(a)cmdBridge(a.q,a.opt);}},{label:'No',fn:function(){convo.askC=null;beginAsk('never mind');finish({headline:'Okay, I will leave it.',small:true,spoken:'',tags:[srcTag('live','Just talking')]});}}],tags:[srcTag('live','Asking you first')]});
