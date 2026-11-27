@@ -273,6 +273,19 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 .fu-sec{font:700 11px var(--font-m);letter-spacing:.16em;margin:16px 0 8px;opacity:.85}.fu-card{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:0 0 9px;background:rgba(92,255,200,.04);animation:fuIn .55s ease-out both;animation-delay:var(--d,0s);position:relative;overflow:hidden}.fu-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--mint)}.fu-card.warn:before{background:#ffb84d}.fu-card.bad:before{background:#ff6b6b}.fu-card.dim:before{background:#5a6b7a}
 .fu-h{display:flex;justify-content:space-between;gap:8px;align-items:center}.fu-n{font:700 14px var(--font-m)}.fu-pill{font:700 9px var(--font-m);letter-spacing:.12em;padding:3px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}.fu-r{font:12px var(--font-m);opacity:.75;margin-top:4px}.fu-b{margin-top:8px;padding:8px 11px;border-radius:12px 12px 12px 3px;background:rgba(92,255,200,.13);font:12.5px/1.4 var(--font-m);max-width:92%;animation:fuType 1.1s steps(40,end) both;animation-delay:var(--d,0s);overflow:hidden}
 @keyframes fuPop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}@keyframes fuIn{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}@keyframes fuType{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+
+html.tv,html.tv *{cursor:none!important}
+html.tv *{animation-duration:.01s!important;animation-delay:0s!important;transition:none!important;box-shadow:none!important;text-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;filter:none!important}
+html.tv #fx{display:none}
+html.tv .top .chips{display:none!important}
+#tvCorner{display:none;position:fixed;top:14px;right:18px;z-index:9999;gap:12px}
+html.tv #tvCorner{display:flex}
+#tvCorner button{width:66px;height:66px;border-radius:50%;background:rgba(2,19,15,.92);border:2px solid #5cffc8;color:#5cffc8;display:flex;align-items:center;justify-content:center;padding:0}
+#tvCorner button svg{width:34px;height:34px}
+#tvCorner button.on{background:#5cffc8;color:#04140f}
+#tvMenu{display:none;position:fixed;top:92px;right:18px;z-index:9999;width:420px;max-width:92vw;background:rgba(2,19,15,.97);border:2px solid #5cffc8;border-radius:18px;padding:14px;flex-direction:column;gap:10px}
+#tvMenu.on{display:flex}
+#tvMenu button{font:700 22px ui-monospace,Menlo,monospace;color:#5cffc8;background:rgba(92,255,200,.08);border:1.5px solid rgba(92,255,200,.45);border-radius:12px;padding:14px 18px;text-align:left}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* ===== visual screens ===== */
 .app[data-state="answer"][data-viz] .center{padding:10px 24px 4px 230px}
@@ -566,6 +579,8 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 </style>
 <script type="application/json" id="claude-artifacts-manifest">{"permissions": []}</script>
 
+<div id="tvCorner"><button type="button" id="tvMic" aria-label="Microphone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button type="button" id="tvMenuBtn" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>
+<div id="tvMenu" role="menu"></div>
 <div id="lock" role="dialog" aria-label="Enter code"><div class="lk-lk">🔒</div><div class="lk-t" id="lkT">M1NT LOCKED</div><div class="lk-d" id="lkD"></div><div class="lk-s" id="lkS"></div><div class="lk-pad" id="lkP"></div><button class="lk-skip" id="lkSkip" type="button" hidden>Skip for now</button><button class="lk-skip" id="lkMic" type="button">🎤 Tap to speak the code</button></div>
 <div class="app" id="app" data-state="asleep">
   <header class="top">
@@ -748,7 +763,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v78-2026-11-27';
+var BUILD='v79-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -836,7 +851,7 @@ function draw(now){
   }
   if(aw>0.3){cx.save();cx.rotate(-t*0.06);cx.strokeStyle='rgba(92,255,200,'+(0.26*aw)+')';cx.lineWidth=1;var R=maxR*0.99;for(var k=0;k<72;k++){var a2=k/72*Math.PI*2,l=k%6===0?9:4;cx.beginPath();cx.moveTo(Math.cos(a2)*R,Math.sin(a2)*R);cx.lineTo(Math.cos(a2)*(R-l),Math.sin(a2)*(R-l));cx.stroke();}cx.restore();}
   cx.restore();
-  if(!reduce)requestAnimationFrame(draw);
+  if(!reduce){if(window.__tvon)setTimeout(function(){requestAnimationFrame(draw);},90);else requestAnimationFrame(draw);}
 }
 function redraw(){if(reduce){S.aw=S.awT;S.an=S.anT;draw(performance.now());}}
 window.addEventListener('resize',function(){size();redraw();});
@@ -3213,7 +3228,7 @@ function fitAuto(){
   h.classList.toggle('fit',on);if(on)h.style.setProperty('--tvk',(Math.min(window.innerWidth/1600,window.innerHeight/900)*0.98).toFixed(4));
 }
 window.addEventListener('resize',function(){try{fitAuto();}catch(e){}});
-function tvApply(){var h=document.documentElement;h.classList.toggle('tv',TV.on);if(TV.on)h.classList.remove('fit');var k=Math.min(window.innerWidth/1600,window.innerHeight/900)*(1-2*TV.inset/100);h.style.setProperty('--tvk',Math.max(.2,k).toFixed(4));try{tvFitBox();}catch(e){}}
+function tvApply(){var h=document.documentElement;window.__tvon=!!TV.on;h.classList.toggle('tv',TV.on);if(TV.on)h.classList.remove('fit');var k=Math.min(window.innerWidth/1600,window.innerHeight/900)*(1-2*TV.inset/100);h.style.setProperty('--tvk',Math.max(.2,k).toFixed(4));try{tvFitBox();}catch(e){}}
 window.addEventListener('resize',function(){if(TV.on)tvApply();});
 function tvRotate(){
   return;if(!TV.on)return;if(Date.now()-(TV.lastUser||0)<30000)return;if(S.mode!=='idle'&&S.mode!=='asleep')return;var qs=["what's on my schedule today","what needs me","how's the system doing"];TV.i=((TV.i||0)+1)%qs.length;
@@ -3266,6 +3281,28 @@ document.addEventListener('keydown',function(e){
 });
 try{fitAuto();}catch(e){}
 (function(){var ua=navigator.userAgent||'';var u=/[?&]tv(=1|=on|&|$)/.test(location.search)||(/SMART-?TV|SmartTV|Tizen|Web0S|webOS|NetCast|BRAVIA|AFT[A-Z]|Android ?TV|GoogleTV|CrKey|HbbTV|Roku|VIDAA|\bTV\b/i.test(ua)&&!/[?&]tv=(0|off)/.test(location.search));if(/[?&]tv=(0|off)/.test(location.search)){store('tv',false);}if(u||store('tv')===true){TV.on=true;tvApply();setTimeout(function(){tvSet(true);},600);}})();
+
+/* ---------- TV corner mic + menu ---------- */
+(function(){
+  var mb=document.getElementById('tvMic'),mn=document.getElementById('tvMenuBtn'),menu=document.getElementById('tvMenu');if(!mb||!mn||!menu)return;
+  function mUi(){mb.classList.toggle('on',!!(ptt&&ptt.on));}
+  mb.addEventListener('click',async function(){
+    try{if(ptt.on){pttStop();}else{if(mic.perm!=='ready')await enableMic();pttStart();}}catch(e){}
+    mUi();setTimeout(mUi,400);
+  });
+  setInterval(mUi,700);
+  var items=[['Enable microphone','enableMic'],['wake','wakeBtn'],['mute','muteBtn'],['Setup','setBtn'],['History','histBtn'],['Usage','useBtn']];
+  function build(){
+    menu.textContent='';
+    items.forEach(function(it){var o=document.getElementById(it[1]);if(!o||o.hidden)return;if(it[1]==='enableMic'&&(o.hidden||/ready|on/i.test((document.getElementById('micTxt')||{}).textContent||'')&&mic.perm==='ready'))return;
+      var b=document.createElement('button');b.type='button';b.textContent=o.textContent;b.addEventListener('click',function(){o.click();setTimeout(function(){if(menu.classList.contains('on'))build();},350);if(it[1]==='setBtn'||it[1]==='histBtn'||it[1]==='useBtn')close();});menu.appendChild(b);});
+    var c=document.createElement('button');c.type='button';c.textContent='Close';c.addEventListener('click',close);menu.appendChild(c);
+  }
+  function open(){build();menu.classList.add('on');var f=menu.querySelector('button');if(f)f.focus();}
+  function close(){menu.classList.remove('on');try{mn.focus();}catch(e){}}
+  mn.addEventListener('click',function(){if(menu.classList.contains('on'))close();else open();});
+  document.addEventListener('keydown',function(e){if(menu.classList.contains('on')&&(e.key==='Escape'||e.key==='Backspace'||e.key==='GoBack'||e.key==='BrowserBack')){e.preventDefault();close();}},true);
+})();
 /* ---------- TV wall display ---------- */
 var WXT={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',80:'Showers',81:'Showers',82:'Heavy showers',95:'Thunderstorms',96:'Thunderstorms',99:'Thunderstorms'};
 var DASH={el:null,data:null,at:0,timer:null,clk:null};
