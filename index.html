@@ -152,7 +152,7 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
       <span class="chip" id="micChip" role="status" title="Microphone status"><i class="dot" id="micDot"></i><span id="micTxt">Mic: not checked</span><span class="meter" id="meter" hidden><i id="meterI"></i></span></span>
       <button class="chip go" type="button" id="enableMic">Enable microphone</button>
       <button class="chip" type="button" id="micOff" title="Fully stop listening">Mic off</button>
-      <button class="chip" type="button" id="wakeBtn" aria-pressed="false">Hey Mint: off</button>
+      <button class="chip" type="button" id="wakeBtn" aria-pressed="false">Voice: off</button>
       <button class="chip" type="button" id="muteBtn" aria-pressed="false">Voice: on</button>
       <button class="chip" type="button" id="useBtn" title="Usage">Usage</button>
       <button class="chip" type="button" id="histBtn">History</button>
@@ -220,7 +220,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v10-2026-11-26';
+var BUILD='v11-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -551,7 +551,7 @@ function finish(o){
   updatePanels();
   var fk=o.clarify?'clarify':(o.follow?'follow':null);
   if(o.follow)convo.last={kind:o.follow,q:cur.q,a:spoken,at:Date.now()};else if(o.clarify)convo.last=null;
-  convo.armAfterSpeech=(fk&&convo.armOk&&(fk==='clarify'||wake.on))?fk:null;
+  convo.armAfterSpeech=null;
   if(!muted)speak(spoken,false);else{setMode('idle');if(convo.armAfterSpeech)afterAnswerArm(300);}
 }
 function pushHist(e){hist.unshift(e);hist=hist.slice(0,40);store('hist',hist);}
@@ -637,7 +637,7 @@ function micUi(){
   $('micOff').hidden=!(mic.perm==='ready'||wake.on||ptt.on);
   $('meter').hidden=!listening;
   $('micBtn').classList.toggle('on',!!ptt.on);
-  $('wakeBtn').textContent='Hey Mint: '+(wake.on?(wake.armed?'listening':(wake.pausedForSpeech?'paused':(wake.retrying?'reconnecting':'on'))):'off');
+  $('wakeBtn').textContent='Voice: '+(wake.on?(wake.armed?'listening':(wake.pausedForSpeech?'paused':(wake.retrying?'reconnecting':'on'))):'off');
   $('wakeBtn').setAttribute('aria-pressed',wake.on?'true':'false');
   renderSetupIfOpen();
 }
@@ -745,7 +745,7 @@ function pttStart(){
   if(ptt.on)return;mic.off=false;
   wakeUi();
   if(micBackend==='none'){$('hint').textContent='This window has no speech input. Press Enable microphone for the reason, or type.';return;}
-  if(wake.on){wake.wasOn=true;wakeOff('Hey Mint paused while you talk.');}
+  if(wake.on){wake.wasOn=true;wakeOff('Voice listening paused while you talk.');}
   stopSpeak();ptt.on=true;ptt.buf='';setMode('listening');micUi();levelStart();
   var sink={partial:function(t){$('cmd').value=(ptt.buf+' '+t).trim();},final:function(t){ptt.buf=(ptt.buf+' '+t).trim();$('cmd').value=ptt.buf;},end:function(why){pttEnd(why);}};
   micStart(sink,false).then(function(ok){if(!ok&&ptt.on)pttEnd('failed');});
@@ -825,7 +825,7 @@ function replyTick(){
 }
 function endReply(why){
   var r=wake.reply;wake.reply=null;clearTimeout(wake.replyT);clearTimeout(silTimer);wakePend=null;
-  if(r&&why==='quiet'){convo.pending=null;logMic('reply','window closed quiet');$('hint').textContent=r.kind==='follow'?'Say “Hey Mint” for a new question.':'No reply heard. Say “Hey Mint” and ask again.';$('doing').textContent='';}
+  if(r&&why==='quiet'){convo.pending=null;logMic('reply','window closed quiet');$('hint').textContent=r.kind==='follow'?'Ask anything.':'No reply heard. Ask anything.';$('doing').textContent='';}
   if(S.mode==='listening'&&!wake.cap)setMode('idle');
   if(wake.temp){wake.temp=false;wakeOff();}
   micUi();
@@ -841,31 +841,27 @@ function busyNow(){return S.mode==='speaking'||S.mode==='thinking'||Date.now()<w
 function cleanQ(q){var r=String(q||'').replace(LEAD_RE,'').trim();return (r.length<3||JUNK.test(r))?'':r;}
 function capArm(){wake.cap=true;setMode('listening');micUi();$('hint').textContent='Listening for your question…';clearTimeout(wake.capTimer);wake.capTimer=setTimeout(function(){wake.cap=false;if(S.mode==='listening')setMode('idle');$('hint').textContent='';micUi();},9000);}
 function submitWake(text){clearTimeout(silTimer);wakePend=null;if(Date.now()<wake.ignoreUntil)return;wake.ignoreUntil=Date.now()+2500;runFromWake(text);}
+function isAwake(){return app.getAttribute('data-state')!=='asleep';}
+function submitHeard(text){
+  clearTimeout(silTimer);wakePend=null;if(Date.now()<wake.ignoreUntil)return;wake.ignoreUntil=Date.now()+2500;
+  var reply=convo.pending?'clarify':((convo.last&&Date.now()-convo.last.at<120000)?'follow':undefined);
+  wake.pausedForSpeech=false;wake.cap=false;if(wakeBE()!=='dictation')micStop();stopSpeak();$('cmd').value='';
+  run(text,{voice:true,wake:true,reply:reply});
+}
 function handleWake(t,isFinal){
-  if(SLEEP_RE.test(t)){if(isFinal){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;if(wake.reply)endReply('sleep');sleepUi();}return;}
+  if(SLEEP_RE.test(t)){if(isFinal||isAwake()){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;if(isFinal)sleepUi();}return;}
   if(busyNow())return;
-  if(wake.reply){
-    if(WAKEUP_RE.test(t))return;
-    if(HEY_RE.test(t)){convo.pending=null;convo.last=null;endReply('new');}      /* Hey Mint = new conversation: fall through */
-    else{
-      var rq=cleanReply(t);if(!rq)return;
-      wake.reply.until=Math.max(wake.reply.until,Date.now()+SIL+3000);clearTimeout(silTimer);wakePend=rq;
-      if(isFinal)submitReply(rq);else silTimer=setTimeout(function(){submitReply(wakePend);},SIL);
-      return;
-    }
+  var wm=WAKEUP_RE.exec(t);
+  if(wm){
+    if(!isAwake()){wakeUi();try{window.focus();}catch(e){}$('hint').textContent='Awake and listening. Ask me anything. Say “Goodnight, Mint” to fold.';setMode('listening');}
+    var rest=cleanQ(t.slice(wm.index+wm[0].length));
+    if(!rest){clearTimeout(silTimer);wakePend=null;return;}
+    t=rest;
   }
-  if(WAKEUP_RE.test(t)){          /* opens only; anything said after it is ignored */
-    if(isFinal||app.getAttribute('data-state')==='asleep'){clearTimeout(silTimer);wakePend=null;wakeUi();try{window.focus();}catch(e){}$('hint').textContent='Awake. Say “Hey Mint” and your question.';}
-    return;
-  }
-  var q=null;
-  var m=HEY_RE.exec(t);
-  if(m){wakeUi();q=cleanQ(t.slice(m.index+m[0].length));if(!q){if(!wake.cap)capArm();return;}}
-  else if(wake.cap){q=cleanQ(t);if(!q)return;}
-  else if(/^\s*(hey|hay)[,.!\s]*(m\w{0,3})?\s*$/i.test(t)){wakeUi();if(!wake.cap)capArm();return;}   /* clipped wake transcript: never a query */
-  else return;
+  if(!isAwake())return;                 /* asleep: only “Wake up, Mint” does anything */
+  var q=cleanQ(t);if(!q)return;
   clearTimeout(silTimer);wakePend=q;
-  if(isFinal){submitWake(q);}else{silTimer=setTimeout(function(){submitWake(wakePend);},SIL);}
+  if(isFinal)submitHeard(q);else silTimer=setTimeout(function(){submitHeard(wakePend);},SIL);
 }
 function wakeSink(be){
   var started=Date.now();
@@ -895,13 +891,13 @@ function wakeStart(){var be=wakeBE();wake.needTap=false;wake.starts++;wake.armed
 function runFromWake(text){wake.pausedForSpeech=false;wake.cap=false;clearTimeout(wake.capTimer);if(wakeBE()!=='dictation')micStop();stopSpeak();$('cmd').value='';run(text,{voice:true,wake:true,fresh:true});}
 function wakeOff(msg){wake.reply=null;wake.temp=false;clearTimeout(wake.replyT);wake.on=false;wake.armed=false;wake.cap=false;wake.retrying=false;clearTimeout(wake.retryT);clearTimeout(wake.capTimer);clearTimeout(silTimer);micStop();levelStop();micUi();if(msg)$('hint').textContent=msg;}
 function wakeOn(quiet){
-  if(micBackend==='none'){if(!quiet){wakeUi();$('hint').textContent='Hey Mint needs speech input. Press Enable microphone to see what this window allows.';}return;}
+  if(micBackend==='none'){if(!quiet){wakeUi();$('hint').textContent='Voice needs speech input. Press Enable microphone to see what this window allows.';}return;}
   mic.off=false;wake.on=true;wake.starts=0;wake.fails=0;wake.pausedForSpeech=false;store('wakePref',true);
-  if(!quiet)$('hint').textContent='“Wake up, Mint” opens the screen. “Hey Mint” then your question. “Goodnight, Mint” folds it.';
+  if(!quiet)$('hint').textContent='Say “Wake up, Mint” and ask. Say “Goodnight, Mint” to fold it away.';
   logMic('on','wake listening requested');wakeStart();
 }
 $('wakeBtn').addEventListener('click',function(){
-  if(wake.on){store('wakePref',false);wakeOff('Hey Mint is off. The mic is no longer listening.');return;}
+  if(wake.on){store('wakePref',false);wakeOff('Voice is off. The mic is no longer listening.');return;}
   wakeOn(false);
 });
 function micOff(){
@@ -909,7 +905,7 @@ function micOff(){
   store('wakePref',false);wake.wasOn=false;convo.pending=null;convo.last=null;convo.armAfterSpeech=null;wakeOff();
   try{micStop();}catch(e){}
   if(stream){stream.getTracks().forEach(function(t){t.stop();});stream=null;}
-  levelStop();mic.off=true;logMic('off','Mic off pressed');micUi();$('hint').textContent='Mic off. Nothing is listening. Press Hey Mint or the mic button to start again.';
+  levelStop();mic.off=true;logMic('off','Mic off pressed');micUi();$('hint').textContent='Mic off. Nothing is listening. Press Voice or the mic button to start again.';
 }
 $('micOff').addEventListener('click',micOff);
 document.addEventListener('pointerdown',function(){if(store('wakePref')&&!wake.on&&!mic.off&&micBackend!=='none')wakeOn(true);},{once:true});
@@ -928,7 +924,7 @@ function wakeResumeAfterSpeech(){
     if(!wake.on)return;wake.pausedForSpeech=false;
     if(wakeBE()==='dictation'){if(wake.armed){logMic('keep','dictation stayed open while M1NT spoke');}return;}
     if(wakeBE()==='webspeech'){wake.fails=0;logMic('rearm','after M1NT spoke');wakeStart();}
-    else{wake.on=false;micUi();$('hint').textContent='Hey Mint paused after M1NT spoke. Press “Hey Mint: off” to listen again (Claude’s mic needs a tap to restart).';}
+    else{wake.on=false;micUi();$('hint').textContent='Voice paused after M1NT spoke. Press “Voice: off” to listen again (Claude’s mic needs a tap to restart).';}
   },1600);
 }
 
@@ -1124,7 +1120,7 @@ async function cmdBriefing(q,opt){
   var b=list[0];
   finish({headline:b.kind+' briefing · '+stampET(b.at),small:true,spoken:'Your '+b.kind.toLowerCase()+' briefing from '+clockET(b.at)+'. '+spokenBrief(b.text),rows:b.text.split(/\n\n+/).map(function(sec){var lines=sec.split('\n');var head=/^[A-Z][A-Z ]{3,}$/.test(lines[0])?lines.shift():'';return {t:head||'Note',n:lines.join('\n')};}),tags:[tagFor(r.rec),srcTag('live','Text sent to you via Quo')],acts:[{label:'Refresh',fn:function(){run(q,{});}}]});
 }
-function cmdLocked(q){beginAsk(q);finish({headline:'That one stays on your texts.',small:true,spoken:'That action needs your safety code. Text it to M1NT and it goes through the usual approval.',tags:[srcTag('snap','Rule')],banners:[{kind:'warn',bold:'LOCKED.',text:'Cancelling, booking, deleting, money, and pausing or resuming customers are not done from this screen. It is read-only; text it to M1NT and the same approval steps apply. “Hey Mint” only opens this screen.'}]});}
+function cmdLocked(q){beginAsk(q);finish({headline:'That one stays on your texts.',small:true,spoken:'That action needs your safety code. Text it to M1NT and it goes through the usual approval.',tags:[srcTag('snap','Rule')],banners:[{kind:'warn',bold:'LOCKED.',text:'Cancelling, booking, deleting, money, and pausing or resuming customers are not done from this screen. It is read-only; text it to M1NT and the same approval steps apply. “Voice” only opens this screen.'}]});}
 function cmdUnknown(q){beginAsk(q);finish({headline:'I do not have a direct lookup for that.',small:true,spoken:'I do not have a direct lookup for that one. I can ask Claude, which uses your Claude usage.',tags:[srcTag('snap','No direct lookup')],banners:[{kind:'',bold:'TRY.',text:'“What needs me?”, “What’s on my schedule tomorrow?”, “today”, “this week”, “leads”, “deposits”, “system health”.'}],acts:[{label:'Ask Claude (uses your Claude usage)',fn:function(){freeClaude(q);}}]});}
 async function freeClaude(q){
   var snap={calendar:D.cal&&D.cal.data&&nextWeekEvents(D.cal.data).map(function(e){return e.title+' '+e.start;}),leads:D.leads&&D.leads.data&&D.leads.data.slice(0,12)};
@@ -1134,6 +1130,8 @@ async function freeClaude(q){
 }
 function followUp(q,opt){
   var L=convo.last,l=q.toLowerCase();
+  var wc=q.trim().split(/\s+/).length;
+  if(!(/^(and|what about|how about|what if|also|then|same|ok|okay|now)\b/i.test(q.trim())||wc<=4||(wxOffset(q)!=null&&wc<=5)))return false;
   if(/\b(weather|forecast|rain|snow|temperature)\b/.test(l)&&L.kind!=='weather'){convo.wxFollow=true;run('weather '+q,{voice:true,wake:true,reply:'x'});return true;}
   if(/\b(schedule|calendar|deposit|lead|customer|jobs?|brief|needs me)\b/.test(l))return false;
   if(L.kind==='schedule'){if(wxOffset(q)==null&&!/\b(evening|morning|afternoon)\b/.test(l))return false;run('schedule '+q,{voice:true,wake:true,reply:'x'});return true;}
@@ -1322,7 +1320,7 @@ function renderSetup(){
   var rows=[
     ['Microphone',mic.perm==='ready'?'Allowed in this window':mic.perm==='blocked'?'Blocked':mic.perm==='none'?'No device found':'Not checked yet'],
     ['Speech input',micBackend==='dictation'?'Claude dictation':micBackend==='webspeech'?'Browser speech recognition':'None offered in this window'],
-    ['Hey Mint',wake.on?'On':'Off (works only while this window is open)'],
+    ['Voice (wake word)',wake.on?'On':'Off (works only while this window is open)'],
     ['Voice output',tts&&pref.kind!=='local'?'Claude voices':(synth?'Windows/browser voices':'None available')],
     ['Connectors',['Make','Quo','Notion'].map(function(n){return n+': '+(servers[n]||'unknown');}).join(' · ')]
   ];
@@ -1373,7 +1371,7 @@ function renderSetup(){
   dBody.appendChild(vi);
   dBody.appendChild(item('IPHONE · INSIDE CLAUDE','Typed commands work; voice may not','Claude’s mic and voice are not offered in the mobile apps. Tap the keyboard’s microphone key to dictate into the box and read answers on screen.'));
   dBody.appendChild(item('SIRI · “ASK MINT”','Not built yet','It needs a new secured Make webhook that returns the answer text. That adds a public endpoint and about 1 credit per ask, so it waits for your OK.'));
-  dBody.appendChild(item('SAFETY','Read-only on this screen','“Hey Mint” only opens the screen. Cancels, bookings, deletes, money, pause and resume stay on your Quo texts with your safety code.'));
+  dBody.appendChild(item('SAFETY','Read-only on this screen','Voice only asks questions. Cancels, bookings, deletes, money, pause and resume stay on your Quo texts with your safety code.'));
 }
 function renderSetupIfOpen(){if(drawer.classList.contains('show')&&$('dTitle').textContent==='Setup')renderSetup();}
 $('setBtn').addEventListener('click',function(){curView=null;showDrawer('Setup',[el('span',null,'Mic, voice and this device')]);renderSetup();});
