@@ -716,7 +716,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v72-2026-11-27';
+var BUILD='v73-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1376,7 +1376,7 @@ function shortReply(q){var w=q.trim().split(/\s+/);return w.length<=7&&!/^(what|
 function completePending(q){
   var p=convo.pending;convo.pending=null;if(!p||Date.now()>p.until)return null;
   var r=q.replace(/^(?:(?:um|uh|it'?s|it is|that'?s|that is|the one|the|one)\s+)+/i,'').replace(/[.!?]+$/,'').trim();if(!r)return null;
-  if(p.kind==='football')return p.orig+' '+r;
+  if(p.kind==='football')return /\b(scores?|nba|wnba|nfl|mlb|nhl|mls|volleyball|basketball|baseball|hockey|soccer|softball|football)\b/i.test(r)?r:p.orig+' '+r;
   if(p.kind==='textbody')return 'text '+p.name+' that '+r;
   if(p.kind==='remwhen')return 'remind me '+r+(p.text?' to '+p.text:'');
   var base=p.orig.replace(/[?.!]+$/,'');
@@ -1799,20 +1799,64 @@ function gameLine(ev){
     else say=(hs>as?hn+' leads '+an+' '+hs+' to '+as:(as>hs?an+' leads '+hn+' '+as+' to '+hs:'tied '+as+' to '+hs))+', '+(st.detail||'in progress')+'.';}
   return {an:an,hn:hn,as:+a.score||0,hs:+h.score||0,aLogo:a.team.logo,hLogo:h.team.logo,detail:st.shortDetail||st.detail||'',when:new Date(ev.date).toLocaleString('en-US',{timeZone:ET,weekday:'short',hour:'numeric',minute:'2-digit'}),id:ev.id,line:line,say:say,names:[h.team.displayName,h.team.shortDisplayName,h.team.name,h.team.location,h.team.abbreviation,a.team.displayName,a.team.shortDisplayName,a.team.name,a.team.location,a.team.abbreviation].filter(Boolean).map(function(x){return String(x).toLowerCase();}),state:st.state};
 }
+var LEAGUES=[
+ {id:'nfl',lg:'NFL',p:'football/nfl',sp:'football'},
+ {id:'ncaaf',lg:'College Football',p:'football/college-football',x:'groups=80&limit=300',sp:'football'},
+ {id:'nba',lg:'NBA',p:'basketball/nba',sp:'basketball'},
+ {id:'wnba',lg:'WNBA',p:'basketball/wnba',sp:'basketball'},
+ {id:'mcbb',lg:'Men’s College Basketball',p:'basketball/mens-college-basketball',x:'groups=50&limit=300',sp:'basketball'},
+ {id:'wcbb',lg:'Women’s College Basketball',p:'basketball/womens-college-basketball',x:'groups=50&limit=300',sp:'basketball'},
+ {id:'mlb',lg:'MLB',p:'baseball/mlb',sp:'baseball'},
+ {id:'cbase',lg:'College Baseball',p:'baseball/college-baseball',x:'limit=300',sp:'baseball'},
+ {id:'csoft',lg:'College Softball',p:'baseball/college-softball',x:'limit=300',sp:'softball'},
+ {id:'nhl',lg:'NHL',p:'hockey/nhl',sp:'hockey'},
+ {id:'chock',lg:'College Hockey',p:'hockey/mens-college-hockey',x:'limit=300',sp:'hockey'},
+ {id:'mls',lg:'MLS',p:'soccer/usa.1',sp:'soccer'},
+ {id:'nwsl',lg:'NWSL',p:'soccer/usa.nwsl',sp:'soccer'},
+ {id:'epl',lg:'Premier League',p:'soccer/eng.1',sp:'soccer'},
+ {id:'liga',lg:'La Liga',p:'soccer/esp.1',sp:'soccer'},
+ {id:'bund',lg:'Bundesliga',p:'soccer/ger.1',sp:'soccer'},
+ {id:'seriea',lg:'Serie A',p:'soccer/ita.1',sp:'soccer'},
+ {id:'ucl',lg:'Champions League',p:'soccer/uefa.champions',sp:'soccer'},
+ {id:'wvb',lg:'Women’s College Volleyball',p:'volleyball/womens-college-volleyball',x:'limit=300',sp:'volleyball'},
+ {id:'mvb',lg:'Men’s College Volleyball',p:'volleyball/mens-college-volleyball',x:'limit=300',sp:'volleyball'}
+];
+function sportPick(ql){
+  var w=function(r){return r.test(ql);};
+  var want={};
+  if(w(/\b(nfl|football|touchdown|quarterback)\b/))want.football=1;
+  if(w(/\b(basketball|nba|wnba|march madness|hoops|ncaab)\b/))want.basketball=1;
+  if(w(/\b(baseball|mlb)\b/))want.baseball=1;
+  if(w(/\b(softball)\b/))want.softball=1;
+  if(w(/\b(hockey|nhl)\b/))want.hockey=1;
+  if(w(/\b(soccer|mls|nwsl|premier league|epl|la liga|bundesliga|serie a|champions league|futbol)\b/))want.soccer=1;
+  if(w(/\b(volleyball|vball)\b/))want.volleyball=1;
+  var L=LEAGUES.filter(function(g){return want[g.sp];});
+  if(w(/\bnfl\b/)&&!w(/\bcollege|ncaa\b/))L=L.filter(function(g){return g.id!=='ncaaf'||!w(/\bnfl\b/);});
+  if(w(/\b(college|ncaa|university|uni|ncaab)\b/)&&L.length)L=L.filter(function(g){return /^(ncaaf|mcbb|wcbb|cbase|csoft|chock|wvb|mvb)$/.test(g.id);});
+  if(w(/\b(women'?s?|womens|ladies)\b/)&&L.length){var wl=L.filter(function(g){return /^(wnba|wcbb|nwsl|wvb|csoft)$/.test(g.id);});if(wl.length)L=wl;}
+  if(w(/\b(men'?s|mens)\b/)&&!w(/\bwomen/)&&L.length){var ml=L.filter(function(g){return !/^(wnba|wcbb|nwsl|wvb|csoft)$/.test(g.id);});if(ml.length)L=ml;}
+  if(w(/\bwnba\b/)){L=LEAGUES.filter(function(g){return g.id==='wnba';});}
+  if(w(/\b(nba)\b/)&&!w(/\bcollege|ncaa|wnba\b/)){L=LEAGUES.filter(function(g){return g.id==='nba';});}
+  return L.length?L:LEAGUES;
+}
 async function cmdFootball(q,pickId){
-  beginAsk(q);var my=cur;doing('checking live football scores');
+  beginAsk(q);var my=cur;doing('checking live scores');
   try{
-    var bs=await Promise.all([jget('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard'),jget('https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=200')]);
-    if(cur!==my)return;var games=[];bs.forEach(function(b,k){(b.events||[]).forEach(function(ev){var g=gameLine(ev);if(g){g.lg=k?'College':'NFL';games.push(g);}});});
     var ql=' '+q.toLowerCase().replace(/[^a-z0-9 ]/g,' ')+' ';
+    var set=sportPick(ql);var d0=etDay(-1).replace(/-/g,''),d1=etDay(1).replace(/-/g,'');
+    var bs=await Promise.all(set.map(function(g){var u='https://site.api.espn.com/apis/site/v2/sports/'+g.p+'/scoreboard?'+(g.x?g.x+'&':'')+(/football\/nfl|college-football/.test(g.p)?'':'dates='+d0+'-'+d1);return jget(u).catch(function(){return {events:[]};});}));
+    if(cur!==my)return;var games=[];bs.forEach(function(b,k){(b.events||[]).forEach(function(ev){var g=gameLine(ev);if(g){g.lg=set[k].lg;g.t=+new Date(ev.date);games.push(g);}});});
     var hit=pickId?games.filter(function(g){return g.id===pickId;}):games.filter(function(g){return g.names.some(function(n){return n.length>=3&&ql.indexOf(' '+n.replace(/[^a-z0-9 ]/g,' ')+' ')>=0;});});
+    var now=Date.now();hit.sort(function(a,b){var la=a.state==='in'?0:1,lb=b.state==='in'?0:1;return la-lb||Math.abs(a.t-now)-Math.abs(b.t-now);});
     var tags=[srcTag('live','ESPN scoreboard'),srcTag('live','Fetched '+clockET(Date.now())+' ET')];
     if(hit.length){hit=hit.slice(0,3);finish({headline:hit[0].line,follow:'football',small:true,spoken:hit.map(function(g){return g.say;}).join(' '),node:scoreNode(hit),tags:tags,acts:[{label:'Refresh',fn:function(){cmdFootball(q,pickId);}}]});return;}
-    if(!games.length){finish({headline:'No football games are on the scoreboard right now.',small:true,spoken:'No football games are on the scoreboard right now.',tags:tags,srcNote:'Verified empty: the lookup worked.'});return;}
-    var live=games.filter(function(g){return g.state==='in';});var show=(live.length?live:games).slice(0,8);
+    var named=/\bhow (?:is|are|did|do|does)\b|\bdid\b|\bwho won\b/.test(ql);
+    if(!games.length){finish({headline:'No games on the scoreboard right now.',small:true,spoken:'There are no games on the scoreboard for that right now.',tags:tags,srcNote:'Checked '+set.map(function(g){return g.lg;}).slice(0,4).join(', ')+(set.length>4?' and more':'')+'. The lookup worked; nothing is scheduled.'});return;}
+    var live=games.filter(function(g){return g.state==='in';});var show=(live.length?live:games.slice().sort(function(a,b){return Math.abs(a.t-now)-Math.abs(b.t-now);})).slice(0,8);
     convo.pending={kind:'football',orig:q,until:Date.now()+120000};
-    finish({headline:'Which game do you mean?',clarify:true,small:true,spoken:'Which game do you mean? Name a team, or pick one on screen.',tags:tags,banners:[{kind:'',bold:'NO TEAM NAMED.',text:'I do not have a game saved from earlier, so tell me a team (“How are the Lions doing?”) or pick below.'+(live.length?' Showing live games first.':'')}],acts:show.map(function(g){return {label:g.line.slice(0,46),fn:function(){cmdFootball(q,g.id);}};})});
-  }catch(e){lookupFail(q,'football score',e);}
+    finish({headline:'Which game do you mean?',clarify:true,small:true,spoken:'Which game do you mean? Name a team, or pick one on screen.',tags:tags,banners:[{kind:'',bold:named?'NO MATCH FOR THAT TEAM.':'NO TEAM NAMED.',text:'Tell me a team (“How are the Lions doing?”, “Louisville volleyball score”) or pick below.'+(live.length?' Showing live games first.':' Showing games closest to now.')}],acts:show.map(function(g){return {label:(g.lg.replace('College ','C. ').slice(0,14))+': '+g.line.slice(0,36),fn:function(){cmdFootball(q,g.id);}};})});
+  }catch(e){lookupFail(q,'score',e);}
 }
 var WEBSID='m1nt-'+Math.random().toString(36).slice(2)+Date.now().toString(36);
 async function cmdWeb(q,opt){
@@ -2046,7 +2090,7 @@ function followUp(q,opt){
   if(/\b(schedule|calendar|deposit|lead|customer|jobs?|brief|needs me)\b/.test(l))return false;
   if(L.kind==='schedule'){if(wxOffset(q)==null&&!/\b(evening|morning|afternoon)\b/.test(l))return false;run('schedule '+q,{voice:true,wake:true,reply:'x'});return true;}
   if(L.kind==='weather'){convo.wxFollow=true;run('weather '+q,{voice:true,wake:true,reply:'x'});return true;}
-  if(L.kind==='football'){run(q+' football score',{voice:true,wake:true,reply:'x'});return true;}
+  if(L.kind==='football'){run(q+' score',{voice:true,wake:true,reply:'x'});return true;}
   if(L.kind==='web'){if(/\b(weather|forecast|football|score)\b/.test(l))return false;cmdWebFollow(q,L,opt);return true;}
   return false;
 }
@@ -2627,7 +2671,7 @@ function helpNode(){
      ['what is 18 percent tip on 85','Math, tips and splits.'],
      ['convert 50 miles to kilometers','Unit conversions.'],
      ['flip a coin','Coin, dice, random picks.'],
-     ['how are the Lions doing','Live sports scores.']
+     ['how are the Lions doing','Live scores for football, basketball, baseball, hockey, soccer, softball and volleyball. Pro and college. Try: Louisville volleyball score, did the Cardinals win, NBA scores.']
    ]],
    ['Screen & voice','◐',[
      ['hey mint / wake up mint','Wakes me. Also: rise and shine mint, get up mint.'],
@@ -2743,7 +2787,7 @@ function routeKnown(q,opt,dry){
   var cc=calcIntent(s);if(cc){if(dry)return true;logMic('route','calc');beginAsk(q);finish({headline:cc.top+' = '+cc.big,small:true,spoken:cc.say,node:calcNode(cc),tags:[srcTag('live','Calculated on this screen')]});return true;}
   var ci=calIntent2(q,l);if(ci){if(dry)return true;logMic('route','calendar '+ci.mode);cmdCalendar(q,ci);return true;}
   if(WX_RE.test(s)&&!/\b(reschedule|cancel|customer|deposit|text|message|book|invoice|refund)\b/.test(s)&&wcq<=22){if(dry)return true;logMic('route','weather');cmdWeather(q);return true;}
-  if((/\b(football|nfl|score|scores|who won|touchdown|playing|game|halftime|quarter|kickoff|lions|cowboys|chiefs|bills|eagles|packers|49ers|ravens|bengals|browns|steelers|cardinals|cats|wildcats|louisville cardinals|ohio state|michigan|alabama|georgia)\b/.test(s)||/how (is|are) (the )?[a-z .]+ (doing|playing)|did (the )?[a-z .]+ (win|lose)/.test(s))&&!/\b(schedule|calendar|appointment|customer|job)\b/.test(s)&&wcq<=16){if(dry)return true;logMic('route','football');cmdFootball(q);return true;}
+  if((/\b(football|nfl|nba|wnba|mlb|nhl|mls|nwsl|basketball|baseball|softball|hockey|soccer|volleyball|ncaa|march madness|premier league|champions league|score|scores|final score|who won|touchdown|playing|game|halftime|quarter|kickoff|lions|cowboys|chiefs|bills|eagles|packers|49ers|ravens|bengals|browns|steelers|cardinals|cats|wildcats|louisville cardinals|ohio state|michigan|alabama|georgia)\b/.test(s)||/how (is|are) (the )?[a-z .]+ (doing|playing)|did (the )?[a-z .]+ (win|lose)/.test(s))&&!/\b(schedule|calendar|appointment|customer|job|inventory|leads?)\b/.test(s)&&wcq<=16){if(dry)return true;logMic('route','football');cmdFootball(q);return true;}
   return false;
 }
 
