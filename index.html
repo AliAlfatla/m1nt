@@ -45,6 +45,15 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 .app:not([data-state="asleep"]) .wakebtn{display:none}
 .resp{position:relative;z-index:2;width:min(680px,100%);max-height:100%;overflow:auto;text-align:center;padding:10px 12px;opacity:0;transform:scale(.94);pointer-events:none;transition:opacity .45s .12s,transform .6s cubic-bezier(.2,.8,.2,1)}
 .app[data-state="answer"] .resp{opacity:1;transform:none;pointer-events:auto}
+.app[data-state="answer"] .panel{opacity:0!important;pointer-events:none!important;visibility:hidden}
+.app[data-state="answer"] .center{grid-column:1 / -1;place-items:start center;padding:10px 0 4px}
+.app[data-state="answer"] .resp{width:min(780px,calc(100% - 330px));margin-top:4px;text-align:left;padding:20px 26px 18px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(160deg,var(--glass),rgba(4,24,21,.74));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.app[data-state="answer"] .ans{text-align:left;margin-top:8px}
+.app[data-state="answer"] .rows,.app[data-state="answer"] .cards,.app[data-state="answer"] .banner{margin-left:0;margin-right:0;max-width:none}
+.app[data-state="answer"] .src,.app[data-state="answer"] .acts{justify-content:flex-start}
+.ctag{position:absolute;left:14px;top:150px;width:124px;text-align:center;font-family:var(--font-m);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mint);opacity:0;transition:opacity .4s;pointer-events:none;z-index:3}
+.app[data-state="answer"] .ctag{opacity:.9}
+.app[data-mode="idle"] .ctag,.app[data-mode="listening"] .ctag{color:var(--muted)}
 .asked{font-family:var(--font-m);font-size:12px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;overflow-wrap:anywhere}
 .asked b{color:var(--mint);font-weight:500}
 .doing{margin:8px 0 0;font-family:var(--font-m);font-size:12px;color:var(--mint);letter-spacing:.06em;min-height:18px}
@@ -141,6 +150,9 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
   .chip{font-size:10px;padding:3px 8px}
   .row{grid-template-columns:1fr;gap:2px}
   .app[data-state="answer"] .panel{display:none}
+  .app[data-state="answer"] .center{padding-top:104px}
+  .app[data-state="answer"] .resp{width:100%;padding:16px 16px 14px}
+  .ctag{left:96px;width:auto;text-align:left;top:44px;font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -165,6 +177,7 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 
   <main class="stage" id="stage">
     <canvas id="fx" aria-hidden="true"></canvas>
+    <div class="ctag" id="ctag" aria-live="polite"></div>
     <button class="panel" data-pos="l" data-i="0" id="pCal" type="button"><div class="ph"><h2>Calendar</h2><span id="pCalTag"></span></div><div class="pbig" id="pCalBig">Tomorrow</div><div class="psub" id="pCalSub">Tap to check</div><div class="popen">Open ›</div></button>
     <button class="panel" data-pos="l" data-i="1" id="pEvm" type="button"><div class="ph"><h2>Evermint</h2><span id="pEvmTag"></span></div><div class="pbig">4 Elite clients</div><div class="psub">Monthly day plus David Wilson. Setup snapshot.</div><div class="popen">Open ›</div></button>
     <button class="panel" data-pos="r" data-i="0" id="pBrf" type="button"><div class="ph"><h2>Briefings</h2><span id="pBrfTag"></span></div><div class="pbig" id="pBrfBig">Morning · Evening</div><div class="psub" id="pBrfSub">Tap to read the latest</div><div class="popen">Open ›</div></button>
@@ -220,7 +233,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v12-2026-11-26';
+var BUILD='v13-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -254,7 +267,7 @@ usageChip();
 
 /* ---------- core animation ---------- */
 var cv=$('fx'),cx=cv.getContext('2d');
-var S={mode:'idle',aw:0,awT:0,an:0,anT:0,energy:0,t0:performance.now(),w:0,h:0,dpr:1,cx:0,cy:0,R:0};
+var S={mode:'idle',aw:0,awT:0,an:0,anT:0,be:0,ex:0,ey:0,energy:0,t0:performance.now(),w:0,h:0,dpr:1,cx:0,cy:0,R:0};
 function size(){
   var r=cv.getBoundingClientRect();S.dpr=Math.min(window.devicePixelRatio||1,2);S.w=r.width;S.h=r.height;
   cv.width=Math.round(r.width*S.dpr);cv.height=Math.round(r.height*S.dpr);
@@ -263,14 +276,17 @@ function size(){
 }
 function draw(now){
   var t=(now-S.t0)/1000;
-  S.aw+=(S.awT-S.aw)*0.07;S.an+=(S.anT-S.an)*0.08;
+  S.aw+=(S.awT-S.aw)*0.07;S.an+=(S.anT-S.an)*0.08;S.be+=(((S.mode==='thinking'||S.mode==='speaking')?1:0)-S.be)*0.1;
   S.energy+=((S.mode==='speaking'?1:0)-S.energy)*(S.mode==='speaking'?0.12:0.04);
   cx.setTransform(S.dpr,0,0,S.dpr,0,0);cx.clearRect(0,0,S.w,S.h);
   var aw=S.aw,an=S.an,mode=S.mode;
-  var coreR=Math.min(30,S.R*0.2)*(1+aw*0.5);
-  var maxR=(62+(S.R*(0.9+0.12*an)-62)*aw);
+  var small=S.w<700,cxC=small?52:78,cyC=small?52:78;
+  var Rb=S.R+(((small?36:44)+(small?22:36)*S.be)-S.R)*an;
+  var ecx=S.cx+(cxC-S.cx)*an,ecy=S.cy+(cyC-S.cy)*an;S.ex=ecx;S.ey=ecy;
+  var coreR=Math.min(30,Rb*0.2)*(1+aw*0.5);
+  var maxR=(62+(Rb*0.9-62)*aw);
   var pulse=1+0.035*Math.sin(t*1.5)+S.energy*0.03*Math.sin(t*2.4);
-  cx.save();cx.translate(S.cx,S.cy);
+  cx.save();cx.translate(ecx,ecy);
   var gr=coreR*(3.2+aw*3.6)*pulse*(mode==='listening'?(1.05+0.05*Math.sin(t*5)):1);
   var ga=1-aw*0.7;
   var g=cx.createRadialGradient(0,0,0,0,0,gr);
@@ -320,14 +336,14 @@ function setUi(state){
 }
 function wakeUi(){if(app.getAttribute('data-state')==='asleep'){setUi('awake');}}
 function sleepUi(){stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
-function setMode(m){S.mode=m;app.setAttribute('data-mode',m);}
+function setMode(m){S.mode=m;app.setAttribute('data-mode',m);var ct=$('ctag');if(ct)ct.textContent=({thinking:'Thinking',speaking:'Speaking',listening:'Listening',idle:'Ready'})[m]||'Ready';}
 
 /* clicking the core while open folds it; clicking it asleep reopens it */
 var stageEl=$('stage');
-function coreHit(e){var r=cv.getBoundingClientRect();var dx=e.clientX-r.left-S.cx,dy=e.clientY-r.top-S.cy;return Math.sqrt(dx*dx+dy*dy)<=38;}
+function coreHit(e){var r=cv.getBoundingClientRect();var dx=e.clientX-r.left-S.ex,dy=e.clientY-r.top-S.ey;return Math.sqrt(dx*dx+dy*dy)<=38;}
 var INTER='button,a,summary,input,select,details';
 stageEl.addEventListener('mousemove',function(e){if(app.getAttribute('data-state')==='asleep'){stageEl.style.cursor='';return;}stageEl.style.cursor=(coreHit(e)&&!(e.target.closest&&e.target.closest(INTER)))?'pointer':'';});
-stageEl.addEventListener('click',function(e){if(app.getAttribute('data-state')==='asleep')return;if(e.target.closest&&e.target.closest(INTER))return;var sel=window.getSelection&&String(window.getSelection());if(sel)return;if(coreHit(e))sleepUi();});
+stageEl.addEventListener('click',function(e){if(app.getAttribute('data-state')==='asleep')return;if(e.target.closest&&e.target.closest(INTER))return;var sel=window.getSelection&&String(window.getSelection());if(sel)return;if(coreHit(e)){if(S.mode==='speaking')stopSpeak();else sleepUi();}});
 
 /* ---------- bridge ---------- */
 var mcp=null,mcpTried=false;
@@ -544,6 +560,7 @@ function finish(o){
   (o.banners||[]).forEach(function(b){var d=el('div','banner '+(b.kind||''));d.appendChild(el('b',null,b.bold+' '));d.appendChild(document.createTextNode(b.text));ex.appendChild(d);});
   var sr=$('srcRow');clear(sr);(o.tags||[]).forEach(function(t){sr.appendChild(t);});if(o.srcNote)sr.appendChild(el('span',null,o.srcNote));
   var ac=$('acts');clear(ac);var spoken=o.spoken||o.headline;
+  var stp=el('button','btn','Stop talking');stp.type='button';stp.addEventListener('click',function(){stopSpeak();});if(!muted)ac.appendChild(stp);
   var sp=el('button','btn','Speak again');sp.type='button';sp.addEventListener('click',function(){speak(spoken,true);});ac.appendChild(sp);
   (o.acts||[]).forEach(function(x){var b=el('button','btn'+(x.pri?' pri':''),x.label);b.type='button';b.addEventListener('click',x.fn);ac.appendChild(b);});
   cur.spoken=spoken;
@@ -571,7 +588,7 @@ function refreshMute(){
 refreshMute();
 function toggleMute(){muted=!muted;store('muted',muted);refreshMute();if(muted)stopSpeak();$('hint').textContent=muted?'Muted. Answers stay on screen.':'Voice on.';}
 $('muteBtn').addEventListener('click',toggleMute);$('spk').addEventListener('click',toggleMute);
-function stopSpeak(){speakTok++;try{if(tts&&tts.stop)tts.stop();}catch(e){}try{if(synth)synth.cancel();}catch(e){}if(S.mode==='speaking')setMode('idle');}
+function stopSpeak(){speakTok++;wake.pausedForSpeech=false;wake.cooldownUntil=Date.now()+600;try{if(tts&&tts.stop)tts.stop();}catch(e){}try{if(synth)synth.cancel();}catch(e){}if(S.mode==='speaking')setMode('idle');}
 function localVoices(){
   var v=synth?synth.getVoices():[];
   return v.filter(function(x){return /^en/i.test(x.lang);}).map(function(x){var nat=/natural|online|neural|premium|enhanced/i.test(x.name);return {name:x.name,lang:x.lang,nat:nat,obj:x};}).sort(function(a,b){return (b.nat-a.nat)||(/en-US/.test(b.lang)-/en-US/.test(a.lang))||a.name.localeCompare(b.name);});
@@ -621,6 +638,7 @@ function endSpeak(){if(S.mode==='speaking'||S.mode==='thinking')setMode('idle');
 var dict=null,dictTried=false,SR=window.SpeechRecognition||window.webkitSpeechRecognition||null;
 var micBackend='none',micSink=null,dictBound=false,webRec=null,lastBE='none',srBlocked=false;
 function dictHold(){return wake.on&&wakeBE()==='dictation'&&wake.armed;}
+var STOP_RE=/\b(stop|quiet|enough|shut up|hold on|be quiet|never ?mind|cancel that)\b/i;
 function wakeBE(){return (SR&&!srBlocked)?'webspeech':micBackend;}
 var mic={perm:'unknown',diag:null,off:false};
 var stream=null,actx=null,meterTimer=0;
@@ -777,7 +795,7 @@ var WAKE_ANY=new RegExp('(?:'+HEY_RE.source+')|(?:wake\\s?up[,.!\\s]+'+NM+')|(?:
 var SLEEP_RE=new RegExp('\\bgood\\s?night[,.!\\s]+'+NM+'\\b','i');
 var LEAD_RE=new RegExp('^(?:(?:hey|hay|hi|ok|okay|wake\\s?up)[,.!\\s]*)?(?:'+NM+')?[,.!\\s]*','i');
 var JUNK=/^(mint|min|mid|mind|man|men|amen|mean|hey|hay|hi|ok|okay|uh|um|a|the|and|so|well|up)$/i;
-var SIL=store('sil')||1000, silTimer=0, wakePend=null;
+var SIL=store('sil')||1300, silTimer=0, wakePend=null;
 var convo={pending:null,last:null,armAfterSpeech:null,armOk:false,hist:[]};
 var BR=store('bridge');
 function setBridge(sv){var p=String(sv||'').trim().split(/\s+/);var u=p[0],c=p[1];if(!/^https:\/\/hook\.[a-z0-9]+\.make\.com\/[A-Za-z0-9]+$/.test(u||'')||!c||c.length<12)return false;BR={url:u,code:c};store('bridge',BR);return true;}
@@ -854,6 +872,7 @@ function submitHeard(text){
 }
 function handleWake(t,isFinal){
   if(SLEEP_RE.test(t)){if(isFinal||isAwake()){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;if(isFinal)sleepUi();}return;}
+  if(S.mode==='speaking'&&STOP_RE.test(t)&&t.trim().split(/\s+/).length<=4){stopSpeak();setMode('idle');logMic('barge','stopped by voice: '+t.slice(0,30));return;}
   if(busyNow())return;
   var wm=WAKEUP_RE.exec(t);
   if(wm){
@@ -920,13 +939,13 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden)rear
 window.addEventListener('online',function(){if(wake.on){wake.fails=0;clearTimeout(wake.retryT);wake.retrying=false;rearmIfStuck('online');}});
 $('wakeCore').addEventListener('click',function(){wakeUi();});
 ['pointerdown','keydown'].forEach(function(n){document.addEventListener(n,function(){if(wake.on&&wake.needTap&&!wake.armed&&!mic.off&&!ptt.on){logMic('tap','restarting dictation from a click');$('hint').textContent='';wakeStart();}},true);});
-function wakePauseForSpeech(){if(!wake.on)return;wake.pausedForSpeech=true;wake.cap=false;clearTimeout(wake.capTimer);if(wakeBE()==='dictation'&&wake.armed){micUi();return;}wake.armed=false;micStop();micUi();}
+function wakePauseForSpeech(){if(!wake.on)return;wake.pausedForSpeech=true;wake.cap=false;clearTimeout(wake.capTimer);if(wake.armed){micUi();return;}wake.armed=false;micStop();micUi();}
 function wakeResumeAfterSpeech(){
   if(!wake.on||!wake.pausedForSpeech)return;
   wake.cooldownUntil=Date.now()+1500;
   setTimeout(function(){
     if(!wake.on)return;wake.pausedForSpeech=false;
-    if(wakeBE()==='dictation'){if(wake.armed){logMic('keep','dictation stayed open while M1NT spoke');}return;}
+    if(wake.armed){logMic('keep','mic stayed open while M1NT spoke');return;}
     if(wakeBE()==='webspeech'){wake.fails=0;logMic('rearm','after M1NT spoke');wakeStart();}
     else{wake.on=false;micUi();$('hint').textContent='Voice paused after M1NT spoke. Press “Voice: off” to listen again (Claude’s mic needs a tap to restart).';}
   },1600);
@@ -1132,13 +1151,19 @@ async function freeClaude(q){
   if(rr.error){doneDoing('Claude did not answer');var b=el('div','banner na');b.appendChild(el('b',null,'CLAUDE. '));b.appendChild(document.createTextNode(rr.error));$('extra').insertBefore(b,$('extra').firstChild);setMode('idle');return;}
   doneDoing('Claude answered · '+usageLine());$('ans').textContent=rr.text;$('ans').className='ans small';pushHist({q:q,a:rr.text,tags:['Claude'],use:usageLine(),at:Date.now()});speak(rr.text,false);
 }
-function histText(){return convo.hist.slice(-8).map(function(h){return 'Ali: '+h.q+'\nM1NT: '+String(h.a).slice(0,500);}).join('\n');}
+function histText(){return 'NOTE: Ali speaks to you through automatic speech-to-text, so words and names can be misheard (business words: Evermint, Urable, Quo, Square, detailing, ceramic coating). Interpret sensibly and ask only if truly unclear.\n'+convo.hist.slice(-8).map(function(h){return 'Ali: '+h.q+'\nM1NT: '+String(h.a).slice(0,500);}).join('\n');}
+async function wxBlurb(){
+  var w=await jget('https://api.open-meteo.com/v1/forecast?latitude=38.2527&longitude=-85.7585&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=3');
+  var d=w.daily;return [0,1,2].map(function(i){return wxDayName(i)+': '+(WXC[d.weather_code[i]]||'mixed')+', high '+Math.round(d.temperature_2m_max[i])+', low '+Math.round(d.temperature_2m_min[i])+', '+d.precipitation_probability_max[i]+'% precipitation';}).join('; ');
+}
 function bridgeFail(q,why){finish({headline:'I could not reach Claude just now.',small:true,spoken:'I could not reach Claude just now.',tags:[srcTag('na','Unavailable')],banners:[{kind:'na',bold:'BRIDGE.',text:why+' Nothing was guessed.'}],acts:[{label:'Try again',pri:true,fn:function(){run(q,{});}}]});}
 async function cmdBridge(q,opt){
   beginAsk(q);doing('thinking it through with Claude (live web and your data)');setMode('thinking');
   var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},45000);
   try{
-    var r=await fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,q:q,history:histText()}),signal:ctl.signal});
+    var qq=q;
+    if(/\b(brief me|briefing|catch me up|what do i need to know|how does my day look|start my day|rundown)\b/i.test(q)){try{qq+='\n\n[Live weather from Open-Meteo for Louisville: '+await wxBlurb()+']';}catch(e){}}
+    var r=await fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,q:qq,history:histText()}),signal:ctl.signal});
     var t=(await r.text()).trim();clearTimeout(tm);
     if(!r.ok)throw new Error('The bridge answered HTTP '+r.status+'.');
     if(/^Accepted$/i.test(t)){bridgeFail(q,'The bridge did not accept the access code. Paste your link again in Setup.');return;}
@@ -1200,6 +1225,7 @@ $('cmd').addEventListener('input',wakeUi);
 document.addEventListener('keydown',function(e){
   if(drawer.classList.contains('show'))return;
   if(app.getAttribute('data-state')==='asleep'&&e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.code!=='Space'&&document.activeElement&&document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='SELECT'){wakeUi();$('cmd').focus();}
+  else if(e.key==='Escape'&&S.mode==='speaking'){stopSpeak();}
   else if(e.key==='Escape'&&app.getAttribute('data-state')!=='asleep'&&document.activeElement===document.body){sleepUi();}
 });
 ["What's on my schedule today?","What's on my schedule tomorrow?","What needs me?"].forEach(function(t){var b=el('button','btn',t);b.type='button';b.addEventListener('click',function(){run(t,{});});$('sugs').appendChild(b);});
