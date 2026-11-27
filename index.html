@@ -714,7 +714,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v50-2026-11-27';
+var BUILD='v51-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -2639,7 +2639,14 @@ async function lkCheck(code){var t='m1nt.wake:'+code;try{if(window.crypto&&crypt
 (function(){var P=$('lkP');['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(function(k){var b=el('button',null,k);b.type='button';if(!k){b.style.visibility='hidden';}b.addEventListener('click',function(){lkKey(k);});P.appendChild(b);});
   document.addEventListener('keydown',function(e){if(!$('lock').classList.contains('on'))return;if(/^\d$/.test(e.key))lkKey(e.key);else if(e.key==='Backspace')lkKey('⌫');});})();
 function lkDraw(mask){var d=$('lkD');clear(d);for(var i=0;i<LKN;i++){var c=el('i',i<lkBuf.length?'f':'');c.style.setProperty('--n',i);if(i<lkBuf.length)c.textContent=(mask&&i<lkBuf.length-1)?'•':lkBuf[i];d.appendChild(c);}}
-function showLock(){if(lkBusy)return;lkBuf='';lkDraw();$('lkT').textContent='M1NT LOCKED';$('lkS').textContent='Say your 6 digits out loud, or tap them.';$('lkSkip').hidden=true;$('lock').classList.remove('ok');$('lock').classList.add('on');LOCKED=true;}
+function lkFit(){
+  var L=$('lock'),w=$('lkW');if(!w){w=document.createElement('div');w.id='lkW';w.style.cssText='display:flex;flex-direction:column;align-items:center;gap:16px;transform-origin:center center;';while(L.firstChild)w.appendChild(L.firstChild);L.appendChild(w);}
+  w.style.transform='none';var H=w.offsetHeight||560,W=w.offsetWidth||320;
+  var k=Math.min((window.innerHeight*.92)/H,(window.innerWidth*.92)/W,1.6);if(!(k>0.2))k=.2;
+  w.style.transform='scale('+k.toFixed(3)+')';
+}
+window.addEventListener('resize',function(){if($('lock').classList.contains('on'))lkFit();});
+function showLock(){if(lkBusy)return;lkBuf='';lkDraw();$('lkT').textContent='M1NT LOCKED';$('lkS').textContent='Say your 6 digits out loud, or tap them.';$('lkSkip').hidden=true;$('lock').classList.remove('ok');$('lock').classList.add('on');LOCKED=true;lkFit();setTimeout(lkFit,300);}
 function lkFail(){lkFails++;var L=$('lock');L.classList.remove('shake');void L.offsetWidth;L.classList.add('shake');sfx('sleep');lkBuf='';setTimeout(function(){lkDraw();},350);$('lkS').textContent=lkFails>=5?'ACCESS DENIED. Locked for 30 seconds.':'Access denied. Try again.';if(lkFails>=5){lkUntil=Date.now()+30000;lkFails=0;}}
 async function lkTry(){
   var code=lkBuf;if(code.length<LKN)return;lkBusy=true;var ok=await lkCheck(code);
