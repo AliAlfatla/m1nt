@@ -784,7 +784,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v91-2026-11-27';
+var BUILD='v92-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1292,7 +1292,7 @@ function micUi(){
   $('micOff').hidden=!(mic.perm==='ready'||wake.on||ptt.on);
   $('meter').hidden=!listening;
   $('micBtn').classList.toggle('on',!!ptt.on);
-  $('wakeBtn').textContent='Voice: '+(wake.on?(wake.armed?'listening':(wake.pausedForSpeech?'paused':(wake.retrying?'reconnecting':'on'))):'off');
+  $('wakeBtn').textContent='Voice: '+(wake.on?(wake.armed?'listening':(wake.pausedForSpeech?'paused':(wake.retrying&&wake.fails>=3?'reconnecting':(wake.retrying?'listening':'on')))):'off');
   $('wakeBtn').setAttribute('aria-pressed',wake.on?'true':'false');
   renderSetupIfOpen();
 }
@@ -1496,7 +1496,7 @@ function afterAnswerArm(delay){
 function startReply(kind){
   if(mic.off||ptt.on||wakeBE()==='none'){wakeResumeAfterSpeech();return;}
   if(kind==='follow'&&!wake.on)return;
-  wake.reply={kind:kind,until:Date.now()+(kind==='clarify'?12000:8000)};wake.cooldownUntil=0;wake.cap=false;
+  wake.reply={kind:kind,until:Date.now()+(kind==='clarify'?25000:15000)};wake.cooldownUntil=0;wake.cap=false;
   $('hint').textContent='Listening for your reply…';$('doing').className='doing';$('doing').textContent='Listening for your reply…';
   setMode('listening');
   if(!wake.on){wake.temp=true;wake.on=true;wake.starts=0;wake.fails=0;wake.pausedForSpeech=false;logMic('on','reply window (temporary)');wakeStart();}
@@ -2486,7 +2486,7 @@ async function findContact(name){
   var c=u[k[0]];if(/blacklist/i.test(c.tags))return {why:'blocked'};
   return {to:'+'+c.digits,name:c.name};
 }
-var simTimers=[],simCtl=null;
+var simTimers=[],simCtl=null,lastDraft=null;
 function simClear(){simTimers.forEach(clearTimeout);simTimers=[];}
 function phoneNode(name,msg,live){
   simClear();
@@ -2531,7 +2531,15 @@ function phoneNode(name,msg,live){
   inp.textContent='';simTimers.push(setTimeout(function(){inp.textContent=msg.slice(0,34)+'…';typeIt();},1400));
   return wrap;
 }
-function askTextBody(q,name){beginAsk(q);convo.pending={kind:'textbody',name:name,orig:q,until:Date.now()+120000};var f=name.split(' ')[0];finish({headline:'What should I tell '+f+'?',small:true,spoken:'What should I say to '+f+'?',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say what the text to '+name+' should say. I will show the draft first and only send when you say send it.'}]});}
+function spokenNum(n){var d=String(n).replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'');return d.slice(0,3).split('').join(' ')+', '+d.slice(3,6).split('').join(' ')+', '+d.slice(6).split('').join(' ');}
+async function textContacts(q){beginAsk(q);var DL=null;try{DL=await getDirectory();}catch(e){}
+  var list=(DL||[]).filter(function(x){return !/blacklist/i.test(x.tags);}).slice(0,10);
+  finish({headline:'Who do you want to text?',small:true,spoken:'Who do you want to text? Say a name or a full number, or tap one.',clarify:true,tags:[srcTag('live','Contacts')],acts:list.map(function(c){return {label:c.name,fn:function(){askTextBody('text '+c.name,c.name,'+'+c.digits);}};})});}
+async function askTextBody(q,name,num){beginAsk(q);var label=name.split(' ')[0],spk=label;
+  if(num||/^\(\d{3}\)/.test(name)){var dg=(num||name).replace(/\D/g,'');var DL=null;try{DL=await getDirectory();}catch(e){}var hit=DL&&DL.filter(function(x){return x.digits===dg;})[0];
+    if(hit){name=hit.name;label=hit.name.split(' ')[0];spk=label;num=num||('+'+hit.digits);}else{label=numPretty(dg.length===10?'1'+dg:dg);spk=spokenNum(dg);name=label;}}
+  convo.pending={kind:'textbody',name:name,num:num||null,orig:q,until:Date.now()+120000};
+  finish({headline:'What should I tell '+label+'?',small:true,spoken:'What should I say to '+spk+'?',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say what the text to '+name+' should say. I will show the draft first and only send when you say send it.'}]});}
 async function cmdTextSim(q,p){
   beginAsk(q);var my=cur;doing('drafting the message');setMode('thinking');
   var msg=null;
@@ -2550,6 +2558,7 @@ async function cmdTextSim(q,p){
   var live=ct&&ct.to?ct:(ct&&ct.why==='nodir'?null:false);
   var f1=p.name.split(' ')[0];
   var spoken=live?'Here is the text to '+f1+'. Say send it when you are ready, or tell me what to change.':(ct&&ct.why==='blocked'?'Heads up, '+f1+' is blacklisted, so I will not send anything. Here is only a draft.':(ct&&ct.why==='many'?'I found more than one '+f1+', so I will only show a draft. Give me the full name to send.':(ct&&ct.why==='none'?'I do not see '+p.name+' in your customer list, so this is only a draft.':'Here is how that text to '+f1+' would look. This is only a simulation.')));
+  lastDraft={q:q,p:{name:p.name,num:p.num||null,body:p.body}};
   finish({headline:(live?'Text to ':'Draft text to ')+(live?live.name:p.name),small:true,spoken:spoken,node:phoneNode(live?live.name:p.name,msg,live),tags:[live?srcTag('live','Live · sends via Quo'):srcTag('demo','Draft only'),srcTag('snap','Draft by Claude')],srcNote:live?'Not sent yet. Say send it.':'Nothing was sent.',acts:[{label:'Redraft',fn:function(){cmdTextSim(q,p);}}]});
 }
 /* ---------- weather scene ---------- */
@@ -2868,7 +2877,7 @@ var TXT_NAME_STOP=/^(that|saying|says|say|to|we|i|i'm|im|the|about|can|could|you
 var TXT_NOT_NAME=/^(me|us|him|her|them|it|you|everyone|everybody|all|back|my|the|a|an|this|that|these|those|messages|message|texts|text|threads|inbox|history|from|up|down|out)$/i;
 function splitNameBody(rest,allowEmpty){
   var words=String(rest).replace(/[,]+/g,' ').trim().split(/\s+/);if(!words.length||TXT_NOT_NAME.test(words[0]))return null;
-  var name=[];while(words.length&&name.length<2&&!TXT_NAME_STOP.test(words[0])&&!TXT_NOT_NAME.test(words[0]))name.push(words.shift());
+  var name=[];if(/^NUM1\d{10}$/i.test(words[0]))name.push(words.shift());while(words.length&&name.length<2&&!/^NUM1\d{10}$/i.test(name[0]||'')&&!TXT_NAME_STOP.test(words[0])&&!TXT_NOT_NAME.test(words[0]))name.push(words.shift());
   if(!name.length)return null;
   var body=words.join(' ').replace(/^(?:know\s+)?(?:that|saying|says|to say|and say|and tell (?:her|him|them)(?: that)?|about|:)\s+/i,'').trim();
   if(!body)return allowEmpty?{name:titleCase(name.join(' ')),body:''}:null;return {name:titleCase(name.join(' ')),body:body};
@@ -3011,8 +3020,16 @@ function preloadData(){
 }
 function routeKnown(q,opt,dry){
   var l=normQ(q);var s=stripFill(l);var wcq=q.split(/\s+/).length;
+  if(wcq<=9&&/\b(?:pull up|open|show|bring up|go back to|get back to|reopen|back to)\b.*\b(?:text messag\w*|texting|my texts|messages|that draft|the draft|that text|last text|last message)\b/.test(s)){
+    if(dry)return true;logMic('route','reopen texting');
+    if(lastDraft){cmdTextSim(lastDraft.q,lastDraft.p);return true;}
+    textContacts(q);return true;}
+  if(wcq<=6&&/^(?:ok(?:ay)?|alright|cool|great|perfect)?\s*(?:thanks?|thank you|that'?s all|we'?re good|all good|close (?:it|that|this)|dismiss(?: it)?)\b/.test(s)&&simCtl&&simCtl.node&&simCtl.node.isConnected){
+    if(dry)return true;logMic('route','dismiss card');simClear();if(simCtl)simCtl.done=true;simCtl=null;beginAsk(q);finish({headline:'You are welcome, Ali.',small:true,spoken:'You are welcome, Ali.',tags:[srcTag('live','Just talking')]});return true;}
   if(simCtl&&simCtl.node.isConnected&&wcq<=14&&!WX_RE.test(s)&&!/\b(calendar|schedule|timer|time is it|score|brief|needs me)\b/.test(s)){
     var si=simIntentWords(s);
+    var rtg=!/\b(?:send it|yes)\b/.test(s)&&wcq<=22&&(/\b(?:actually|instead|wrong (?:person|number)|meant|not that|oops)\b/.test(l)||/NUM1\d{10}/.test(phoneTokens(q)))?parseTextCmd(q.replace(/^(?:(?:actually|instead|oops|no wait|wait|sorry|i meant|i mean|no)[,\s]+)+/i,'')):null;
+    if(rtg&&(rtg.num||(!rtg.body&&rtg.name))&&!simCtl.done){if(dry)return true;logMic('route','sim retarget');cmdTextSim(q,{name:rtg.name,num:rtg.num,body:simCtl.body});return true;}
     if(si==='cancel'||(simCtl.armed&&/^(?:no|nope|nah|wrong|wrong number|not right|that'?s wrong)\b/.test(s))){if(dry)return true;logMic('route','sim cancel');simClear();simCtl.done=true;$('hint').textContent='Draft dropped.';try{speak('Okay, dropped it.',false);}catch(e){}return true;}
     if(si==='redo'){if(dry)return true;logMic('route','sim redraft');cmdTextSim(q,{name:simCtl.name,num:simCtl.num,body:simCtl.body+' (Adjust the message like this: '+q+')'});return true;}
     if(!si&&wcq>=2&&!/^(?:what|who|when|where|how|why|is|are|do|does|did|can|could)\b/.test(s)&&!simCtl.done){if(dry)return true;logMic('route','sim edit by conversation');cmdTextSim(q,{name:simCtl.name,num:simCtl.num,body:simCtl.body+' (Adjust the message like this: '+q+')'});return true;}
@@ -3080,7 +3097,7 @@ function routeKnown(q,opt,dry){
   if(dm){if(dry)return true;logMic('route','dice');var dv=1+Math.floor(Math.random()*6);beginAsk(q);finish({headline:'Rolled a '+dv,small:true,spoken:'You rolled a '+dv+'.',node:tossNode('dice',dv),tags:[srcTag('live','On this screen')],acts:[{label:'Roll again',fn:function(){run('roll a die',{});}}]});return true;}
   var rn=/\b(?:pick|choose|give me|random)\b.*\bnumber\b.*?(\d+)\D+(\d+)/.exec(s);
   if(rn){if(dry)return true;var lo=Math.min(+rn[1],+rn[2]),hi=Math.max(+rn[1],+rn[2]);var rv=lo+Math.floor(Math.random()*(hi-lo+1));logMic('route','random');beginAsk(q);finish({headline:String(rv),small:true,spoken:rv+'.',node:calcNode({top:'Random number from '+lo+' to '+hi,big:String(rv),unit:''}),tags:[srcTag('live','On this screen')],acts:[{label:'Again',fn:function(){run(q,{});}}]});return true;}
-  var tx=parseTextCmd(q);if(tx){if(dry)return true;logMic('route','text sim');if(!tx.body){askTextBody(q,tx.name);return true;}cmdTextSim(q,tx);return true;}
+  var tx=parseTextCmd(q);if(tx){if(dry)return true;logMic('route','text sim');if(!tx.body){askTextBody(q,tx.name,tx.num);return true;}cmdTextSim(q,tx);return true;}
   var cc=calcIntent(s);if(cc){if(dry)return true;logMic('route','calc');beginAsk(q);finish({headline:cc.top+' = '+cc.big,small:true,spoken:cc.say,node:calcNode(cc),tags:[srcTag('live','Calculated on this screen')]});return true;}
   var ci=calIntent2(q,l);if(ci){if(dry)return true;logMic('route','calendar '+ci.mode);cmdCalendar(q,ci);return true;}
   if(WX_RE.test(s)&&!/\b(reschedule|cancel|customer|deposit|text|message|book|invoice|refund)\b/.test(s)&&wcq<=22){if(dry)return true;logMic('route','weather');cmdWeather(q);return true;}
@@ -3741,7 +3758,7 @@ function dashStart(){
  TV.lastUser=Date.now();dashShow(false);},true);});
 document.addEventListener('mousemove',function(){if(!TV.on)return;var h=document.documentElement;h.classList.add('cur');clearTimeout(TV.curT);TV.curT=setTimeout(function(){h.classList.remove('cur');},4000);});
 
-window.__t={h2:H2,ptt:ptt,dashShow:dashShow,unlock:function(){LOCKED=false;},h2Go:h2Go,dashLoad:dashLoad,lexTalk:lexTalk,tvSet:tvSet,lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,lockReq:lockReq,doLock:doLock,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
+window.__t={parse:function(q){return parseTextCmd(q);},tok:function(q){return phoneTokens(q);},h2:H2,ptt:ptt,dashShow:dashShow,unlock:function(){LOCKED=false;},h2Go:h2Go,dashLoad:dashLoad,lexTalk:lexTalk,tvSet:tvSet,lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,lockReq:lockReq,doLock:doLock,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
 function addReminder(q,s){
   var pw=parseWhen(s);var txt=remText(pw?pw.rest:s);
   if(!pw){convo.pending={kind:'remwhen',text:txt,orig:q,until:Date.now()+120000};beginAsk(q);finish({headline:'When should I remind you?',small:true,spoken:'When should I remind you'+(txt?' to '+txt:'')+'?',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say a time, like in 20 minutes, or tomorrow at 9.'}]});return;}
