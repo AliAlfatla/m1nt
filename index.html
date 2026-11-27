@@ -371,7 +371,9 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 .qbar .qa{font-size:16px;line-height:1.4;color:#eafff7}
 .qbar .qx{position:absolute;right:8px;top:6px;background:none;border:0;color:var(--mint);font-size:18px;cursor:pointer}
 .qbar.think .qa{opacity:.7}
-.wx-ghost{position:fixed!important;margin:0!important;z-index:60;pointer-events:none;background:rgba(3,26,26,.94)!important;border:1px solid var(--mint)!important;box-shadow:0 0 30px rgba(92,255,200,.55)!important;border-radius:6px}
+.wx-ghost{position:fixed!important;margin:0!important;z-index:60;pointer-events:none;transform-origin:50% 50%}
+.wx-ghost .wx-pick{background:rgba(92,255,200,.2)!important;box-shadow:inset 0 0 0 2px var(--mint),0 0 26px rgba(92,255,200,.7)!important;animation:pickPulse .9s ease-in-out infinite}
+@keyframes pickPulse{50%{box-shadow:inset 0 0 0 2px var(--mint),0 0 40px rgba(92,255,200,.95)}}
 
 /* ===== full-screen calendar ===== */
 .app[data-state="answer"][data-viz="cal"] .center{padding:0}
@@ -397,6 +399,19 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 
 .app[data-viz="board"] .resp{background:none!important;border-color:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important}
 .app[data-viz="board"] .resp *{text-shadow:0 1px 10px rgba(0,0,0,.6)}
+
+#boot{position:fixed;inset:0;z-index:80;pointer-events:none;display:grid;place-items:center;overflow:hidden;animation:bootOut .5s ease-in 1.7s forwards}
+.boot-r{position:absolute;left:50%;top:50%;width:220px;height:220px;margin:-110px 0 0 -110px;border-radius:50%;border:2px solid var(--mint);box-shadow:0 0 30px rgba(92,255,200,.6),inset 0 0 30px rgba(92,255,200,.3);opacity:0;animation:bootRing 1.5s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes bootRing{0%{transform:scale(.1);opacity:.95}100%{transform:scale(6.5);opacity:0}}
+.boot-sc{position:absolute;left:0;right:0;height:90px;top:-90px;background:linear-gradient(180deg,rgba(92,255,200,0),rgba(92,255,200,.22),rgba(92,255,200,0));animation:bootSc 1.3s ease-in-out .1s forwards}
+@keyframes bootSc{to{top:100%}}
+.boot-t{position:relative;font:600 13px 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.7em;color:var(--mint);text-shadow:0 0 14px rgba(92,255,200,.8);opacity:0;animation:bootT 1.6s ease-in-out .15s forwards}
+@keyframes bootT{20%,70%{opacity:1}100%{opacity:0;letter-spacing:1em}}
+@keyframes bootOut{to{opacity:0}}
+.bd-pill{display:inline-block;margin-top:6px;font:600 10px var(--font-m);letter-spacing:.12em;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--mint)}
+.bd-pill.warn{color:var(--warn);border-color:rgba(255,200,87,.6)}.bd-pill.bad{color:var(--bad);border-color:rgba(255,123,114,.6)}
+.nc-OK .nc-ic{color:var(--mint)}.nc-WARN{border-color:rgba(255,200,87,.55)}.nc-WARN .nc-ic{color:var(--warn);border-color:var(--warn)}.nc-BAD{border-color:rgba(255,123,114,.6)}.nc-BAD .nc-ic{color:var(--bad);border-color:var(--bad);animation:pulse 1.3s ease-in-out infinite}
+.nc-CUSTOMER .nc-ic{font-size:22px;letter-spacing:.02em}
 </style>
 <script type="application/json" id="claude-artifacts-manifest">{"permissions": []}</script>
 
@@ -475,7 +490,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v35-2026-11-26';
+var BUILD='v36-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -532,7 +547,7 @@ function draw(now){
   var gr=coreR*(3.2+aw*3.6)*pulse*(mode==='listening'?(1.05+0.05*Math.sin(t*5)):1);
   var ga=1-aw*0.7;
   var g=cx.createRadialGradient(0,0,0,0,0,gr);
-  g.addColorStop(0,'rgba(190,255,235,'+(0.9*ga)+')');g.addColorStop(0.15,'rgba(92,255,200,'+(0.55*ga)+')');g.addColorStop(0.5,'rgba(47,174,138,'+(0.18+aw*0.05)+')');g.addColorStop(1,'rgba(47,174,138,0)');
+  var gf=1-an*0.93;g.addColorStop(0,'rgba(190,255,235,'+(0.9*ga*gf)+')');g.addColorStop(0.15,'rgba(92,255,200,'+(0.55*ga*gf)+')');g.addColorStop(0.5,'rgba(47,174,138,'+((0.18+aw*0.05)*gf)+')');g.addColorStop(1,'rgba(47,174,138,0)');
   cx.fillStyle=g;cx.beginPath();cx.arc(0,0,gr,0,Math.PI*2);cx.fill();
   var nr=coreR*pulse*(1-aw*0.3);
   var ng=cx.createRadialGradient(0,0,0,0,0,nr);ng.addColorStop(0,'rgba(240,255,250,'+(0.95*ga+0.05)+')');ng.addColorStop(0.55,'rgba(92,255,200,'+(0.85*ga+0.08)+')');ng.addColorStop(1,'rgba(47,174,138,'+(0.25*ga)+')');
@@ -576,12 +591,28 @@ function setUi(state){
   S.awT=state==='asleep'?0:1;S.anT=state==='answer'?1:0;
   setTimeout(size,60);setTimeout(size,700);redraw();
 }
-function wakeUi(){if(app.getAttribute('data-state')==='asleep'){setUi('awake');}}
+
+/* ---------- sounds (soft, optional) and wake-up intro ---------- */
+var sfxOn=store('sfx')!==false,sfxCtx=null;
+function sfx(kind){
+  if(!sfxOn)return;try{var A=window.AudioContext||window.webkitAudioContext;if(!A)return;sfxCtx=sfxCtx||new A();var a=sfxCtx;if(a.state==='suspended')a.resume();
+    var seqs={open:[[660,0,.09],[990,.07,.12]],wake:[[392,0,.12],[587,.1,.12],[784,.2,.22]],sleep:[[587,0,.14],[440,.12,.14],[294,.24,.26]],pick:[[880,0,.07]],whoosh:null};
+    var now=a.currentTime,vol=.03;
+    if(kind==='whoosh'){var len=Math.floor(a.sampleRate*.5),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);for(var i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.sin(Math.PI*i/len);var src=a.createBufferSource();src.buffer=buf;var f=a.createBiquadFilter();f.type='bandpass';f.Q.value=1.2;f.frequency.setValueAtTime(400,now);f.frequency.exponentialRampToValueAtTime(3200,now+.45);var g=a.createGain();g.gain.value=.05;src.connect(f);f.connect(g);g.connect(a.destination);src.start(now);return;}
+    (seqs[kind]||[]).forEach(function(n){var o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=n[0];g.gain.setValueAtTime(0,now+n[1]);g.gain.linearRampToValueAtTime(vol,now+n[1]+.015);g.gain.exponentialRampToValueAtTime(.0008,now+n[1]+n[2]+.12);o.connect(g);g.connect(a.destination);o.start(now+n[1]);o.stop(now+n[1]+n[2]+.15);});
+  }catch(e){}
+}
+function bootAnim(){
+  var b=document.getElementById('boot');if(b)b.remove();b=el('div','boot');b.id='boot';b.setAttribute('aria-hidden','true');
+  for(var i=0;i<3;i++){var r=el('i','boot-r');r.style.animationDelay=(i*.22)+'s';b.appendChild(r);}
+  b.appendChild(el('div','boot-sc'));b.appendChild(el('div','boot-t','M1NT  ONLINE'));document.body.appendChild(b);setTimeout(function(){if(b.parentNode)b.remove();},2200);
+}
+function wakeUi(){if(app.getAttribute('data-state')==='asleep'){setUi('awake');sfx('wake');bootAnim();}}
 function etHour(){try{return parseInt(new Intl.DateTimeFormat('en-US',{hour:'numeric',hour12:false,timeZone:'America/New_York'}).format(new Date()),10)%24;}catch(e){return new Date().getHours();}}
 function greetWord(){var h=etHour();return h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
 var standby=false;
 function byeSleep(t){var k=sleepKind(t)||'goodnight';if(k==='standby'){if(standby)return;standby=true;wxBackdropStop();stopSpeak();closeDrawer();setUi('awake');setMode('listening');$('hint').textContent='Standing by. Say “Hey, Mint” and then talk as long as you like. Say “Stand by, Mint” to pause again.';try{speak('Standing by, Ali.');}catch(e){}return;}standby=false;sleepUi();var n=etHour();var m=k==='standby'?'Standing by':k==='thatsall'?(n>=17?'See you later':'Okay'):(n>=17||n<5?'Goodnight':'Goodbye');$('hint').textContent='';try{speak(m+', Ali.');}catch(e){}}
-function sleepUi(){wxBackdropStop();stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
+function sleepUi(){sfx('sleep');wxBackdropStop();stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
 var idleT=0;
 function armIdle(){clearTimeout(idleT);if(S.mode!=='idle'||app.getAttribute('data-state')!=='answer')return;var dl=document.querySelector('#extra .cv,#extra .wx,#extra .sb,#extra .sim,#extra .needs,#extra .notes')?45000:20000;idleT=setTimeout(function(){if(S.mode==='idle'&&app.getAttribute('data-state')==='answer'&&!drawer.classList.contains('show')&&!ptt.on){wxBackdropStop();setUi('awake');$('hint').textContent=standby?'Standing by. Say “Hey, Mint” to talk.':'Ready. Ask me anything.';renderDock();}},dl);}
 ['pointerdown','keydown'].forEach(function(n){document.addEventListener(n,function(){armIdle();},true);});
@@ -803,11 +834,11 @@ function doing(txt){$('doing').className='doing';$('doing').textContent='M1NT is
 function doneDoing(txt){$('doing').className='doing done';$('doing').textContent=txt||'';}
 function usageLine(){var u=use.last;var parts=[];if(u.runs)parts.push(u.runs+' Make run'+(u.runs===1?'':'s'));if(u.claude)parts.push(u.claude+' Claude');if(u.web)parts.push(u.web+' web lookup'+(u.web===1?'':'s'));parts.push(u.reads+' free read'+(u.reads===1?'':'s'));return parts.join(' · ');}
 function finish(o){
-  doneDoing('Done · '+clockET(Date.now())+' ET · '+usageLine());
+  doneDoing('Done · '+clockET(Date.now())+' ET · '+usageLine());sfx('open');
   var a=$('ans');a.textContent=o.headline;a.className='ans'+(o.small?' small':'');
   var ex=$('extra');clear(ex);
   if(o.node){var ncl=String(o.node.className||'');var isCv=/\bcv\b/.test(ncl);app.setAttribute('data-viz',o.viz||(isCv?'cal':(/\b(clk|tmx|swx|calc|toss)\b/.test(ncl)?'center':(/\b(sim|needs)\b/.test(ncl)?'board':'1'))));ex.appendChild(o.node);
-    var fxk=isCv?'grid':(/\bneeds\b/.test(ncl)?'radar':(/\b(clk|tmx|swx|calc|toss)\b/.test(ncl)?'rings':(/\bsim\b/.test(ncl)?'chat':null)));if(fxk){try{wxBackdrop(fxk);}catch(e){}}if(isCv)hudify(o.node);}
+    var fxk=isCv?'grid':(/\bbd-health\b/.test(ncl)?'pulse':(/\bbd-cust\b/.test(ncl)?'net':(/\bbd-leads\b/.test(ncl)?'stream':(/\bneeds\b/.test(ncl)?'radar':(/\b(clk|tmx|swx|calc|toss)\b/.test(ncl)?'rings':(/\bsim\b/.test(ncl)?'chat':null))))));if(fxk){try{wxBackdrop(fxk);}catch(e){}}if(isCv)hudify(o.node);}
   if(o.rows&&o.rows.length){var rs=el('div','rows');o.rows.forEach(function(r){var row=el('div','row');row.appendChild(el('div','t',r.t));var n=el('div','n');if(r.link){var al=el('a',null,r.n);al.href=r.link;al.target='_blank';al.rel='noopener noreferrer';al.style.color='var(--mint)';n.appendChild(al);}else n.appendChild(document.createTextNode(r.n));if(r.note)n.appendChild(el('div','note',r.note));row.appendChild(n);rs.appendChild(row);});ex.appendChild(rs);}
   if(o.cards){var cs=el('div','cards');o.cards.forEach(function(c){var b=el('button','card');b.type='button';var h=el('h3');h.appendChild(el('span',null,c.title));h.appendChild(c.tag);b.appendChild(h);b.appendChild(el('div','big',c.big));b.appendChild(el('div','l1',c.line));b.addEventListener('click',function(){openView(c.view);});cs.appendChild(b);});ex.appendChild(cs);}
   (o.banners||[]).forEach(function(b){var d=el('div','banner '+(b.kind||''));d.appendChild(el('b',null,b.bold+' '));d.appendChild(document.createTextNode(b.text));ex.appendChild(d);});
@@ -1294,7 +1325,7 @@ function wxOffset(q){
 function wxDayName(off){if(off===0)return 'Today';if(off===1)return 'Tomorrow';return new Date(etDay(off)+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});}
 async function cmdWeather(q,disp){
   var cardRects=Array.prototype.map.call(document.querySelectorAll('#extra .wx-dw'),function(n){var r=n.getBoundingClientRect();return {l:r.left,t:r.top,w:r.width,h:r.height};});
-  var gcard=null,goff=wxOffset(q);if(goff!=null&&cardRects[goff]){var nodes=document.querySelectorAll('#extra .wx-dw');if(nodes[goff]){gcard=nodes[goff].cloneNode(true);gcard.classList.add('wx-ghost');var cr0=cardRects[goff];gcard.style.cssText='left:'+cr0.l+'px;top:'+cr0.t+'px;width:'+cr0.w+'px;height:'+cr0.h+'px';document.body.appendChild(gcard);if(gcard.animate)gcard.animate([{transform:'scale(1)'},{transform:'scale(1.16) translateY(-6px)'}],{duration:420,easing:'cubic-bezier(.2,.85,.2,1)',fill:'forwards'});setTimeout(function(){if(gcard&&gcard.parentNode)gcard.remove();},7000);}}
+  var gcard=null,goff=wxOffset(q);if(goff!=null&&cardRects[goff]){var wkw=document.querySelector('#extra .wxw');var nodes=document.querySelectorAll('#extra .wx-dw');if(wkw&&nodes[goff]){var wr=wkw.getBoundingClientRect();gcard=wkw.cloneNode(true);gcard.classList.add('wx-ghost');gcard.style.cssText='left:'+wr.left+'px;top:'+wr.top+'px;width:'+wr.width+'px;height:'+wr.height+'px';var pk=gcard.querySelectorAll('.wx-dw')[goff];if(pk){pk.classList.add('wx-pick');}document.body.appendChild(gcard);if(gcard.animate)gcard.animate([{filter:'brightness(1)'},{filter:'brightness(1.15)'}],{duration:500,fill:'forwards'});setTimeout(function(){if(gcard&&gcard.parentNode)gcard.remove();},8000);}}
   beginAsk(disp||q);var my=cur;doing('checking live weather');
   var m=q.match(/\b(?:in|for|at)\s+([A-Za-z .'-]+?)(?:\s+(?:today|tonight|tomorrow|right now|this (?:week|weekend)|now)\b|[?.!,]|$)/i);
   var place=m?m[1].trim():'';if(/^(the|a|my)?\s*(morning|afternoon|evening|week|weekend)$/i.test(place)||/\b(day|week|weekend|tomorrow|morning|afternoon|evening|night|that|then|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i.test(place))place='';
@@ -1335,6 +1366,49 @@ async function cmdWeather(q,disp){
     convo.wxSay=head+'. '+spoken;
     var wn=wxNode(loc,c,d,off,cond,(hh<6||hh>=19));if(hp)wn.appendChild(hourStrip(hp,foc,evh));flipFrom(cardRects[off],'#extra .wx:not(.wxw)');finish({headline:head,follow:'weather',small:true,spoken:spoken,node:wn,viz:'wx',tags:[srcTag('live','Open-Meteo'),srcTag('live','Updated '+(upd?t12(upd):'just now')+' local')],srcNote:loc.def?'Default location: Louisville, Kentucky. Say “weather in <city>” for another.':'',acts:[{label:'Refresh',fn:function(){run(q,{});}}]});
   }catch(e){lookupFail(q,'weather',e);}
+}
+
+/* ---------- health, customers, leads boards ---------- */
+function boardNode(cls,chips,items){
+  var w=el('div','needs '+cls);var sum=el('div','needs-sum');chips.forEach(function(c){var d=el('div','ns');d.appendChild(el('b',null,String(c[0])));d.appendChild(el('span',null,c[1]));sum.appendChild(d);});w.appendChild(sum);
+  var g=el('div','needs-grid');items.forEach(function(it,i){var c=el('div','nc nc-'+it.type);c.style.setProperty('--d',(0.07*i)+'s');var ic=el('div','nc-ic');ic.appendChild(el('span','nc-g',it.icon||'•'));c.appendChild(ic);
+    var bd=el('div','nc-b');bd.appendChild(el('div','nc-k',it.k));bd.appendChild(el('div','nc-w',it.who));if(it.detail)bd.appendChild(el('div','nc-d',it.detail));if(it.pill)bd.appendChild(el('span','bd-pill '+(it.pillk||''),it.pill));c.appendChild(bd);g.appendChild(c);});
+  w.appendChild(g);return w;
+}
+var lastClaude={ok:null,at:0};
+async function cmdHealth(q){
+  beginAsk(q);doing('checking the screen\'s connections');var my=cur;var items=[];
+  items.push({type:BR?'OK':'WARN',icon:'⚡',k:'CLAUDE BRIDGE',who:BR?'Connected':'Not set up',detail:BR?(lastClaude.at?(lastClaude.ok?'Last answer ':'Last attempt failed ')+ageText(Date.now()-lastClaude.at):'No question asked yet this session'):'Paste your link in Setup',pill:BR?'READY':'SETUP',pillk:BR?'':'warn'});
+  var wxt=0,wxok=false;try{var t0=performance.now();await jget('https://api.open-meteo.com/v1/forecast?latitude=38.25&longitude=-85.76&current=temperature_2m');wxt=Math.round(performance.now()-t0);wxok=true;}catch(e){}
+  if(cur!==my)return;
+  items.push({type:wxok?'OK':'BAD',icon:'☁',k:'WEATHER FEED',who:wxok?'Open-Meteo online':'Not reachable',detail:wxok?'Responded in '+wxt+' ms':'Weather will not load until it is back',pill:wxok?'FREE':'DOWN',pillk:wxok?'':'bad'});
+  var cks=Object.keys(calCache),ca=cks.length?Math.max.apply(null,cks.map(function(k){return calCache[k].at;})):0;
+  items.push({type:'OK',icon:'▦',k:'CALENDAR DATA',who:ca?'Loaded '+ageText(Date.now()-ca):'Loads when you wake or ask',detail:'Snapshot refreshes about 6:30 PM ET',pill:'READ-ONLY'});
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  items.push({type:SR?'OK':'BAD',icon:'🎙',k:'VOICE',who:SR?'Speech recognition available':'Not supported in this browser',detail:SR?(isAwake()?'Awake and listening for you':'Asleep. Say wake up Mint'):'Use Chrome',pill:SR?'CHROME':'NO',pillk:SR?'':'bad'});
+  items.push({type:'OK',icon:'🧠',k:'MEMORY',who:Object.keys(ACACHE).length+' remembered answers',detail:'Say clear your memory to wipe them',pill:'ON THIS DEVICE'});
+  items.push({type:'OK',icon:'⏱',k:'TIMERS',who:tmrs.length?tmrs.length+(tmrs.length===1?' running':' running'):'None running',detail:sw.made?'Stopwatch '+(sw.on?'running':'stopped'):'No stopwatch',pill:'LOCAL'});
+  var cc=use.session.claude;items.push({type:'OK',icon:'¢',k:'THIS SESSION',who:cc+' Claude calls',detail:'About '+(cc*6)+' Make credits · Quo 0 (texting is simulated)',pill:'ESTIMATE'});
+  items.push({type:'OK',icon:'#',k:'BUILD',who:BUILD,detail:'Sounds '+(sfxOn?'on':'off')+' · memory '+(Object.keys(ACACHE).length)+' items'});
+  var bad=items.filter(function(i){return i.type==='BAD';}).length,warn=items.filter(function(i){return i.type==='WARN';}).length;
+  var sp=bad?'I found '+bad+(bad===1?' problem':' problems')+'. The weather feed is not reachable.':(warn?'Mostly good. One thing needs setup: the Claude bridge link.':'All systems look good. '+(wxok?'The weather feed answered in '+wxt+' milliseconds. ':'')+(BR?'The Claude bridge is connected.':''));
+  finish({headline:bad?bad+' problem'+(bad===1?'':'s')+' found':(warn?'Mostly good':'All systems normal'),small:true,spoken:sp,node:boardNode('bd-health',[[items.length-bad-warn,'OK'],[warn,'Setup'],[bad,'Down']].filter(function(c){return c[0]>0;}),items),tags:[srcTag('live','Checked '+clockET(Date.now())+' ET'),srcTag('live','Free checks')],srcNote:'Checks the screen itself. Nothing here costs Make credits.',acts:[{label:'Check again',fn:function(){run(q,{});}}]});
+}
+var custCache=null;
+var CUST_Q='[CUSTOMERS REQUEST] Using only the business data (calendar snapshot and booked jobs with their payment status, and any deposit waivers recorded by Ali), list each distinct customer who has an appointment from today through the next 30 days. Output ONLY lines in the form NAME|VEHICLE|NEXT APPOINTMENT|PAYMENT. NEXT APPOINTMENT is the day and time such as "Fri 11:00 AM". PAYMENT is a short phrase: "deposit paid", "none received", "waived by Ali", "balance due", "paid in full" or "unknown". Never invent anything. If there are none output only the word NONE. No other words.';
+async function cmdCustomers(q,opt){
+  beginAsk(q);doing('reading your upcoming customers through Make');var my=cur;
+  if(!BR){finish({headline:'Customers need the Claude link.',small:true,spoken:'Customers need the Claude link in Setup.',tags:[srcTag('na','Unavailable')]});return;}
+  try{var t;if(!(opt&&opt.live)&&custCache&&Date.now()-custCache.at<300000)t=custCache.t;else{t=await bridgePost(CUST_Q,'NOTE: machine-readable request from the screen. Output exactly the lines requested.',50000);custCache={at:Date.now(),t:t};addUse('claude',1);usageChip();}
+    if(cur!==my)return;var rows=/^\W*none\W*$/i.test(t)?[]:String(t).split(/\n+/).map(function(l){return l.split('|').map(function(x){return x.trim();});}).filter(function(p){return p.length>=4&&p[0];});
+    if(!rows.length){finish({headline:'No upcoming customers found.',small:true,spoken:'I do not see any customers with appointments in the next 30 days.',tags:[srcTag('live','Make data')],srcNote:'Verified empty: the lookup worked.'});return;}
+    var items=rows.slice(0,24).map(function(p){var pay=p[3].toLowerCase(),k=/none|balance due/.test(pay)?'WARN':'CUSTOMER';return {type:k,icon:p[0].split(/\s+/).map(function(w){return w.charAt(0);}).join('').slice(0,2).toUpperCase(),k:(p[2]||'').toUpperCase(),who:p[0],detail:p[1],pill:p[3].toUpperCase(),pillk:k==='WARN'?'warn':''};});
+    var due=items.filter(function(i){return i.type==='WARN';}).length;
+    finish({headline:items.length+(items.length===1?' customer':' customers')+' coming up',small:true,spoken:'You have '+items.length+(items.length===1?' customer':' customers')+' coming up in the next 30 days. '+rows.slice(0,5).map(function(p){return p[0]+', '+p[2];}).join('. ')+'.'+(due?' '+due+' still '+(due===1?'needs':'need')+' payment attention.':''),node:boardNode('bd-cust',[[items.length,'Customers'],[due,'Payment']].filter(function(c){return c[0]>0;}),items),tags:[srcTag('live','Claude via Make'),srcTag('live','Read '+clockET(Date.now())+' ET')],srcNote:'Next 30 days from your calendar snapshot and booked jobs. Read-only.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}}]});
+  }catch(e){if(cur!==my)return;bridgeFail(q,failCopy(e));}
+}
+function cmdLeads(q){
+  beginAsk(q);finish({headline:'Leads are not connected to this screen yet.',small:true,spoken:'Leads live in Quo, and this screen is not connected to Quo yet, so I have nothing real to show. I will not make anything up.',node:boardNode('bd-leads',[[0,'Leads']],[{type:'WARN',icon:'?',k:'NOT CONNECTED',who:'No lead feed yet',detail:'Texting and Quo are still simulation-only here. When you say the word, I can connect read-only lead data.',pill:'SIMULATION ONLY',pillk:'warn'}]),tags:[srcTag('na','Not connected')]});
 }
 function gameLine(ev){
   var c=ev.competitions&&ev.competitions[0];if(!c)return null;var h=c.competitors.filter(function(x){return x.homeAway==='home';})[0],a=c.competitors.filter(function(x){return x.homeAway==='away';})[0];
@@ -1484,9 +1558,9 @@ async function cmdBridge(q,opt){
     if(/^Accepted$/i.test(t)){bridgeFail(q,'The bridge did not accept the access code. Paste your link again in Setup.');return;}
     if(!t||/^M1NT_BRIDGE_ERROR/.test(t)){bridgeFail(q,'Claude did not answer.');return;}
     if(/^~+$/.test(t)){addUse('claude',1);usageChip();logMic('ignored','unclear, stayed silent: '+q.slice(0,40));if(keep){var qb0=$('qbar');if(qb0)qb0.remove();setMode('idle');return;}wxBackdropStop();setUi('awake');setMode('listening');$('hint').textContent='';renderDock();return;}
-    addUse('claude',1);usageChip();acachePut(q,t);
+    addUse('claude',1);usageChip();acachePut(q,t);lastClaude={ok:true,at:Date.now()};
     done(t,['Claude via Make'],{headline:t,small:true,spoken:t,tags:[srcTag('live','Claude via Make'),srcTag('live','Answered '+clockET(Date.now())+' ET')],srcNote:'Live web search plus your saved calendar, bookings and deposit snapshots. Read-only.',acts:[{label:'Ask again',fn:function(){run(q,{});}}]});
-  }catch(e){clearTimeout(tm);if(cur!==my)return;if(keep){keepBar(q,'That lookup failed. '+(e&&e.name==='AbortError'?'It took longer than 45 seconds.':'Try again in a moment.'),false);setMode('idle');return;}bridgeFail(q,e&&e.name==='AbortError'?'The lookup took longer than 45 seconds.':failCopy(e));}
+  }catch(e){clearTimeout(tm);lastClaude={ok:false,at:Date.now()};if(cur!==my)return;if(keep){keepBar(q,'That lookup failed. '+(e&&e.name==='AbortError'?'It took longer than 45 seconds.':'Try again in a moment.'),false);setMode('idle');return;}bridgeFail(q,e&&e.name==='AbortError'?'The lookup took longer than 45 seconds.':failCopy(e));}
 }
 function followUp(q,opt){
   var L=convo.last,l=q.toLowerCase();
@@ -1664,7 +1738,7 @@ function wxKind(code,isNight){
 function wxGlyph(code){var k=wxKind(code,false);return {sun:'☀',night:'☾',partly:'⛅',cloud:'☁',fog:'🌫',drizzle:'🌦',rain:'🌧',snow:'❄',storm:'⛈'}[k];}
 
 /* ---------- full-screen animated scenes for boards, calendar, clock, texting ---------- */
-var FX_KINDS={grid:1,radar:1,rings:1,chat:1};
+var FX_KINDS={grid:1,radar:1,rings:1,chat:1,net:1,pulse:1,stream:1};
 function sceneFor(cv,kind){return FX_KINDS[kind]?fxScene(cv,kind):wxScene(cv,kind);}
 function fxScene(cv,kind){
   var ctx=cv.getContext('2d'),W=0,H=0,raf=0,t0=Date.now(),P=[],blips=[],bubs=[],lastB=0,lastBub=0;
@@ -1703,6 +1777,24 @@ function fxScene(cv,kind){
     if(kind==='chat'){
       if(Date.now()-lastBub>900){lastBub=Date.now();var left=Math.random()<.5;bubs.push({x:left?W*(.05+Math.random()*.2):W*(.62+Math.random()*.3),y:H+60,w:110+Math.random()*130,h:34+Math.random()*30,v:.5+Math.random()*.7,out:!left});}
       bubs=bubs.filter(function(b){b.y-=b.v;if(b.y<-90)return false;var al=Math.min(1,(H-b.y)/220)*Math.min(1,(b.y+90)/260)*.5;ctx.strokeStyle='rgba('+M+','+al+')';ctx.lineWidth=1.6;ctx.shadowColor='#5cffc8';ctx.shadowBlur=8;rr(b.x,b.y,b.w,b.h,14);ctx.stroke();ctx.shadowBlur=0;ctx.lineWidth=1.2;ctx.strokeStyle='rgba('+M+','+al*.8+')';for(var l=0;l<(b.h>50?3:2);l++){ctx.beginPath();ctx.moveTo(b.x+12,b.y+12+l*11);ctx.lineTo(b.x+b.w*(.45+.4*((l*37)%10)/10),b.y+12+l*11);ctx.stroke();}return true;});
+    }
+
+    if(kind==='net'){
+      if(!P.nodes){P.nodes=[];for(var n=0;n<38;n++)P.nodes.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5});}
+      var nd=P.nodes;nd.forEach(function(a){a.x+=a.vx;a.y+=a.vy;if(a.x<0||a.x>W)a.vx*=-1;if(a.y<0||a.y>H)a.vy*=-1;});
+      ctx.lineWidth=1;for(var i1=0;i1<nd.length;i1++)for(var j1=i1+1;j1<nd.length;j1++){var dx=nd[i1].x-nd[j1].x,dy=nd[i1].y-nd[j1].y,d2=Math.sqrt(dx*dx+dy*dy);if(d2<190){ctx.strokeStyle='rgba('+M+','+(.2*(1-d2/190))+')';ctx.beginPath();ctx.moveTo(nd[i1].x,nd[i1].y);ctx.lineTo(nd[j1].x,nd[j1].y);ctx.stroke();}}
+      nd.forEach(function(a,i){ctx.fillStyle='rgba('+M+','+(.45+.35*Math.sin(t*1.4+i))+')';ctx.shadowColor='#5cffc8';ctx.shadowBlur=10;ctx.beginPath();ctx.arc(a.x,a.y,2.4,0,6.283);ctx.fill();ctx.shadowBlur=0;});
+      var pi=Math.floor(t*1.2)%nd.length,pj=(pi*7+3)%nd.length,pf=(t*1.2)%1;ctx.fillStyle='rgba(220,255,245,.9)';ctx.beginPath();ctx.arc(nd[pi].x+(nd[pj].x-nd[pi].x)*pf,nd[pi].y+(nd[pj].y-nd[pi].y)*pf,3,0,6.283);ctx.fill();
+    }
+    if(kind==='pulse'){
+      var my=H*.5,sc=(t*140)%W;ctx.lineWidth=1;ctx.strokeStyle='rgba('+M+',.07)';for(var gx=0;gx<W;gx+=48){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke();}for(var gy=0;gy<H;gy+=48){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();}
+      function ecg(x){var u=((x-sc)%W+W)%W;var p=u/W;var y=0;var q=(p*10)%1;if(q>.42&&q<.46)y=-70*Math.sin((q-.42)/.04*Math.PI);else if(q>.46&&q<.5)y=40*Math.sin((q-.46)/.04*Math.PI);else if(q>.62&&q<.72)y=-14*Math.sin((q-.62)/.1*Math.PI);return my+y;}
+      ctx.lineWidth=2.4;ctx.shadowColor='#5cffc8';ctx.shadowBlur=14;ctx.strokeStyle='rgba('+M+',.55)';ctx.beginPath();for(var x=0;x<=W;x+=3){var yy=ecg(x),fade=1-((x-((sc)%W)+W)%W)/W;if(x===0)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);}ctx.stroke();ctx.shadowBlur=0;
+      for(var rp=0;rp<3;rp++){var ph=((t*.4+rp/3)%1);ctx.strokeStyle='rgba('+M+','+(.25*(1-ph))+')';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(cx,cy,60+ph*Math.min(W,H)*.6,0,6.283);ctx.stroke();}
+    }
+    if(kind==='stream'){
+      if(!P.cols){P.cols=[];for(var c=0;c<Math.ceil(W/20);c++)P.cols.push({y:Math.random()*H,v:1+Math.random()*2.4});}
+      ctx.font='13px ui-monospace,monospace';P.cols.forEach(function(cl,ci){cl.y+=cl.v;if(cl.y>H+200)cl.y=-Math.random()*300;for(var k=0;k<14;k++){var yy2=cl.y-k*16;if(yy2<0||yy2>H)continue;ctx.fillStyle='rgba('+M+','+(k===0?.8:(.28*(1-k/14)))+')';ctx.fillText('0123456789ABCDEF'.charAt((ci*7+k*3+Math.floor(t*6))%16),ci*20,yy2);}});
     }
     P.forEach(function(p){p.y-=p.v;if(p.y<-4){p.y=H+4;p.x=Math.random()*W;}ctx.fillStyle='rgba('+M+','+(.15+.35*Math.abs(Math.sin(t*.8+p.a)))+')';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);ctx.fill();});
     var vg=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.max(W,H)*.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,8,8,.55)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
@@ -1794,6 +1886,13 @@ function hourStrip(plan,foc,evs){
 }
 
 
+
+function isWxChat(q){
+  var l=normQ(q);if(wxFragment(q))return false;
+  if(/^(?:so|ok so|okay so|and so|but|wait|hold on|basically|meaning|that means|does that mean|is that|is it|are you sure|really|why|how come)\b/.test(l)&&!/\b(weather in|forecast for|pull up|show me)\b/.test(l))return true;
+  if(/\b(whole day|all day|all morning|all afternoon|all night|entire day|the whole time|that whole|basically|that means|so it'?s|so that|how long|how many hours|how heavy|how much rain|how much snow|will i need|do i need|should i|would you|could i|can i|worth|bad day|good day|a good idea|a bad idea|any chance|is that (?:a lot|bad|normal)|going to be a)\b/.test(l)&&!/\b(weather in|forecast for|pull up|show me|what'?s the weather|what is the weather)\b/.test(l))return true;
+  return false;
+}
 function wxCtxNow(){return (convo.last&&convo.last.kind==='weather'&&Date.now()-convo.last.at<300000)||(app.getAttribute('data-state')==='answer'&&!!document.querySelector('#extra .wx'));}
 var WDAY='(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)';
 var WDAYX='(?:today|tomorrow|tonight|'+WDAY+'(?:\\\'s)?|next '+WDAY+'|(?:this |the )?weekend|(?:the )?next day|(?:the )?day after(?: that| tomorrow)?|(?:the )?(?:previous|last) day|(?:the )?day before(?: that)?)';
@@ -1840,10 +1939,10 @@ function winText(w,off,a,b,lab){
   return lab+': '+(lo===hi?'about '+hi:lo+' to '+hi)+' degrees and '+txt+'.';
 }
 function flipFrom(rect,sel){
-  document.querySelectorAll('.wx-ghost').forEach(function(g){var an=g.animate?g.animate([{opacity:1},{opacity:0}],{duration:420,delay:120,fill:'forwards'}):null;if(an)an.onfinish=function(){g.remove();};else g.remove();});
+  sfx('whoosh');document.querySelectorAll('.wx-ghost').forEach(function(g){var an=g.animate?g.animate([{opacity:1,transform:'scale(1)'},{opacity:0,transform:'scale(1.05)'}],{duration:900,easing:'ease-in',fill:'forwards'}):null;if(an)an.onfinish=function(){g.remove();};else g.remove();});
   if(!rect)return;setTimeout(function(){var nw=document.querySelector(sel);if(!nw||!nw.animate)return;var nr=nw.getBoundingClientRect();if(!nr.width)return;
     var dx=rect.l-nr.left,dy=rect.t-nr.top,sx=Math.max(.05,rect.w/nr.width),sy=Math.max(.05,rect.h/nr.height);
-    nw.style.transformOrigin='0 0';nw.animate([{transform:'translate('+dx+'px,'+dy+'px) scale('+sx+','+sy+')',opacity:.35,filter:'blur(2px)'},{transform:'none',opacity:1,filter:'none'}],{duration:950,easing:'cubic-bezier(.2,.85,.2,1)'});
+    nw.style.transformOrigin='0 0';nw.animate([{transform:'translate('+dx+'px,'+dy+'px) scale('+sx+','+sy+')',opacity:0,offset:0},{opacity:.85,offset:.35},{transform:'none',opacity:1,offset:1}],{duration:1500,easing:'cubic-bezier(.22,.9,.25,1)',fill:'backwards'});
     var hr=nw.querySelector('.wx-hr');if(hr&&hr.animate)hr.animate([{opacity:0,transform:'translateY(14px)'},{opacity:0,transform:'translateY(14px)',offset:.55},{opacity:1,transform:'none'}],{duration:1100,easing:'ease-out'});},40);
 }
 function hudify(w){w.classList.add('hudb');['c1','c2'].forEach(function(k){w.appendChild(el('span','hud-'+k));});return w;}
@@ -1967,7 +2066,7 @@ function simIntentWords(l){
 
 function capsNote(){
   var tl=tmrs.length?tmrs.map(function(t){return t.label+(t.alarm?' alarm':' timer')+' ('+(t.done?'finished':hms(t.end-Date.now())+' left')+')';}).join(', '):'none';
-  return 'WHAT THIS SCREEN CAN DO BY ITSELF (built in, handled on the screen without you, and these are REAL and WORKING): timers and alarms (several at once, they keep running in the bottom-left corner and beep and speak when done), a stopwatch, a big clock, animated full-screen weather (now, a day, or the week), calendar views (a day, 3 days, a week, a month), a what-needs-me board of deposits, balances and flags, text-message SIMULATIONS (visual only, nothing is actually sent), notes and a to-do list saved on this device, a calculator, unit conversions, tip math, coin flip, dice, football scores. If Ali asks about any of these, they exist and work; never say they do not. What it truly cannot do yet: send real texts, book, cancel, reschedule, take payments or change anything in his systems. CURRENT STATE: timers: '+tl+'; stopwatch: '+(sw.made?(sw.on?'running '+swFmt(swElapsed()):'stopped at '+swFmt(swElapsed())):'not started')+'; saved notes: '+NOTES.length+'.\n';
+  return 'WHAT THIS SCREEN CAN DO BY ITSELF (built in, handled on the screen without you, and these are REAL and WORKING): a system health board, an upcoming customers board, full-screen animated calendar and weather, hour by hour weather and day lookups, soft sounds that can be turned off by saying sounds off, timers and alarms (several at once, they keep running in the bottom-left corner and beep and speak when done), a stopwatch, a big clock, animated full-screen weather (now, a day, or the week), calendar views (a day, 3 days, a week, a month), a what-needs-me board of deposits, balances and flags, text-message SIMULATIONS (visual only, nothing is actually sent), notes and a to-do list saved on this device, a calculator, unit conversions, tip math, coin flip, dice, football scores. If Ali asks about any of these, they exist and work; never say they do not. What it truly cannot do yet: send real texts, book, cancel, reschedule, take payments or change anything in his systems. CURRENT STATE: timers: '+tl+'; stopwatch: '+(sw.made?(sw.on?'running '+swFmt(swElapsed()):'stopped at '+swFmt(swElapsed())):'not started')+'; saved notes: '+NOTES.length+'.\n';
 }
 var HELP_RE=/\b(what can you do|what do you do|what are you capable of|what are your (?:commands|capabilities|features|tools|abilities)|your (?:commands|capabilities|features|tools|abilities)|list (?:the )?(?:commands|tools|features)|show (?:me )?(?:the )?(?:commands|tools|features)|what (?:commands|tools|features) (?:do you have|can i use|are there)|how do i use (?:you|this|mint)|what can i (?:ask|say)|help me with mint|^help$)\b/;
 var TSTAT_RE=/\b(did you (?:set|start|make)(?: (?:the|a|my|that))? (?:timer|alarm|countdown)|is (?:the|my|a|that) (?:timer|alarm|countdown) (?:running|going|set|on|working|active)|(?:are there|do i have|have i got|got) (?:any|a) (?:timers?|alarms?|countdowns?)|(?:what|which) (?:timers?|alarms?) (?:do i have|are (?:running|set|going))|any (?:timers?|alarms?)|(?:timers?|alarms?) (?:running|going|status)|did (?:it|that|the (?:timer|alarm)) (?:start|go|set)|is it (?:running|going|counting)|is (?:there )?a (?:timer|alarm))\b/;
@@ -2011,6 +2110,12 @@ function routeKnown(q,opt,dry){
     if(sw.made){showStopwatch(q);return true;}
     beginAsk(q);finish({headline:'No timers running.',small:true,spoken:'No, there is no timer running right now.',node:clockNode(),tags:[srcTag('live','On this screen')]});return true;}
   if(HELP_RE.test(s)){if(dry)return true;logMic('route','help');beginAsk(q);finish({headline:'Here is what I can do',small:true,spoken:'Here is what I can do. Tap any example to try it.',node:helpNode(),viz:'1',tags:[srcTag('live','Built in')]});return true;}
+  /* --- boards, sounds --- */
+  if(/\b(system health|health check|diagnostics?|system status|status check|how(?:'?s| is) (?:everything|the system|it all) (?:running|working|looking|going)|is (?:everything|the system|it all|everything running) (?:working|running|ok|okay|fine|good|up)|check (?:the |my |all )?(?:system|connections?|everything)|are (?:we|you|things|all systems) (?:up|online|working|good)|all systems)\b/.test(s)&&!/\b(weather|timer|calendar)\b/.test(s)){if(dry)return true;logMic('route','health');cmdHealth(q);return true;}
+  if(/\b(?:my|our|the) (?:upcoming )?(?:customers|clients)\b|\b(?:customer|client) list\b|\bwho(?:'?s| is| are) (?:coming|booked|on (?:the )?books)\b|\bshow (?:me )?(?:all )?(?:customers|clients)\b|\bpull up (?:the |my )?(?:customers|clients)\b/.test(s)&&!/\b(text|message|call|email|send|tell|remind)\b/.test(s)&&wcq<=12){if(dry)return true;logMic('route','customers');cmdCustomers(q,opt);return true;}
+  if(/\b(?:my|our|the|new|any|show me|pull up) leads?\b|\blead list\b|\bany new leads\b/.test(s)&&!/\b(text|message|call|email|send)\b/.test(s)&&wcq<=10){if(dry)return true;logMic('route','leads');cmdLeads(q);return true;}
+  var sfm=/\b(?:turn|switch|set)?\s*(?:the )?(?:sounds?|sound effects|chimes?|sfx)\s+(on|off)\b|\b(mute|unmute)\s+(?:the )?(?:sounds?|sound effects|chimes?|sfx)\b|\bturn (on|off) (?:the )?(?:sounds?|sound effects|chimes?)\b/.exec(s);
+  if(sfm&&wcq<=8){if(dry)return true;var on=(sfm[1]||sfm[3]||'')==='on'||sfm[2]==='unmute';sfxOn=on;store('sfx',on);logMic('route','sounds '+(on?'on':'off'));beginAsk(q);finish({headline:'Sounds '+(on?'on':'off')+'.',small:true,spoken:on?'Okay, sounds are on.':'Okay, sounds are off.',tags:[srcTag('live','On this screen')]});if(on)sfx('wake');return true;}
   /* --- timer edits and window controls --- */
   var hasDur=/\b(\d+(?:\.\d+)?|forty five|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|ninety)\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?)\b/.test(s);
   if(tmrs.length&&hasDur&&/\b(change|switch|update|edit|adjust|make it|make that|make the|actually|instead|can you do|do a|set it)\b/.test(s)&&!/\b(another|also|(?:a|the|my) second timer|new|extra|additional)\b/.test(s)&&!/\b(add|extend)\b/.test(s)){
@@ -2194,6 +2299,7 @@ function run(raw,opt){
   if(convo.pending&&(opt.reply||shortReply(q)||convo.pending.kind==='textbody')){var comp=completePending(q);if(comp){logMic('reply','completed: '+comp.slice(0,70));q=comp;opt.clarified=true;}}
   else if(convo.pending&&Date.now()>convo.pending.until)convo.pending=null;
   var wxCtx=wxCtxNow();
+  if(wxCtx&&BR&&!opt.noFrag&&isWxChat(q)){logMic('route','weather chat to Claude');cmdBridge(q,opt);return;}
   if(wxCtx&&!opt.noFrag){var fr=wxFragment(q);if(fr){logMic('route','weather fragment: '+fr);convo.wxFollow=true;cmdWeather(fr,q);return;}}
   if(opt.reply==='follow'&&convo.last&&Date.now()-convo.last.at<300000&&followUp(q,opt))return;
   var l=q.toLowerCase();
