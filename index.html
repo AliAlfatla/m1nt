@@ -423,7 +423,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v30-2026-11-26';
+var BUILD='v31-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1105,6 +1105,7 @@ function handleWake(t,isFinal){
   }
   if(!isAwake())return;                 /* asleep: only “Wake up, Mint” does anything */
   var q=cleanQ(t);if(!q)return;
+  if(q.split(/\s+/).length>=5&&looksLikeEcho(q)){if(isFinal)logMic('ignored','echo of M1NT: '+q.slice(0,40));return;}
   clearTimeout(silTimer);wakePend=q;
   if(isFinal)submitHeard(q);else silTimer=setTimeout(function(){submitHeard(wakePend);},SIL);
 }
@@ -1587,7 +1588,7 @@ function wxScene(cv,kind){
   for(var c=0;c<cn;c++)clouds.push({x:Math.random()*W,y:12+Math.random()*(H*0.45),s:0.8+Math.random()*1.4,v:0.08+Math.random()*0.22});
   var stars=[];if(kind==='night')for(var s=0;s<Math.round(70*AREA);s++)stars.push({x:Math.random()*W,y:Math.random()*H*0.8,r:Math.random()*1.4+0.2,p:Math.random()*6});
   var flash=0,nextFlash=Date.now()+2500,SPL=[];
-  function cloud(x,y,s,a,col){var B=[[0,0,34],[30,-12,40],[66,0,32],[34,10,36]];ctx.save();ctx.strokeStyle='rgba(92,255,200,'+Math.min(.9,a*2+.25)+')';ctx.shadowColor='#5cffc8';ctx.shadowBlur=14;ctx.lineWidth=3;B.forEach(function(b){ctx.beginPath();ctx.arc(x+b[0]*s,y+b[1]*s,b[2]*s,0,6.283);ctx.stroke();});ctx.shadowBlur=0;ctx.fillStyle='rgba(3,20,22,.93)';B.forEach(function(b){ctx.beginPath();ctx.arc(x+b[0]*s,y+b[1]*s,b[2]*s-1.5,0,6.283);ctx.fill();});ctx.restore();}
+  function cloud(x,y,s,a,col){ctx.save();ctx.translate(x,y+30*s);ctx.scale(s,s);ctx.beginPath();ctx.moveTo(18,0);ctx.arc(18,-18,18,Math.PI/2,Math.PI*1.5);ctx.arc(50,-42,28,Math.PI*1.15,Math.PI*1.9);ctx.arc(86,-22,22,Math.PI*1.35,Math.PI*2.5);ctx.closePath();ctx.fillStyle='rgba(3,20,22,.7)';ctx.fill();ctx.strokeStyle='rgba(92,255,200,'+Math.min(.6,a+.2)+')';ctx.shadowColor='#5cffc8';ctx.shadowBlur=10;ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();ctx.shadowBlur=0;ctx.lineWidth=1.2;ctx.globalAlpha=.55;ctx.beginPath();ctx.arc(50,-42,19,Math.PI*1.2,Math.PI*1.6);ctx.stroke();ctx.globalAlpha=.4;ctx.setLineDash([10,7]);ctx.beginPath();ctx.moveTo(10,11);ctx.lineTo(92,11);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=.3;ctx.beginPath();ctx.moveTo(28,19);ctx.lineTo(74,19);ctx.stroke();ctx.restore();}
   function frame(){
     if(!cv.isConnected){return;}
     var t=(Date.now()-t0)/1000;ctx.clearRect(0,0,W,H);
@@ -1807,7 +1808,7 @@ function routeKnown(q,opt,dry){
   var wcs=s.split(' ').length;
   if(wcs<=9&&/\b(maximi[sz]e|expand|enlarge|bring (?:it |that |the timer )?(?:up|back|out)|pull (?:it |that |the timer )?up|open (?:up )?(?:the |my )?(?:timer|stopwatch|clock)|show me (?:the |my )?(?:timer|stopwatch)|(?:can i )?see (?:it|the timer|my timer|that|the stopwatch)|look (?:in )?(?:at )?the bottom left|bottom left)\b/.test(s)&&(tmrs.length||sw.made)){
     if(dry)return true;logMic('route','maximize timer');if(tmrs.length&&!(sw.made&&/stopwatch/.test(s))){var tm0=tmrs.slice().sort(function(a,b){return a.end-b.end;})[0];showTimerView(tm0,q);}else showStopwatch(q);return true;}
-  if(wcs<=8&&(/\b(minimi[sz]e|shrink|put away|tuck|hide|close|take away|dismiss|get rid of)\s+(?:it|that|this|the (?:timer|calendar|weather|forecast|clock|stopwatch|schedule|screen|window|view|board|notes|text|simulation)|my (?:timer|calendar|schedule))\b/.test(s)||/^(?:minimi[sz]e|shrink|put it away|hide it)$/.test(s)||/\bmove (?:it|that|the timer) (?:to )?(?:the )?corner\b/.test(s))&&!/\b(mic|microphone|drawer|setup|history)\b/.test(s)&&app.getAttribute('data-state')==='answer'){
+  if(wcs<=8&&(/\b(minimi[sz]e|shrink|put away|tuck|hide|close|take away|dismiss|get rid of)\s+(?:it|that|this|the (?:timer|calendar|weather|forecast|clock|stopwatch|schedule|screen|window|view|board|notes|text|simulation)|my (?:timer|calendar|schedule))\b/.test(s)||/^(?:minimi[sz]e|shrink|put it away|hide it)$/.test(s)||/\bmove (?:it|that|the timer) (?:to )?(?:the )?corner\b/.test(s))&&!/\b(mic|microphone|drawer|setup|history)\b/.test(s)){
     if(dry)return true;logMic('route','minimize');app.removeAttribute('data-viz');wxBackdropStop();setUi('awake');$('hint').textContent=(tmrs.length||sw.made)?'Minimized. Timers keep running in the corner.':'Ready. Ask me anything.';renderDock();return true;}
   var ti=timerIntent(s);
   if(ti){if(dry)return true;logMic('route','timer');
