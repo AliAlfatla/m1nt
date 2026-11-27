@@ -1,4 +1,8 @@
 <title>M1NT</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#04120f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -154,6 +158,35 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
   .app[data-state="answer"] .resp{width:100%;padding:16px 16px 14px}
   .ctag{left:118px;width:auto;text-align:left;top:62px;font-size:10px}
 }
+
+/* ---------- phone mode: just the core ---------- */
+.app.mob .top{position:fixed;top:8px;right:8px;left:8px;z-index:30;justify-content:flex-end}
+.app.mob .chips .chip{display:none}
+.app.mob .chips #muteBtn,.app.mob .chips #setBtn,.app.mob .chips #enableMic{display:inline-flex}
+.app.mob .chips #enableMic[hidden]{display:none}
+.app.mob .panel,.app.mob .sugs,.app.mob .ctag,.app.mob #spk,.app.mob .sendb{display:none!important}
+.app.mob .dock{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:0 0 max(18px,env(safe-area-inset-bottom));pointer-events:none}
+.app.mob .dock>*{pointer-events:auto}
+.app.mob .bar{background:transparent;border:0;box-shadow:none;padding:0;width:auto}
+.app.mob #micBtn{width:84px;height:84px;border-radius:50%;background:rgba(92,255,200,.14);border:1.5px solid var(--mint);color:var(--mint);box-shadow:0 0 34px rgba(92,255,200,.45);display:flex;align-items:center;justify-content:center;touch-action:manipulation}
+.app.mob #micBtn svg{width:38px;height:38px}
+.app.mob #micBtn.on{background:var(--mint);color:#04140f;animation:micPulse 1.1s ease-in-out infinite}
+@keyframes micPulse{50%{box-shadow:0 0 56px rgba(92,255,200,.9)}}
+.app.mob #cmd{display:none}
+.app.mob.typing #cmd{display:block;position:fixed;left:12px;right:12px;bottom:118px;width:auto}
+.app.mob .hint{position:fixed;left:0;right:0;bottom:116px;text-align:center;font-size:12px;opacity:.85}
+.app.mob[data-state="idle"] .hint,.app.mob[data-state="awake"] .hint{bottom:128px}
+.app.mob .dock::before{content:'';position:fixed;left:0;right:0;bottom:0;height:150px;background:linear-gradient(to top,rgba(3,16,13,.96) 35%,transparent);pointer-events:none;z-index:-1}
+.app.mob .typebtn{position:fixed;left:14px;bottom:34px;z-index:31;background:transparent;border:1px solid var(--line);color:var(--mint);border-radius:999px;padding:8px 14px;font:600 11px var(--font-m);letter-spacing:.1em}
+.app:not(.mob) .typebtn{display:none}
+.app.mob .resp{max-height:calc(100vh - 250px);overflow:auto}
+.app.mob #acts .btn{padding:8px 12px}
+
+.app.mob .stage{display:block;position:fixed;inset:0;z-index:1}
+.app.mob .center{position:absolute;inset:0;display:grid;place-items:center;padding:0}
+.app.mob[data-state="answer"] .center{display:block;padding:92px 8px 124px;overflow:auto}
+.app.mob[data-state="answer"] .resp{width:100%;max-height:none;padding:14px 12px;margin:0}
+.app.mob .wakebtn{width:230px;height:230px;margin:-115px 0 0 -115px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* ===== visual screens ===== */
 .app[data-state="answer"][data-viz] .center{padding:10px 24px 4px 230px}
@@ -467,6 +500,7 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
     </form>
     <div class="sugs" id="sugs"></div>
   </footer>
+  <button class="typebtn" id="typeBtn" type="button">TYPE</button>
 </div>
 
 <div class="scrim" id="scrim"></div>
@@ -487,11 +521,17 @@ var $=function(id){return document.getElementById(id);};
 var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 var app=$('app');
 var drawer=$('drawer'),scrim=$('scrim'),dBody=$('dBody'),lastFocus=null,curView=null;
+var MOB=(/Android|iPhone|iPod|Mobile/i.test(navigator.userAgent)||(window.matchMedia&&matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,innerWidth)<=900))&&!/[?&]desktop/.test(location.search);
+if(MOB){document.getElementById('app').classList.add('mob');}
+/* phones block speech until a tap: unlock once */
+(function(){var done=false;function unlock(){if(done)return;done=true;try{if(window.speechSynthesis){var u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);speechSynthesis.getVoices();}}catch(e){}try{var A=window.AudioContext||window.webkitAudioContext;if(A){var c=new A();c.resume&&c.resume();var o=c.createOscillator(),g=c.createGain();g.gain.value=0;o.connect(g);g.connect(c.destination);o.start(0);o.stop(.01);}}catch(e){}}
+['touchend','pointerdown','click','keydown'].forEach(function(n){document.addEventListener(n,unlock,{once:true,passive:true});});
+try{if(window.speechSynthesis&&speechSynthesis.addEventListener)speechSynthesis.addEventListener('voiceschanged',function(){});}catch(e){}})();
 var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v37-2026-11-26';
+var BUILD='v38-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1075,8 +1115,8 @@ function pttEnd(why){
 }
 async function pttStop(){if(!ptt.on)return;await micStop();setTimeout(function(){if(ptt.on)pttEnd('stopped');},900);}
 var micBtn=$('micBtn');
-micBtn.addEventListener('pointerdown',function(e){e.preventDefault();try{micBtn.setPointerCapture(e.pointerId);}catch(x){}ptt.held=true;pttStart();});
-['pointerup','pointercancel'].forEach(function(n){micBtn.addEventListener(n,function(){if(ptt.held){ptt.held=false;pttStop();}});});
+micBtn.addEventListener('pointerdown',function(e){e.preventDefault();if(MOB){if(ptt.on)pttStop();else pttStart();return;}try{micBtn.setPointerCapture(e.pointerId);}catch(x){}ptt.held=true;pttStart();});
+['pointerup','pointercancel'].forEach(function(n){micBtn.addEventListener(n,function(){if(MOB)return;if(ptt.held){ptt.held=false;pttStop();}});});
 micBtn.addEventListener('keydown',function(e){if((e.key===' '||e.key==='Enter')&&!e.repeat){e.preventDefault();if(ptt.on)pttStop();else pttStart();}});
 document.addEventListener('keydown',function(e){if(e.code==='Space'&&!e.repeat&&document.activeElement===document.body&&!ptt.on&&!drawer.classList.contains('show')){e.preventDefault();ptt.held=true;pttStart();}});
 document.addEventListener('keyup',function(e){if(e.code==='Space'&&ptt.held){ptt.held=false;pttStop();}});
@@ -1258,13 +1298,15 @@ function micOff(){
   levelStop();mic.off=true;logMic('off','Mic off pressed');micUi();$('hint').textContent='Mic off. Nothing is listening. Press Voice or the mic button to start again.';
 }
 $('micOff').addEventListener('click',micOff);
-document.addEventListener('pointerdown',function(){if(store('wakePref')&&!wake.on&&!mic.off&&micBackend!=='none')wakeOn(true);},{once:true});
+document.addEventListener('pointerdown',function(){if(!MOB&&store('wakePref')&&!wake.on&&!mic.off&&micBackend!=='none')wakeOn(true);},{once:true});
 /* watchdog: if it should be listening but is neither listening nor waiting to retry, rearm it */
 function rearmIfStuck(why){if(wake.on&&!wake.armed&&!wake.pausedForSpeech&&!wake.retrying&&wakeBE()==='webspeech'&&S.mode!=='speaking'){logMic('watchdog','rearm ('+why+')');wakeStart();}}
 setInterval(function(){rearmIfStuck('interval');},6000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden)rearmIfStuck('visible');});
 window.addEventListener('online',function(){if(wake.on){wake.fails=0;clearTimeout(wake.retryT);wake.retrying=false;rearmIfStuck('online');}});
 $('wakeCore').addEventListener('click',function(){wakeUi();});
+$('typeBtn').addEventListener('click',function(){var on=app.classList.toggle('typing');if(on){wakeUi();$('cmd').focus();}});
+$('cmdForm').addEventListener('submit',function(){app.classList.remove('typing');});
 ['pointerdown','keydown'].forEach(function(n){document.addEventListener(n,function(){if(wake.on&&wake.needTap&&!wake.armed&&!mic.off&&!ptt.on){logMic('tap','restarting dictation from a click');$('hint').textContent='';wakeStart();}},true);});
 function wakePauseForSpeech(){if(!wake.on)return;wake.pausedForSpeech=true;wake.cap=false;clearTimeout(wake.capTimer);if(wake.armed){micUi();return;}wake.armed=false;micStop();micUi();}
 function wakeResumeAfterSpeech(){
