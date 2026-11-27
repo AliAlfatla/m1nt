@@ -709,7 +709,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v44-2026-11-26';
+var BUILD='v45-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -2529,7 +2529,7 @@ function tossNode(kind,result){
 }
 
 /* ---------- wake code (fixed 6-digit; salted hash only, never the code itself) ---------- */
-var LOCKON=(function(){try{var q=/[?&]lock=(on|off)\b/.exec(location.search);if(q){if(q[1]==='on')localStorage.setItem('m1nt.lock','1');else localStorage.removeItem('m1nt.lock');}return localStorage.getItem('m1nt.lock')==='1';}catch(e){return false;}})();
+var LOCKON=true;
 var LOCKED=LOCKON,lkBuf='',lkFails=0,lkUntil=0,lkBusy=false,LK_H='4421357f4fa6e328e0a3db6b62648947e00d817750e4a0a8b8c6558a81efa5c1',LK_H2='x-1234357654',LKN=6;
 function pinSet(){return true;}
 function h32(t){var n=5381;for(var i=0;i<t.length;i++)n=((n*33)^t.charCodeAt(i))|0;return 'x'+n;}
