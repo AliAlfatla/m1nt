@@ -1563,7 +1563,7 @@ function handleWake(t,isFinal){
   var q=cleanQ(t);if(!q)return;
   if(!standby&&isFinal&&lockReq(q)){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;doLock(q);return;}
   if(q.split(/\s+/).length>=5&&looksLikeEcho(q)){if(isFinal)logMic('ignored','echo of M1NT: '+q.slice(0,40));return;}
-  if(q.split(/\s+/).length<=2&&!convo.pending&&!(convo.last&&Date.now()-convo.last.at<120000)&&!routeKnown(q,{},true)){if(isFinal)logMic('ignored','unclear fragment: '+q.slice(0,30));return;}
+  if(q.split(/\s+/).length<=2&&!convo.pending&&!(convo.askC&&Date.now()<convo.askC.until)&&!(simCtl&&simCtl.node&&simCtl.node.isConnected)&&!(convo.last&&Date.now()-convo.last.at<120000)&&!routeKnown(q,{},true)){if(isFinal)logMic('ignored','unclear fragment: '+q.slice(0,30));return;}
   clearTimeout(silTimer);wakePend=q;
   if(isFinal)submitHeard(q);else silTimer=setTimeout(function(){submitHeard(wakePend);},SIL);
 }
@@ -2500,25 +2500,32 @@ function phoneNode(name,msg,live){
   var bar=el('div','sim-bar');var inp=el('div','sim-in','iMessage / text');var snd=el('button','sim-send','↑');snd.type='button';snd.disabled=true;bar.appendChild(inp);bar.appendChild(snd);ph.appendChild(bar);
   wrap.appendChild(ph);
   var side=el('div','sim-side');side.appendChild(el('div','sim-lbl','DRAFT TO '+name.toUpperCase()));var dr=el('div','sim-draft',msg);side.appendChild(dr);
-  var note=el('div','sim-note',live?(live.explicit?'LIVE to a typed number. It only goes out if the number is on your approved list. ':'')+'LIVE. This goes to '+live.name+' ('+live.to.replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'($1) $2-$3')+') from the Evermint line when you send it.':(live===false?'Visual simulation only. This person could not be matched to exactly one customer, so nothing can be sent.':'This is a visual simulation only.'));side.appendChild(note);
+  var note=el('div','sim-note',live?(live.explicit?'LIVE to a typed number. You will be asked to confirm the number before it goes out. ':'')+'LIVE. This goes to '+live.name+' ('+live.to.replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'($1) $2-$3')+') from the Evermint line when you send it.':(live===false?'Visual simulation only. This person could not be matched to exactly one customer, so nothing can be sent.':'This is a visual simulation only.'));side.appendChild(note);
   var go=el('button','btn pri',live?'Send for real':'Play the send (simulated)');go.type='button';go.disabled=true;side.appendChild(go);wrap.appendChild(side);
   function typeIt(){typing.style.display='none';bub.style.display='';var i=0;(function step(){if(!bub.isConnected)return;bt.textContent=msg.slice(0,i);bd.scrollTop=bd.scrollHeight;if(i<msg.length){i++;simTimers.push(setTimeout(step,msg.length>140?9:16));}else{inp.textContent='';go.disabled=false;snd.disabled=false;}})();}
   function anim(ok,label,stampTxt){st.textContent=label+' · '+clockET(Date.now());st.className=ok?'sim-st ok':'sim-st';if(ok)bub.classList.add('sent');var sp=el('div','sim-stamp',stampTxt);sp.style.whiteSpace='pre';ph.appendChild(sp);sfx(ok?'pick':'sleep');setTimeout(function(){if(sp.parentNode)sp.remove();},1800);}
   function deliver(){go.disabled=true;snd.disabled=true;inp.textContent='iMessage / text';st.textContent='Sending…';st.className='sim-st';bub.classList.remove('fly');void bub.offsetWidth;bub.classList.add('fly');ph.appendChild(el('div','sim-ripple'));sfx('open');
     if(live){
       var t0=Date.now();
-      fetch(live.explicit?SEND_NUM_URL:SEND_URL,{method:'POST',body:new URLSearchParams({code:BR.code,action:live.explicit?'sendnum':'send',to:live.to,text:msg})}).then(function(r){return r.text();}).catch(function(){return 'NETERR';}).then(function(t){
+      fetch(live.explicit?SEND_NUM_URL:SEND_URL,{method:'POST',body:new URLSearchParams({code:BR.code,action:live.explicit?'sendnum':'send',to:live.to,text:msg,confirmed:live.explicit?'yes':''})}).then(function(r){return r.text();}).catch(function(){return 'NETERR';}).then(function(t){
         var wait=Math.max(0,1100-(Date.now()-t0));
         simTimers.push(setTimeout(function(){
           if(/^M1NT_SENT/.test(t)){anim(true,'Delivered','SENT\nVIA QUO');try{addUse('quo',1);usageChip();}catch(e){}try{speak('Sent to '+live.name.split(' ')[0]+'.',false);}catch(e){}}
-          else{anim(false,'Not sent','NOT SENT');var why=/NOT_APPROVED/.test(t)?'That number is not on your approved list, so nothing went out. Tell me to approve it, or give me a customer name.':(/daily/.test(t)||/REFUSED/.test(t)?'The line refused it. Nothing went out.':'That did not go through. Nothing went out.');if(simCtl)simCtl.done=false;$('hint').textContent=why;try{speak(why,false);}catch(e){}}
+          else{anim(false,'Not sent','NOT SENT');var why=(/NOT_CONFIRMED/.test(t)?'The number was not confirmed, so nothing went out.':/daily/.test(t)||/REFUSED/.test(t)?'The line refused it. Nothing went out.':'That did not go through. Nothing went out.');if(simCtl)simCtl.done=false;$('hint').textContent=why;try{speak(why,false);}catch(e){}}
         },wait));
       });
       return;
     }
     simTimers.push(setTimeout(function(){anim(true,'Delivered (simulated)','DELIVERED\nSIMULATED');},1100));}
-  go.addEventListener('click',deliver);snd.addEventListener('click',deliver);
-  simCtl={node:wrap,name:name,body:msg,live:!!live,done:false,deliver:function(){if(simCtl&&simCtl.done)return;simCtl.done=true;deliver();}};
+  var EXP=!!(live&&live.explicit);function viaCtl(){if(simCtl&&simCtl.node===wrap)simCtl.deliver();}
+  go.addEventListener('click',EXP?viaCtl:deliver);snd.addEventListener('click',EXP?viaCtl:deliver);
+  simCtl={node:wrap,name:name,body:msg,live:!!live,num:(live&&live.explicit)?live.to:null,done:false,armed:false,deliver:function(){if(simCtl&&simCtl.done)return;
+    if(EXP&&!simCtl.armed){simCtl.armed=true;note.textContent='ARE YOU SURE? This text goes to '+live.name+'. Is this the right person? Say yes or no.';note.style.color='#ffd166';note.style.fontWeight='700';go.textContent='Yes, send it';go.disabled=false;
+      var no=el('button','btn','No, wrong number');no.type='button';no.addEventListener('click',function(){if(simCtl&&simCtl.node===wrap){simCtl.done=true;simClear();note.textContent='Dropped. Nothing was sent.';go.disabled=true;no.remove();$('hint').textContent='Draft dropped.';try{speak('Okay, dropped it.',false);}catch(e){}}});side.appendChild(no);
+      bar.style.outline='2px solid #ffd166';sfx('open');
+      try{speak('Sending to '+live.name.replace(/\D/g,'').split('').join(' ')+'. Is that the right number? Say yes or no.',false);convo.armAfterSpeech='clarify';}catch(e){}
+      return;}
+    simCtl.done=true;deliver();}};
   inp.textContent='';simTimers.push(setTimeout(function(){inp.textContent=msg.slice(0,34)+'…';typeIt();},1400));
   return wrap;
 }
@@ -2801,7 +2808,7 @@ function beep(){try{var A=window.AudioContext||window.webkitAudioContext;var a=n
 
 /* ================= INTENT ROUTER: many ways to say each thing, no Claude lookups for built-in screens ================= */
 var FILL_RE=/^(?:(?:hey|okay|ok|ay|kay|a(?=\s+(?:what|how|and|so|can|will|could|pull|show|open|next|then|the next)\b)|alright|all right|so|um|uh|well|yo|and|now|then|mint|please|kindly|can you|could you|would you|will you|can i|could i|i want you to|i want to|i wanna|i'd like to|i would like to|i need to|i need you to|go ahead and|just|let me|lemme|let's|lets)\s+)+/i;
-function normQ(q){return String(q).toLowerCase().replace(/[’]/g,"'").replace(/[^a-z0-9' ]+/g,' ').replace(/\s+/g,' ').trim();}
+function normQ(q){var x=String(q).toLowerCase().replace(/[’]/g,"'").replace(/(\d),(\d{3})\b/g,'$1$2').replace(/(\d)\.(\d)/g,'$1\u0001$2').replace(/[×✕✖*]/g,' times ').replace(/÷/g,' divided by ').replace(/\^/g,' to the power of ').replace(/(\d)\s*%/g,'$1 percent ').replace(/(\d)\s*\+\s*(?=\d)/g,'$1 plus ').replace(/(\d)\s*[-−–]\s*(?=\d)/g,'$1 minus ').replace(/(\d)\s*\/\s*(?=\d)/g,'$1 divided by ');return x.replace(/[^a-z0-9'\u0001 ]+/g,' ').replace(/\u0001/g,'.').replace(/\s+/g,' ').trim();}
 function stripFill(l){return l.replace(FILL_RE,'').trim();}
 var VIEW_V='(?:pull up|bring up|show(?: me)?|open|display|see|view|check|look at|look up|let me see|give me|get me|show up)';
 var WX_RE=/\b(weather|forecast|forecasts|temperature|temperatures|temp|temps|degrees|rain|raining|rainy|snow|snowing|snowy|storm|storms|stormy|thunder|thunderstorm|thunderstorms|sunny|cloudy|overcast|humid|humidity|windy|freezing|chilly|sleet|icy|hail|umbrella|jacket|coat)\b|how (?:hot|cold|warm|bad|nice) (?:is it|will it be)|will it (?:rain|snow|storm|be (?:hot|cold|warm|nice))|is it (?:raining|snowing|cold|hot|warm|nice|gonna|going to)|what'?s it like out|how'?s it (?:looking|looks) out|how is it out/i;
@@ -3004,8 +3011,8 @@ function routeKnown(q,opt,dry){
   var l=normQ(q);var s=stripFill(l);var wcq=q.split(/\s+/).length;
   if(simCtl&&simCtl.node.isConnected&&wcq<=14&&!WX_RE.test(s)&&!/\b(calendar|schedule|timer|time is it|score|brief|needs me)\b/.test(s)){
     var si=simIntentWords(s);
-    if(si==='cancel'){if(dry)return true;logMic('route','sim cancel');simClear();simCtl.done=true;$('hint').textContent='Draft dropped.';try{speak('Okay, dropped it.',false);}catch(e){}return true;}
-    if(si==='redo'){if(dry)return true;logMic('route','sim redraft');cmdTextSim(q,{name:simCtl.name,body:simCtl.body+' (Adjust the message like this: '+q+')'});return true;}
+    if(si==='cancel'||(simCtl.armed&&/^(?:no|nope|nah|wrong|wrong number|not right|that'?s wrong)\b/.test(s))){if(dry)return true;logMic('route','sim cancel');simClear();simCtl.done=true;$('hint').textContent='Draft dropped.';try{speak('Okay, dropped it.',false);}catch(e){}return true;}
+    if(si==='redo'){if(dry)return true;logMic('route','sim redraft');cmdTextSim(q,{name:simCtl.name,num:simCtl.num,body:simCtl.body+' (Adjust the message like this: '+q+')'});return true;}
     if(si==='send'){if(dry)return true;logMic('route','sim send');if(!simCtl.done){var lv=simCtl.live;simCtl.deliver();if(!lv){$('hint').textContent='Simulated send. Nothing was actually sent.';try{speak('Sent. That was a simulation, so nothing actually went out.',false);}catch(e){}}}return true;}
   }
   if(TSTAT_RE.test(s)&&!WX_RE.test(s)&&!/\b(set|start|make|create)\b.*\b\d/.test(s)){if(dry)return true;logMic('route','timer status');
@@ -3810,6 +3817,15 @@ function run(raw,opt){
   var l=q.toLowerCase();
   if(!BR&&/\b(cancel|delete|refund|charge|transfer|send money|reschedule|resume|pause|book (a|an|me|him|her|them)|take (a )?payment|waive)\b/.test(l)){cmdLocked(q);return;}
   var wcq=q.split(/\s+/).length;
+  var YES1=/^(?:yes|yea|yeah|yep|yup|ya|yah|uh huh|mhm|mm hmm|sure|ok|okay|alright|all right|correct|right|definitely|go ahead|send it|do it)[\s.!?]*$/i,NO1=/^(?:no|nope|nah|naw|negative|wrong|wrong number|not right|cancel|never ?mind|stop|skip|not now|no thanks)[\s.!?]*$/i;
+  if(simCtl&&simCtl.armed&&!simCtl.done&&simCtl.node&&simCtl.node.isConnected&&wcq<=3){
+    if(YES1.test(q.trim())){logMic('route','confirm number yes');simCtl.deliver();return;}
+    if(NO1.test(q.trim())){logMic('route','confirm number no');simCtl.done=true;simClear();var nn=simCtl.node.querySelector('.sim-note');if(nn){nn.textContent='Dropped. Nothing was sent.';nn.style.color='';}$('hint').textContent='Draft dropped. Nothing was sent.';try{speak('Okay, dropped it. Nothing was sent.',false);}catch(e){}return;}
+  }
+  if(convo.askC&&Date.now()<convo.askC.until&&wcq<=3){
+    if(YES1.test(q.trim())||/^(?:ask claude|please|go for it|why not|affirmative|absolutely|of course)[\s.!?]*$/i.test(q.trim())){var a1=convo.askC;convo.askC=null;logMic('route','ask claude yes');cmdBridge(a1.q,a1.opt);return;}
+    if(NO1.test(q.trim())||/^(?:don'?t|forget it|not really)[\s.!?]*$/i.test(q.trim())){convo.askC=null;logMic('route','ask claude no');beginAsk(q);finish({headline:'Okay, I will leave it.',small:true,spoken:'Okay, I will leave it.',tags:[srcTag('live','Just talking')]});return;}
+  }
   if(retractOnly(q)){dropHeard(q);return;}
   if(MICOFF_RE.test(q)){micOff();return;}
   if(isAwake()&&!standby&&lockReq(q)){doLock(q);return;}
@@ -3820,8 +3836,9 @@ function run(raw,opt){
   if(wcq<=24&&EXPLAIN_RE.test(l)&&(SYS_RE.test(l)||(Date.now()-lastHealthAt<900000&&wcq<=16)||/\b(?:fix (?:it|that|this|them|everything|all)|figure (?:it|that|this) out|go through (?:it|that|everything|all))\b/.test(l))&&!/\b(?:weather|forecast|score|calendar|schedule)\b/.test(l)){logMic('route','explain systems');cmdExplain(q,/\bfix\b/.test(l));return;}
   if(wcq<=14&&/\b(?:how(?:'?s| is| are)|is|are|did|has|have|check|status of|what'?s|whats)\b/.test(l)&&/\b(c2|watchdog|fixer|self.?heal|booking sync|back ?up|credit total|(?:morning|daily|evening) briefings?|calendar sync|follow.?up manager|deposit reminders?|notion|quo|make|urable)\b/.test(l)&&/\b(doing|working|running|ran|run|status|healthy|ok|okay|alright|fine|broken|down|last|going|holding)\b/.test(l)&&!/\b(weather|forecast)\b/.test(l)){logMic('route','system status');cmdHealth(q);return;}
   if(convo.askC&&Date.now()<convo.askC.until){var ac0=convo.askC;
-    if(/^(?:yes|yeah|yep|yup|sure|ok|okay|go ahead|do it|ask|ask claude|please|go for it|why not|affirmative|absolutely|of course|si|sí|نعم|اه|ايوه|أيوه|oui)\b/i.test(q.trim())){convo.askC=null;cmdBridge(ac0.q,ac0.opt);return;}
-    if(/^(?:no|nope|nah|don'?t|cancel|never ?mind|forget it|stop|not now|no thanks|لا|non)\b/i.test(q.trim())){convo.askC=null;beginAsk(q);finish({headline:'Okay, I will leave it.',small:true,spoken:'Okay, I will leave it.',tags:[srcTag('live','Just talking')]});return;}
+    if(/^(?:yes|yea|yeah|yep|yup|ya|yah|uh huh|mhm|mm hmm|sure|ok|okay|k|alright|all right|fine|go ahead|do it|ask|ask claude|please|go for it|why not|affirmative|absolutely|of course|correct|right|definitely|go on|si|sí|نعم|اه|ايوه|أيوه|oui)\b/i.test(q.trim())){convo.askC=null;cmdBridge(ac0.q,ac0.opt);return;}
+    if(/^(?:no|nope|nah|naw|negative|don'?t|do not|cancel|never ?mind|forget it|skip|skip it|stop|not now|not really|no thanks|لا|non)\b/i.test(q.trim())){convo.askC=null;beginAsk(q);finish({headline:'Okay, I will leave it.',small:true,spoken:'Okay, I will leave it.',tags:[srcTag('live','Just talking')]});return;}
+    if(/^(?:i don'?t know|idk|dunno|not sure|maybe|hmm+|um+|uh+|i guess)\b/i.test(q.trim())){beginAsk(q);finish({headline:'No rush. Say yes if you want me to ask Claude, or no to drop it.',small:true,spoken:'No rush. Say yes and I will ask Claude, or no to drop it.',tags:[srcTag('live','Waiting on you')]});try{convo.askC=ac0;convo.askC.until=Date.now()+90000;convo.armAfterSpeech='clarify';}catch(e){}return;}
     convo.askC=null;}
   var lm=/\b(?:listen|speak|talk|understand|switch|change|set)\b.*\b(?:in|to|into)?\s*(english|spanish|arabic|french|espanol|francais)\b/.exec(l);
   if(lm&&wcq<=8&&!(simCtl&&simCtl.node.isConnected)){var LG={english:['en-US','English'],spanish:['es-US','Spanish'],espanol:['es-US','Spanish'],arabic:['ar-SA','Arabic'],french:['fr-FR','French'],francais:['fr-FR','French']}[lm[1]];store('reclang',LG[0]);beginAsk(q);finish({headline:'Listening in '+LG[1]+' now.',small:true,spoken:'Okay, listening in '+LG[1]+' now. Reload the page if the microphone does not switch.',tags:[srcTag('live','Voice language')]});try{if(webRec)webRec.lang=LG[0];}catch(e){}return;}
