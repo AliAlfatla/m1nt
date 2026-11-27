@@ -261,7 +261,7 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 @keyframes lkscan{from{top:0}to{top:100%}}
 #lock.ok .lk-d i{background:var(--mint);color:#02130f;box-shadow:0 0 26px var(--mint);transition-delay:calc(var(--n)*70ms)}
 #lock.ok .lk-lk{transform:scale(1.2);transition:transform .4s}
-#lock.ok{animation:lkout .7s ease .9s forwards}
+#lock.ok{}
 @keyframes lkout{to{opacity:0;transform:scale(1.08)}}
 @media(max-width:480px){#lock .lk-d i{width:36px;height:48px}#lock .lk-d{gap:7px}}
 #lock .lk-pad{display:grid;grid-template-columns:repeat(3,70px);gap:12px}
@@ -542,20 +542,21 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 .lg-e.open .a{-webkit-line-clamp:unset;display:block;color:inherit}
 @keyframes lgIn{to{opacity:1;transform:none}}
 
-#nv{position:fixed;top:0;right:0;bottom:0;left:0;z-index:290;pointer-events:none;background:radial-gradient(ellipse at center,rgba(60,255,120,.18),rgba(0,40,12,.78) 75%,#000 100%);mix-blend-mode:normal;opacity:0;animation:nvOn 1.5s ease forwards}
-#nv:before{content:'';position:absolute;top:0;right:0;bottom:0;left:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.28) 0 2px,transparent 2px 4px);animation:nvScan .12s steps(2) infinite}
-#nv:after{content:'';position:absolute;left:0;right:0;height:14%;top:-14%;background:linear-gradient(180deg,transparent,rgba(120,255,160,.35),transparent);animation:nvSweep 1.2s ease-in .1s forwards}
-#nv .nvt{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:700 clamp(18px,3.4vw,40px)/1 var(--font-m);letter-spacing:.4em;color:#9dffb0;text-shadow:0 0 18px #3cff78;opacity:0;animation:nvTxt 1.3s ease .15s forwards}
-#nv .nvc{position:absolute;left:50%;top:50%;width:min(46vw,46vh);height:min(46vw,46vh);transform:translate(-50%,-50%) scale(1.5);border:1.5px solid rgba(157,255,176,.7);border-radius:50%;opacity:0;animation:nvRing 1.3s ease-out forwards}
-@keyframes nvOn{0%{opacity:0}12%{opacity:1;filter:brightness(2.4)}22%{opacity:.4}34%{opacity:1;filter:brightness(1.4)}82%{opacity:1}100%{opacity:0}}
+#nv{position:fixed;top:0;right:0;bottom:0;left:0;z-index:290;pointer-events:none;background:#000;opacity:0;animation:nvOn 1.9s ease forwards;overflow:hidden}
+#nv .nvs{position:absolute;top:0;right:0;bottom:0;left:0;background:radial-gradient(ellipse at center,rgba(70,255,130,.30),rgba(0,50,16,.85) 72%,#000 100%);transform-origin:50% 50%;animation:nvCrt 1.9s cubic-bezier(.6,0,.3,1) forwards}
+#nv .nvs:before{content:'';position:absolute;top:0;right:0;bottom:0;left:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.30) 0 2px,transparent 2px 4px);animation:nvScan .12s steps(2) infinite}
+#nv .nvs:after{content:'';position:absolute;left:0;right:0;height:16%;top:-16%;background:linear-gradient(180deg,transparent,rgba(130,255,170,.45),transparent);animation:nvSweep .9s ease-in .12s forwards}
+#nv .nvc{position:absolute;left:50%;top:50%;width:min(60vw,60vh);height:min(60vw,60vh);border:1.5px solid rgba(157,255,176,.75);border-radius:50%;opacity:0;transform:translate(-50%,-50%) scale(1.7);animation:nvRing 1s ease-out .1s forwards}
+#nv .nvc.b{animation-delay:.3s;width:min(36vw,36vh);height:min(36vw,36vh)}
+@keyframes nvOn{0%{opacity:0}8%{opacity:1}92%{opacity:1}100%{opacity:0}}
 @keyframes nvScan{to{transform:translateY(4px)}}@keyframes nvSweep{to{top:104%}}
-@keyframes nvTxt{0%{opacity:0;letter-spacing:.9em}30%{opacity:1}80%{opacity:1}100%{opacity:0;letter-spacing:.4em}}
-@keyframes nvRing{0%{opacity:0;transform:translate(-50%,-50%) scale(1.5)}30%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) scale(.55)}}
+@keyframes nvRing{0%{opacity:0;transform:translate(-50%,-50%) scale(1.7)}35%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) scale(.4)}}
+@keyframes nvCrt{0%{transform:scale(1,1);filter:brightness(2.6)}12%{filter:brightness(1.3)}52%{transform:scale(1,1);filter:brightness(1.2)}72%{transform:scale(1,.006);filter:brightness(3.2)}88%{transform:scale(.012,.006);filter:brightness(4)}100%{transform:scale(0,0);filter:brightness(1)}}
 #doors{position:fixed;top:0;right:0;bottom:0;left:0;z-index:320;pointer-events:none}
 #doors i{position:absolute;top:0;bottom:0;width:50.2%;background:radial-gradient(circle at 100% 40%,#0b3a31,#020d0b 80%);animation-duration:1.1s;animation-timing-function:cubic-bezier(.7,0,.2,1);animation-fill-mode:forwards}
 #doors i:first-child{left:0;border-right:2px solid var(--mint);box-shadow:8px 0 40px rgba(60,255,200,.35);animation-name:dL}
 #doors i:last-child{right:0;border-left:2px solid var(--mint);box-shadow:-8px 0 40px rgba(60,255,200,.35);animation-name:dR;background:radial-gradient(circle at 0 40%,#0b3a31,#020d0b 80%)}
-@keyframes dL{0%{transform:none}35%{transform:none}100%{transform:translateX(-102%)}}@keyframes dR{0%{transform:none}35%{transform:none}100%{transform:translateX(102%)}}
+@keyframes dL{0%{transform:none}10%{transform:none}100%{transform:translateX(-102%)}}@keyframes dR{0%{transform:none}10%{transform:none}100%{transform:translateX(102%)}}
 </style>
 <script type="application/json" id="claude-artifacts-manifest">{"permissions": []}</script>
 
@@ -741,7 +742,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v75-2026-11-27';
+var BUILD='v76-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -869,10 +870,11 @@ function lockLine(t){return 'Going dark.';}
 
 function nvSound(){if(!sfxOn)return;try{var A=window.AudioContext||window.webkitAudioContext;if(!A)return;sfxCtx=sfxCtx||new A();var a=sfxCtx;if(a.state==='suspended')a.resume();var n=a.currentTime;
   var o=a.createOscillator(),g=a.createGain(),f=a.createBiquadFilter();o.type='sawtooth';f.type='lowpass';f.frequency.setValueAtTime(400,n);f.frequency.exponentialRampToValueAtTime(5000,n+.8);o.frequency.setValueAtTime(140,n);o.frequency.exponentialRampToValueAtTime(2600,n+.8);g.gain.setValueAtTime(0,n);g.gain.linearRampToValueAtTime(.035,n+.1);g.gain.linearRampToValueAtTime(.02,n+.8);g.gain.exponentialRampToValueAtTime(.0006,n+1.2);o.connect(f);f.connect(g);g.connect(a.destination);o.start(n);o.stop(n+1.25);
+  var d=a.createOscillator(),dg=a.createGain();d.type='sine';d.frequency.setValueAtTime(900,n+1.05);d.frequency.exponentialRampToValueAtTime(45,n+1.7);dg.gain.setValueAtTime(0,n+1.05);dg.gain.linearRampToValueAtTime(.05,n+1.1);dg.gain.exponentialRampToValueAtTime(.0006,n+1.75);d.connect(dg);dg.connect(a.destination);d.start(n+1.05);d.stop(n+1.8);
   [[.82,1500],[.9,2100]].forEach(function(c){var p=a.createOscillator(),q=a.createGain();p.type='square';p.frequency.value=c[1];q.gain.setValueAtTime(.02,n+c[0]);q.gain.exponentialRampToValueAtTime(.0006,n+c[0]+.06);p.connect(q);q.connect(a.destination);p.start(n+c[0]);p.stop(n+c[0]+.07);});}catch(e){}}
-function nightVision(){var o=document.getElementById('nv');if(o)o.remove();o=el('div');o.id='nv';o.setAttribute('aria-hidden','true');o.appendChild(el('div','nvc'));o.appendChild(el('div','nvt','NIGHT VISION'));document.body.appendChild(o);nvSound();setTimeout(function(){if(o.parentNode)o.remove();},1600);}
+function nightVision(){var o=document.getElementById('nv');if(o)o.remove();o=el('div');o.id='nv';o.setAttribute('aria-hidden','true');var sc=el('div','nvs');o.appendChild(sc);o.appendChild(el('div','nvc'));o.appendChild(el('div','nvc b'));document.body.appendChild(o);nvSound();setTimeout(function(){if(o.parentNode)o.remove();},2000);}
 function openDoors(){var d=document.getElementById('doors');if(d)d.remove();d=el('div');d.id='doors';d.appendChild(el('i'));d.appendChild(el('i'));document.body.appendChild(d);try{sfx('whoosh');}catch(e){}setTimeout(function(){if(d.parentNode)d.remove();},1300);}
-function doLock(t){try{stopSpeak();closeDrawer();wxBackdropStop();standby=false;}catch(e){}if(app.getAttribute('data-state')!=='asleep'){try{sfx('sleep');setUi('asleep');setMode('idle');}catch(e){}}$('hint').textContent='';LOCKED=true;lkBusy=false;try{var ll=lockLine(t);if(ll)speak(ll);}catch(e){}try{nightVision();}catch(e){}setTimeout(function(){showLock();},1250);}
+function doLock(t){try{stopSpeak();closeDrawer();wxBackdropStop();standby=false;}catch(e){}if(app.getAttribute('data-state')!=='asleep'){try{sfx('sleep');setUi('asleep');setMode('idle');}catch(e){}}$('hint').textContent='';LOCKED=true;lkBusy=false;try{var ll=lockLine(t);if(ll)speak(ll);}catch(e){}try{nightVision();}catch(e){}setTimeout(function(){showLock();},1900);}
 function byeSleep(t){var k=sleepKind(t)||'goodnight';if(k==='standby'){if(standby)return;standby=true;wxBackdropStop();stopSpeak();closeDrawer();setUi('awake');setMode('listening');$('hint').textContent='Standing by. Say “Hey, Mint” and then talk as long as you like. Say “Stand by, Mint” to pause again.';try{speak('Standing by, Ali.');}catch(e){}return;}standby=false;sleepUi(LOCK_RE.test(t));var n=etHour();var m=k==='standby'?'Standing by':k==='thatsall'?(n>=17?'See you later':'Okay'):(n>=17||n<5?'Goodnight':'Goodbye');$('hint').textContent='';try{speak(m+', Ali.');}catch(e){}}
 function sleepUi(lk){sfx('sleep');if(TV.on){try{TV.lastUser=0;stopSpeak();setUi('awake');setMode('idle');dashShow(true);}catch(e){}return;}if(LOCKON&&lk){LOCKED=true;lkBusy=false;setTimeout(function(){showLock();},700);}wxBackdropStop();stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
 var idleT=0;
@@ -2104,12 +2106,29 @@ function smallTalk(q){
   }
   return null;
 }
+
+function tm12(ts){var m=/T(\d\d):(\d\d)/.exec(ts);if(!m)return 'All day';var h=+m[1],ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+m[2]+' '+ap;}
+async function localTextMe(q){
+  var l=q.toLowerCase();var wk=/\b(schedule|calendar|agenda|jobs?|appointments?|bookings?|day|week)\b/.test(l);var ld=/\bleads?\b/.test(l);
+  if(!wk&&!ld)return null;
+  var t=await boardsRaw(false),td=etDay(0);
+  if(ld&&!wk){var LL=bsec(t,'LEADS').split('\n').filter(function(x){return x.split('|').length>=6;}).map(function(x){return x.split('|').map(function(y){return y.trim();});}).filter(function(p){return /^(?:none|-|[A-Z][a-z]{2}\s\d)/.test(p[5]||'')&&!/^(?:SNAPSHOT|RECENTLY)/.test(p[0]);});
+    if(!LL.length)return null;var out='Open leads ('+LL.length+'):\n'+LL.slice(0,8).map(function(p){return p[0]+', '+p[1]+' - '+p[2];}).join('\n');return out.length>430?out.slice(0,420).replace(/\n[^\n]*$/,'')+'\n+ more on the screen':out;}
+  var span=/\bweek\b/.test(l)?7:(/\btomorrow\b/.test(l)&&!/\btoday\b/.test(l)?1:(/\btoday\b/.test(l)&&!/\btomorrow\b/.test(l)?0:1));
+  var from=(/\btomorrow\b/.test(l)&&!/\btoday\b/.test(l))?addDays(td,1):td,to=span===7?addDays(td,6):(from===td&&span===1?addDays(td,1):from);
+  var ev=parseCalLines(bsec(t,'CAL')).filter(function(e){var d=e.start.slice(0,10);return d>=from&&d<=to;});
+  var lines=[],last='';ev.forEach(function(e){var d=e.start.slice(0,10);if(d!==last){last=d;var dt=new Date(d+'T12:00:00Z');lines.push(dt.toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'})+(d===td?' (today)':''));}lines.push(tm12(e.start)+' '+e.title);});
+  var out=lines.length?lines.join('\n'):'Nothing on the calendar '+(from===to?(from===td?'today':'tomorrow'):'in that time')+'.';
+  while(out.length>430&&lines.length>2){lines.pop();out=lines.join('\n')+'\n+ more on the screen';}
+  return out;
+}
 async function cmdTextMe(q){
   beginAsk(q);var my=cur;
   if(!BR){finish({headline:'Texting you needs the Claude link.',small:true,spoken:'Texting you needs the Claude link in Setup.',tags:[srcTag('na','Unavailable')]});return;}
   doing('writing your text');setMode('thinking');
-  var msg=null;
-  try{
+  var msg=null,viaLocal=false;
+  try{var lm0=await localTextMe(q);if(lm0){msg=lm0;viaLocal=true;}}catch(e){msg=null;}
+  if(!msg)try{
     var t=await bridgePost('[DRAFT REQUEST] Write the plain text message that M1NT will send to Ali\'s own phone. Ali asked: "'+q+'". Use only the business data (calendar snapshot, booked jobs, leads snapshot). If the data does not cover it, say so in one short line. Plain text, no markdown, no emojis, short lines separated by line breaks, under 430 characters in total. Output ONLY the message text.','NOTE: a text to Ali. Output only the message.',45000);
     addUse('claude',1);msg=String(t).replace(/^["'“]+|["'”]+$/g,'').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim();
     if(msg.length>470){var cut=msg.slice(0,470),nl=cut.lastIndexOf('\n');msg=(nl>200?cut.slice(0,nl):cut.replace(/\s+\S*$/,''))+'…';}
@@ -2121,7 +2140,7 @@ async function cmdTextMe(q){
   if(cur!==my)return;
   var ok=/^M1NT_SENT/.test(res);if(ok){addUse('quo',1);usageChip();}
   var n=el('div','sim-side');n.appendChild(el('div','sim-lbl',ok?'TEXTED TO YOUR PHONE':'NOT SENT'));var d=el('div','sim-draft',msg);d.style.whiteSpace='pre-wrap';n.appendChild(d);
-  finish({headline:ok?'Sent to your phone.':'That did not send.',small:true,spoken:ok?'Done. Check your phone.':'That did not go through, so nothing was sent.',node:n,tags:[ok?srcTag('live','Texted via Quo'):srcTag('na','Not sent'),srcTag('snap','Written by Claude')],srcNote:ok?'Sent to your own number only.':'Nothing was sent.'});
+  finish({headline:ok?'Sent to your phone.':'That did not send.',small:true,spoken:ok?'Done. Check your phone.':'That did not go through, so nothing was sent.',node:n,tags:[ok?srcTag('live','Texted via Quo'):srcTag('na','Not sent'),srcTag('snap',viaLocal?'Built from your data, free':'Written by Claude')],srcNote:ok?'Sent to your own number only.':'Nothing was sent.'});
 }
 function cmdUnknown(q){beginAsk(q);finish({headline:'I do not have a direct lookup for that.',small:true,spoken:'I do not have a direct lookup for that one. I can ask Claude, which uses your Claude usage.',tags:[srcTag('snap','No direct lookup')],banners:[{kind:'',bold:'TRY.',text:'“What needs me?”, “What’s on my schedule tomorrow?”, “today”, “this week”, “leads”, “deposits”, “system health”.'}],acts:[{label:'Ask Claude (uses your Claude usage)',fn:function(){freeClaude(q);}}]});}
 async function freeClaude(q){
@@ -3040,7 +3059,7 @@ async function lkTry(){
   var code=lkBuf;if(code.length<LKN)return;lkBusy=true;var ok=await lkCheck(code);
   if(!ok){lkBusy=false;lkFail();return;}
   lkFails=0;LOCKED=false;$('lock').classList.add('ok');$('lkT').textContent='ACCESS GRANTED';$('lkS').textContent='';sfx('unlock');
-  setTimeout(function(){try{if(!TV.on)openDoors();}catch(e){}hideLock();lkBusy=false;try{if(TV.on)wakeUi();else{setUi('asleep');setMode('idle');}}catch(e){}try{preloadData();}catch(e){}try{if(BR)getStatus();}catch(e){}$('hint').textContent=BR?'':'This address is new. Open Setup once and paste your bridge link and access code.';try{if(TV.on)speak(greetWord()+', Ali.');}catch(e){}setTimeout(remCheck,800);},1700);
+  setTimeout(function(){try{if(!TV.on)openDoors();}catch(e){}hideLock();lkBusy=false;try{if(TV.on)wakeUi();else{setUi('asleep');setMode('idle');}}catch(e){}try{preloadData();}catch(e){}try{if(BR)getStatus();}catch(e){}$('hint').textContent=BR?'':'This address is new. Open Setup once and paste your bridge link and access code.';try{if(TV.on)speak(greetWord()+', Ali.');}catch(e){}setTimeout(remCheck,800);},1150);
 }
 function hideLock(){$('lock').classList.remove('on','ok');}
 function lkKey(k){
