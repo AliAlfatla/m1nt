@@ -741,7 +741,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v74-2026-11-27';
+var BUILD='v75-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1739,7 +1739,7 @@ async function cmdAlerts(q){
   var w=el('div','lg-w'),n=0,add=function(k,tt,b,cls){var e=el('div','lg-e open'+(cls?' '+cls:''));e.style.animationDelay=(n++*220)+'ms';e.appendChild(el('div','t',k));e.appendChild(el('div','q',tt));if(b)e.appendChild(el('div','a',b));w.appendChild(e);};
   add('CHECKED',rows.length+' events in the next 60 days',good.length+' already alert you the day before.');
   bad.slice(0,25).forEach(function(r){add(r.ds+' · '+r.tm,r.title,r.mins.length?'Alert set for '+r.mins.map(function(x){return x>=1440?Math.round(x/1440)+' day':(x>=60?Math.round(x/60)+' hr':x+' min');}).join(', ')+' before, not a day before.':(r.allday?'All-day event with no day-before alert.':'Using the default alert, not a day before.'));});
-  var sp=!rows.length?'I do not see any events in the next sixty days.':bad.length?good.length+' of '+rows.length+' events already alert you the day before. '+bad.length+(bad.length===1?' does not: ':' do not: ')+bad.slice(0,4).map(function(r){return r.title.split(':')[0];}).join(', ')+'. I can read your alerts but cannot change them from this screen. Your jobs get the day-before alert automatically when they are booked and by the nightly sync.':'Every one of your '+rows.length+' upcoming events alerts you the day before.';
+  var sp=!rows.length?'I do not see any events in the next sixty days.':bad.length?good.length+' of '+rows.length+' events already alert you the day before. '+bad.length+(bad.length===1?' does not: ':' do not: ')+bad.slice(0,4).map(function(r){return r.title.split(':')[0];}).join(', ')+'. A nightly fixer at 9:30 PM adds the day-before alert to anything missing, so new events are covered every night. This list comes from the calendar snapshot, which refreshes twice a day, so it can lag a little.':'Every one of your '+rows.length+' upcoming events alerts you the day before.';
   if(!bad.length&&rows.length)add('RESULT','All alerts are the day before','Nothing to change.');
   finish({headline:bad.length?bad.length+' without a day-before alert':'All alerts are the day before',small:true,spoken:sp,node:w,viz:'1',tags:[srcTag('live','Calendar snapshot')]});
 }
@@ -3373,7 +3373,7 @@ function run(raw,opt){
   var lx=(simCtl&&simCtl.node.isConnected)?null:lexTalk(q);if(lx){logMic('route','chat '+lx.lang);beginAsk(q);SPK_LANG=lx.lang==='en'?null:LANGTAG[lx.lang];finish({headline:lx.text,small:true,spoken:lx.text,tags:[srcTag('live','Just talking')]});setTimeout(function(){SPK_LANG=null;},9000);return;}
   var stk=smallTalk(q);if(stk){logMic('route','small talk');beginAsk(q);finish({headline:stk,small:true,spoken:stk,tags:[srcTag('live','Just talking')]});return;}
   if(routeKnown(q,opt))return;
-  if(BR&&!opt.live&&!opt.nocache&&!opt.reply&&store('autoclaude')===false&&wcq>=2&&!wxCtxNow()){
+  if(BR&&!opt.live&&!opt.nocache&&!opt.reply&&store('autoclaude')!==true&&wcq>=2&&!wxCtxNow()){
     if(/^(?:always ask claude|ask claude (?:automatically|without asking)|stop asking before claude|don'?t ask before claude)/i.test(q)){store('autoclaude',true);beginAsk(q);finish({headline:'Okay. I will ask Claude without checking first.',small:true,spoken:'Okay. From now on I will ask Claude without checking with you first.',tags:[srcTag('live','Setting saved')]});return;}
     convo.askC={q:q,opt:opt,until:Date.now()+90000};beginAsk(q);
     finish({headline:'I do not have that one built in. Want me to ask Claude?',small:true,spoken:'I do not have that one built in. Want me to ask Claude?',acts:[{label:'Yes, ask Claude',pri:true,fn:function(){var a=convo.askC;convo.askC=null;if(a)cmdBridge(a.q,a.opt);}},{label:'No',fn:function(){convo.askC=null;beginAsk('never mind');finish({headline:'Okay, I will leave it.',small:true,spoken:'',tags:[srcTag('live','Just talking')]});}}],tags:[srcTag('live','Asking you first')]});
