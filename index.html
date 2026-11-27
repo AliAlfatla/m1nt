@@ -18,8 +18,9 @@
 [hidden]{display:none!important}
 html,body{height:100%}
 html.tv body{overflow:hidden}
-html.tv .app{position:fixed;left:50%;top:50%;width:1280px;height:720px;max-width:none;box-sizing:border-box;transform:translate(-50%,-50%) scale(var(--tvk,1));transform-origin:center center}
+html.tv .app{position:fixed;left:50%;top:50%;width:1600px;height:900px;max-width:none;box-sizing:border-box;transform:translate(-50%,-50%) scale(var(--tvk,1));transform-origin:center center}
 html.tv{cursor:none}
+html.tv #micChip,html.tv #micOff,html.tv #useBtn,html.tv #histBtn,html.tv #installBtn{display:none!important}
 html.tv :focus{outline:3px solid #5cffc8!important;outline-offset:3px;box-shadow:0 0 14px rgba(92,255,200,.7)}
 html.tv .hint,html.tv .banner{display:none}
 
@@ -715,7 +716,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v55-2026-11-27';
+var BUILD='v56-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -2792,11 +2793,11 @@ function remCheck(){
 
 /* ---------- TV mode ---------- */
 var TV={on:false,inset:+(store('tvInset')||5),t:null};
-function tvApply(){var h=document.documentElement;h.classList.toggle('tv',TV.on);var k=Math.min(window.innerWidth/1280,window.innerHeight/720)*(1-2*TV.inset/100);h.style.setProperty('--tvk',Math.max(.2,k).toFixed(4));try{tvFitBox();}catch(e){}}
+function tvApply(){var h=document.documentElement;h.classList.toggle('tv',TV.on);var k=Math.min(window.innerWidth/1600,window.innerHeight/900)*(1-2*TV.inset/100);h.style.setProperty('--tvk',Math.max(.2,k).toFixed(4));try{tvFitBox();}catch(e){}}
 window.addEventListener('resize',function(){if(TV.on)tvApply();});
 function tvRotate(){
-  if(!TV.on)return;var qs=["what's on my schedule today","what needs me","how's the system doing"];TV.i=((TV.i||0)+1)%qs.length;
-  tvQuiet=true;try{run(qs[TV.i],{});}catch(e){}setTimeout(function(){tvQuiet=false;},25000);
+  if(!TV.on)return;if(Date.now()-(TV.lastUser||0)<240000)return;if(S.mode!=='idle'&&S.mode!=='asleep')return;var qs=["what's on my schedule today","what needs me","how's the system doing"];TV.i=((TV.i||0)+1)%qs.length;
+  tvQuiet=true;try{run(qs[TV.i],{tvAuto:true});}catch(e){}setTimeout(function(){if(Date.now()-(TV.lastUser||0)>=1000)tvQuiet=false;},25000);
 }
 function tvSet(on){
   TV.on=!!on;store('tv',TV.on);tvApply();clearInterval(TV.t);
@@ -2903,7 +2904,7 @@ async function cmdNeedsBoard(q,force){
 }
 
 function run(raw,opt){
-  if(LOCKED){lkVoice(raw,true);return;}opt=opt||{};var q=String(raw||'').trim();if(!q)return;$('hint').textContent='';if(!opt.voice&&standby)standby=false;
+  if(LOCKED){lkVoice(raw,true);return;}opt=opt||{};if(!opt.tvAuto){tvQuiet=false;try{TV.lastUser=Date.now();}catch(e){}}var q=String(raw||'').trim();if(!q)return;$('hint').textContent='';if(!opt.voice&&standby)standby=false;
   convo.armAfterSpeech=null;convo.armOk=!!opt.voice||wake.on;
   if(opt.fresh){convo.pending=null;convo.last=null;}
   if(convo.pending&&(opt.reply||shortReply(q)||convo.pending.kind==='textbody'||convo.pending.kind==='remwhen')){var comp=completePending(q);if(comp){logMic('reply','completed: '+comp.slice(0,70));q=comp;opt.clarified=true;}}
