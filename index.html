@@ -251,6 +251,13 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 .sim-send{width:32px;height:32px;border-radius:50%;border:0;background:var(--mint);color:var(--ink);font:700 16px var(--font-d);cursor:pointer}.sim-send:disabled{opacity:.35;cursor:default}
 .sim-side{flex:1 1 260px;max-width:420px;text-align:left}.sim-lbl{font:600 10px var(--font-m);letter-spacing:.16em;color:var(--muted)}.sim-draft{margin:8px 0 12px;font:400 17px/1.45 var(--font-d);color:#fff}.sim-note{font:400 12px/1.5 var(--font-m);color:var(--warn);margin-bottom:14px}
 
+
+.wxw{min-height:0}.wxw .wx-ov{min-height:0;gap:14px}
+.wx-fcw{margin-top:8px;gap:8px;padding:10px}.wx-dw{padding:10px 4px;gap:3px;animation:evIn .55s var(--d,0s) both;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03)}
+.wx-dgb{font-size:34px!important;margin:2px 0}.wx-dnum{font:500 10px var(--font-m);color:#a9cfc4}.wx-dw .wx-dh{font-size:22px}.wx-dw .wx-dl{font-size:15px}
+.wx-pb{width:8px;height:44px;border-radius:5px;background:rgba(255,255,255,.12);display:flex;align-items:flex-end;overflow:hidden;margin-top:4px}.wx-pb i{display:block;width:100%;background:linear-gradient(0deg,#6fc3ff,#b6e4ff);box-shadow:0 0 8px #6fc3ff}
+.wx-pp{font:600 11px var(--font-m);color:#b6e4ff}.wx-dc{font:500 10px/1.2 var(--font-m);color:#cdeee4;text-align:center;min-height:24px}
+@media (max-width:760px){.wx-fcw{overflow-x:auto}.wx-dw{min-width:74px}}
 </style>
 <script type="application/json" id="claude-artifacts-manifest">{"permissions": []}</script>
 
@@ -329,7 +336,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v24-2026-11-26';
+var BUILD='v25-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1127,6 +1134,7 @@ async function cmdWeather(q){
   beginAsk(q);doing('checking live weather');
   var m=q.match(/\b(?:in|for|at)\s+([A-Za-z .'-]+?)(?:\s+(?:today|tonight|tomorrow|right now|this (?:week|weekend)|now)\b|[?.!,]|$)/i);
   var place=m?m[1].trim():'';if(/^(the|a|my)?\s*(morning|afternoon|evening|week|weekend)$/i.test(place)||/\b(day|week|weekend|tomorrow|morning|afternoon|evening|night|that|then|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i.test(place))place='';
+  if(/^(me|us|you|my|our|the|this|that|a|an|real|quick|please|now|today|tomorrow|tonight|week|weekend|here|it)\b/i.test(place))place='';
   var loc={name:'Louisville, Kentucky',lat:38.2527,lon:-85.7585,def:true};
   var fu=convo.wxFollow;convo.wxFollow=false;var resolvedOff=wxOffset(q);if(resolvedOff==null)resolvedOff=(fu&&convo.wxOff!=null)?convo.wxOff:0;
   if(!place&&fu&&convo.wxLoc)loc=convo.wxLoc;
@@ -1134,6 +1142,13 @@ async function cmdWeather(q){
     if(resolvedOff>7)throw new Error('I can only see about a week ahead.');
     if(place){var g=await jget('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name='+encodeURIComponent(place));var r0=g.results&&g.results[0];if(!r0)throw new Error('I could not find a place called '+place+'.');loc={name:r0.name+(r0.admin1?', '+r0.admin1:''),lat:r0.latitude,lon:r0.longitude,def:false};}
     var w=await jget('https://api.open-meteo.com/v1/forecast?latitude='+loc.lat+'&longitude='+loc.lon+'&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=8');
+    if(WXWEEK_RE.test(q)&&(wxOffset(q)==null||/\bweekend\b/i.test(q))){
+      convo.wxOff=0;convo.wxLoc=loc;var c0=w.current,d0=w.daily,sh0=loc.name.split(',')[0];var hh0=+String(c0.time||'').slice(11,13);
+      var hiMax=Math.round(Math.max.apply(null,d0.temperature_2m_max.slice(0,7))),loMin=Math.round(Math.min.apply(null,d0.temperature_2m_min.slice(0,7)));
+      var wet=[],cold=[];for(var z=0;z<7;z++){var kk=wxKind(d0.weather_code[z],false);var dn=z===0?'today':new Date(d0.time[z]+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'long'});if(kk==='rain'||kk==='drizzle'||kk==='storm')wet.push(dn+' ('+(kk==='storm'?'storms':'rain')+')');else if(kk==='snow')wet.push(dn+' (snow)');}
+      var sp='This week in '+sh0+': highs between '+loMin+' and '+hiMax+' degrees. '+(wet.length?'Wet weather: '+wet.slice(0,4).join(', ')+'.':'No rain or snow in the forecast.')+' Today is '+(WXC[c0.weather_code]||'mixed')+' and '+Math.round(c0.temperature_2m)+'.';
+      finish({headline:'Next 7 days in '+loc.name,follow:'weather',small:true,spoken:sp,node:weekWxNode(loc,c0,d0,(hh0<6||hh0>=19)),viz:'wx',tags:[srcTag('live','Open-Meteo'),srcTag('live','Updated '+clockET(Date.now())+' ET')],srcNote:loc.def?'Default location: Louisville, Kentucky.':'',acts:[{label:'Refresh',fn:function(){run(q,{});}}]});return;
+    }
     var off=resolvedOff,tom=off>0,c=w.current,d=w.daily,i=off,dl=wxDayName(off);convo.wxOff=off;convo.wxLoc=loc;
     var cond=WXC[tom?d.weather_code[i]:c.weather_code]||'mixed conditions';
     var hi=Math.round(d.temperature_2m_max[i]),lo=Math.round(d.temperature_2m_min[i]),pp=d.precipitation_probability_max[i];
@@ -1410,33 +1425,7 @@ async function cmdCalendar(q,spec,force){
   acts.push({label:'Refresh',fn:function(){cmdCalendar(q,spec,true);}});
   finish({headline:title+' · '+evs.length+plural(evs.length,' item',' items'),small:true,spoken:calSpoken(evs,spec.n,label),node:node,tags:[srcTag('snap','Calendar snapshot'),srcTag('live','Read '+clockET(Date.now())+' ET')],srcNote:'Read-only. The snapshot refreshes on its own schedule.',acts:acts});
 }
-function calIntent(q,l){
-  if(!BR)return null;
-  var sched=/\b(calendar|schedule|agenda|appointments?|bookings?|jobs?|what do i have|what'?s on|what is on|what have i got|week look|days look)\b/.test(l);
-  var W={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,few:3,couple:2};
-  var m=/\b(?:next|following|coming|upcoming|few|following)\s+(\d+|one|two|three|four|five|six|seven|few|couple(?: of)?)\s*(?:more\s+)?days?\b/.exec(l)||/\b(\d+|one|two|three|four|five|six|seven)\s+days?\b/.exec(l);
-  if(sched&&m){var raw=m[1].replace(/ of$/,'');var n=W[raw]||parseInt(raw,10)||3;n=Math.max(1,Math.min(7,n));return {mode:'days',start:etDay(0),n:n,label:'over the next '+n+plural(n,' day',' days')};}
-  if(sched&&/\bnext week\b/.test(l)){var t=etDay(0),dow=dowOf(t),add=((8-dow)%7)||7;return {mode:'days',start:addDays(t,add),n:7,label:'next week'};}
-  if(sched&&/\b(this week|the week|my week|week ahead|next seven days|next 7 days|week look)\b/.test(l)&&!/weekend/.test(l))return {mode:'days',start:etDay(0),n:7,label:'over the next 7 days'};
-  if((sched||/\bmonth\b/.test(l))&&/\b(this month|the month|my month|month look|monthly)\b/.test(l))return {mode:'month',ym:etDay(0).slice(0,7)};
-  if(/\b(pull up|show( me)?|open|bring up|display|see)\b.*\bcalendar\b/.test(l)||/^\W*(?:my )?calendar\W*$/.test(l)){
-    if(/\btomorrow\b/.test(l))return {mode:'days',start:etDay(1),n:1,label:'tomorrow'};
-    if(/\btoday\b/.test(l))return {mode:'days',start:etDay(0),n:1,label:'today'};
-    return {mode:'month',ym:etDay(0).slice(0,7)};
-  }
-  return null;
-}
 /* ---------- text simulation (visual only; nothing is sent) ---------- */
-var TXT_STOP=/^(that|saying|say|says|to|we|i|i'm|im|the|about|can|could|your|her|his|their|if|please|hey|hi|let|and|so|you|it|just|tell|telling|regarding|for|a)$/i;
-function parseTextCmd(q){
-  var m=/^\W*(?:please\s+)?(?:can you\s+|could you\s+)?(?:send\s+(?:a\s+)?(?:text|message)\s+to|send\s+(?:a\s+)?(?:text|message)\s+for|text|message|sms)\s+(.+)$/i.exec(q);
-  if(!m)return null;var words=m[1].replace(/[,]+/g,' ').trim().split(/\s+/);
-  if(/^(me|back|from|messages?|threads?|history|inbox|that|about)$/i.test(words[0]))return null;
-  var name=[];while(words.length&&name.length<2&&!TXT_STOP.test(words[0]))name.push(words.shift());
-  if(!name.length)return null;
-  var body=words.join(' ').replace(/^(?:that|saying|to say|and say|and tell (?:her|him|them)(?: that)?|:)\s+/i,'').trim();
-  if(!body)return null;return {name:titleCase(name.join(' ')),body:body};
-}
 function fallbackDraft(name,body){var first=name.split(' ')[0];var b=body.replace(/\bher\b/gi,'your').replace(/\bhis\b/gi,'your').replace(/^we\b/i,'we').replace(/[.!]+$/,'');return 'Hi '+first+', it\'s Ali with Evermint Detailing. '+b.charAt(0).toUpperCase()+b.slice(1)+'. Let me know what works for you. Thanks!';}
 var simTimers=[],simCtl=null;
 function simClear(){simTimers.forEach(clearTimeout);simTimers=[];}
@@ -1524,6 +1513,20 @@ function wxBackdropStop(){
   setTimeout(function(){if(wxBgS.tok===t&&wxBgS.stop){try{wxBgS.stop();}catch(e){}wxBgS.stop=null;}},900);
 }
 window.addEventListener('resize',function(){if(wxBgS.stop&&wxBgS.kind){var k=wxBgS.kind,cv=document.getElementById('wxBg');try{wxBgS.stop();}catch(e){}wxBgS.stop=wxScene(cv,k);}});
+function weekWxNode(loc,c,d,isNight){
+  var kind=wxKind(c.weather_code,isNight);wxBackdrop(kind);
+  var wrap=el('div','wx wxw wx-'+kind);var ov=el('div','wx-ov');
+  var top=el('div','wx-l');top.appendChild(el('div','wx-place',loc.name));top.appendChild(el('div','wx-day','Next 7 days · now '+Math.round(c.temperature_2m)+'° and '+(WXC[c.weather_code]||'mixed')));ov.appendChild(top);
+  var fc=el('div','wx-fc wx-fcw');
+  for(var k=0;k<Math.min(7,d.time.length);k++){var it=el('div','wx-d wx-dw');it.style.setProperty('--d',(0.08*k)+'s');
+    it.appendChild(el('span','wx-dn',k===0?'Today':new Date(d.time[k]+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short'})));
+    it.appendChild(el('span','wx-dnum',new Date(d.time[k]+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric'})));
+    it.appendChild(el('span','wx-dg wx-dgb',wxGlyph(d.weather_code[k])));
+    it.appendChild(el('span','wx-dh',Math.round(d.temperature_2m_max[k])+'°'));it.appendChild(el('span','wx-dl',Math.round(d.temperature_2m_min[k])+'°'));
+    var bar=el('span','wx-pb');var fill=el('i');fill.style.height=Math.max(4,d.precipitation_probability_max[k])+'%';bar.appendChild(fill);it.appendChild(bar);it.appendChild(el('span','wx-pp',d.precipitation_probability_max[k]+'%'));
+    it.appendChild(el('span','wx-dc',(WXC[d.weather_code[k]]||'').replace(/^./,function(x){return x.toUpperCase();})));fc.appendChild(it);}
+  ov.appendChild(fc);wrap.appendChild(ov);return wrap;
+}
 function wxNode(loc,c,d,off,cond,isNight){
   var i=off;var code=off>0?d.weather_code[i]:c.weather_code;var kind=wxKind(code,off===0&&isNight);
   var wrap=el('div','wx wx-'+kind);wxBackdrop(kind);
@@ -1568,12 +1571,105 @@ function timerNode(){
   (function tick(){if(!tmr){big.textContent='0:00';return;}var left=tmr.end-Date.now();big.textContent=tmr.done||left<=0?'Done':fmtMS(left);fg.style.strokeDashoffset=String(C*(1-Math.max(0,left)/tmr.total));w.classList.toggle('done',left<=0);setTimeout(function(){if(w.isConnected)tick();},200);})();
   return w;
 }
-function parseTimer(l){
-  var m=/\b(?:set|start|begin|run|put)?\s*(?:a|an|the)?\s*(?:(\d+(?:\.\d+)?|a|an|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty five|forty-five|forty|sixty|ninety)\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?))\s*(?:timer|countdown)?/.exec(l);
-  if(!/\b(timer|countdown|remind me in|alarm)\b/.test(l)||!m)return null;
-  var W={a:1,an:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,fifteen:15,twenty:20,thirty:30,'forty five':45,'forty-five':45,forty:40,sixty:60,ninety:90};
-  var v=W[m[1]]!=null?W[m[1]]:parseFloat(m[1]);var u=m[2].charAt(0);var ms=u==='h'?v*3600000:(u==='m'?v*60000:v*1000);
-  return {ms:ms,label:(W[m[1]]!=null||/^\d+$/.test(m[1])?v:m[1])+' '+(u==='h'?'hour':(u==='m'?'minute':'second'))+(v===1?'':'s')};
+
+/* ================= INTENT ROUTER: many ways to say each thing, no Claude lookups for built-in screens ================= */
+var FILL_RE=/^(?:(?:hey|ok|okay|alright|all right|so|um|uh|well|yo|and|now|then|mint|please|kindly|can you|could you|would you|will you|can i|could i|i want you to|i want to|i wanna|i'd like to|i would like to|i need to|i need you to|go ahead and|just|let me|lemme|let's|lets)\s+)+/i;
+function normQ(q){return String(q).toLowerCase().replace(/[’]/g,"'").replace(/[^a-z0-9' ]+/g,' ').replace(/\s+/g,' ').trim();}
+function stripFill(l){return l.replace(FILL_RE,'').trim();}
+var VIEW_V='(?:pull up|bring up|show(?: me)?|open|display|see|view|check|look at|look up|let me see|give me|get me|show up)';
+var WX_RE=/\b(weather|forecast|forecasts|temperature|temperatures|temp|temps|degrees|rain|raining|rainy|snow|snowing|snowy|storm|storms|stormy|thunder|thunderstorm|thunderstorms|sunny|cloudy|overcast|humid|humidity|windy|freezing|chilly|sleet|icy|hail|umbrella|jacket|coat)\b|how (?:hot|cold|warm|bad|nice) (?:is it|will it be)|will it (?:rain|snow|storm|be (?:hot|cold|warm|nice))|is it (?:raining|snowing|cold|hot|warm|nice|gonna|going to)|what'?s it like out|how'?s it (?:looking|looks) out|how is it out/i;
+var WXWEEK_RE=/\b(week|weekly|weekend|7 day|seven day|7 days|seven days|ten day|10 day|extended|few days|next days|coming days|rest of the week|days ahead|ahead)\b/i;
+var SCHED_RE=/\b(calendar|calendars|schedule|schedules|agenda|appointment|appointments|booking|bookings|booked|jobs?|what do i have|what have i got|what'?ve i got|what am i doing|am i free|am i busy|am i booked|how busy|do i have (?:anything|any|something|a)|anything (?:on|scheduled|booked)|what'?s on|what is on|what'?s coming up|what is coming up|coming up|lined up|on deck|on the books|my day|my week|my month|my plans|who do i have|who'?s coming|who is coming|who'?s booked|who am i seeing|who am i meeting|what'?s next|what is next|upcoming|on my plate)\b/i;
+function calDayOff(l){
+  if(/\bday after tomorrow\b/.test(l))return 2;if(/\btomorrow\b/.test(l))return 1;if(/\b(today|tonight|this morning|this afternoon|this evening)\b/.test(l))return 0;
+  var m=/\b(?:(next|this|on)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday|sun|mon|tues?|wed(?:nes)?|thu(?:rs?)?|fri|sat(?:ur)?)\b/.exec(l);
+  if(m){var names=['sun','mon','tue','wed','thu','fri','sat'];var t=names.indexOf(m[2].slice(0,3));var dow=dowOf(etDay(0));var add=(t-dow+7)%7;if(m[1]==='next'&&add<7)add=add===0?7:add+ (add<=0?7:0);if(add===0&&m[1]!=='this')add=7;return add;}
+  return null;
+}
+var MONTHS=['january','february','march','april','may','june','july','august','september','october','november','december'];
+function calIntent2(q,l){
+  if(!BR)return null;var s=stripFill(l);
+  var hasSched=SCHED_RE.test(s);var viewCal=new RegExp('\\b'+VIEW_V+'\\b.*\\b(calendar|schedule|agenda)\\b').test(s)||/^(?:my\s+)?(calendar|schedule|agenda)$/.test(s)||/\b(open|pull up|bring up|show|display)\b.*\bmy\s+(calendar|schedule)\b/.test(s);
+  var monthWord=MONTHS.some(function(x){return x!=='may'&&new RegExp('\\b'+x+'\\b').test(s);})&&new RegExp('\\b'+VIEW_V+'\\b').test(s);
+  if(!hasSched&&!viewCal&&!monthWord)return null;
+  if(WX_RE.test(s)&&!/\b(calendar|schedule|agenda|appointments?|bookings?|jobs?)\b/.test(s))return null;
+  var W={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,few:3,couple:2};
+  var m=/\b(?:next|following|coming|upcoming|few|following|over the next|for the next|in the next)\s+(\d+|one|two|three|four|five|six|seven|few|couple(?: of)?)\s*(?:more\s+)?days?\b/.exec(s)||/\b(\d+|one|two|three|four|five|six|seven)\s+days?\b/.exec(s);
+  if(m){var raw=m[1].replace(/ of$/,'');var n=Math.max(1,Math.min(7,W[raw]||parseInt(raw,10)||3));return {mode:'days',start:etDay(0),n:n,label:'over the next '+n+plural(n,' day',' days')};}
+  if(/\b(few days|couple (?:of )?days|next days|coming days)\b/.test(s))return {mode:'days',start:etDay(0),n:3,label:'over the next 3 days'};
+  if(/\bnext week\b/.test(s)){var t=etDay(0),dw=dowOf(t),add=((8-dw)%7)||7;return {mode:'days',start:addDays(t,add),n:7,label:'next week'};}
+  if(/\bweekend\b/.test(s)){var t2=etDay(0),d2=dowOf(t2);var toSat=(6-d2+7)%7;var st=d2===0?t2:addDays(t2,toSat);return {mode:'days',start:st,n:d2===0?1:2,label:'this weekend'};}
+  if(/\b(week|weekly|7 day|seven day|rest of the week|week ahead|week look|my week)\b/.test(s)&&!/\bmonth\b/.test(s))return {mode:'days',start:etDay(0),n:7,label:'over the next 7 days'};
+  var mm=MONTHS.filter(function(x){return new RegExp('\\b'+x+'\\b').test(s)&&!(x==='may'&&!/\b(in|for|during|of)\s+may\b|\bmay\s+(calendar|schedule)/.test(s));})[0];
+  if(mm){var yr=+etDay(0).slice(0,4);var idx=MONTHS.indexOf(mm);if(idx<+etDay(0).slice(5,7)-1)yr++;return {mode:'month',ym:yr+'-'+String(idx+1).padStart(2,'0')};}
+  if(/\bnext month\b/.test(s)){var dd=new Date(etDay(0).slice(0,7)+'-01T12:00:00Z');dd.setUTCMonth(dd.getUTCMonth()+1);return {mode:'month',ym:dd.toISOString().slice(0,7)};}
+  if(/\b(month|monthly|this month|the month|my month)\b/.test(s))return {mode:'month',ym:etDay(0).slice(0,7)};
+  var off=calDayOff(s);if(off!=null&&off<=45){return {mode:'days',start:etDay(off),n:1,label:off===0?'today':(off===1?'tomorrow':'on '+prettyDay(etDay(off)).split(',')[0])};}
+  if(/\b(coming up|upcoming|what'?s next|what is next|lined up|on deck|on my plate|on the books)\b/.test(s))return {mode:'days',start:etDay(0),n:3,label:'over the next 3 days'};
+  if(viewCal&&!/\b(today|tonight)\b/.test(s))return {mode:'month',ym:etDay(0).slice(0,7)};
+  return {mode:'days',start:etDay(0),n:1,label:'today'};
+}
+function timeIntent(s){
+  s=stripFill(s);
+  return /^(?:what(?:'s| is)?\s+)?(?:the\s+)?(?:current\s+|exact\s+|local\s+)?(?:time|date|day|time and date|date and time|day and date)(?:\s+(?:is it|is it now|is it right now|now|right now|today|it is|it is now))?(?:\s+please)?$/.test(s)||/^what (?:time|day|date) is it(?:\s+(?:now|right now|today|currently))?$/.test(s)||/^(?:tell me|got|have you got|do you have|give me|show me|say|read)\s+(?:me\s+)?(?:the\s+)?(?:time|date|day|clock)(?:\s+please)?$/.test(s)||/^(?:time check|clock|the clock|show (?:me )?(?:the )?clock|what'?s today'?s date|what is today'?s date|today'?s date)$/.test(s);
+}
+function timerIntent(s){
+  if(/\b(cancel|stop|clear|end|kill|reset|turn off|dismiss|delete)\b.*\b(timer|alarm|countdown)\b/.test(s))return {cancel:true};
+  if(/\b(how much (?:time )?(?:is )?left|time (?:is )?left|time remaining|check (?:on )?(?:the |my )?timer|timer status|how long (?:is )?left)\b/.test(s)&&tmr)return {show:true};
+  var wordN={a:1,an:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,fifteen:15,twenty:20,thirty:30,forty:40,'forty five':45,fifty:50,sixty:60,ninety:90};
+  var wantsT=/\b(timer|countdown|count down|alarm|remind me|wake me|ping me|alert me|buzz me|notify me|tell me when|let me know when)\b/.test(s);
+  if(!wantsT)return null;
+  if(/\b(half an hour|half hour|30 min)\b/.test(s)&&!/\d+ ?min/.test(s.replace('30 min','')))return {ms:1800000,label:'30 minute'};
+  var hb=/\b(an|one|1) hour and a half\b/.exec(s);if(hb)return {ms:5400000,label:'90 minute'};
+  var m=/\b(\d+(?:\.\d+)?|forty five|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|ninety)\s*(hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)\b/.exec(s);
+  if(!m)return null;var v=wordN[m[1]]!=null?wordN[m[1]]:parseFloat(m[1]);var u=m[2].charAt(0);var ms=u==='h'?v*3600000:(u==='m'?v*60000:v*1000);
+  if(!(ms>0)||ms>86400000)return null;var unit=u==='h'?'hour':(u==='m'?'minute':'second');return {ms:ms,label:(Number.isInteger(v)?v:v)+' '+unit+(v===1?'':'s')};
+}
+var TXT_NAME_STOP=/^(that|saying|says|say|to|we|i|i'm|im|the|about|can|could|your|her|his|their|if|whether|please|hey|hi|hello|let|and|so|you|it|just|tell|telling|regarding|for|a|an|know|knows|how|what|when|why|over|with|from|at|on|in|is|are|was|were|will|would|should|do|does|did|have|has|need|needs|want|wants|got|gonna|going|thanks|thank)$/i;
+var TXT_NOT_NAME=/^(me|us|him|her|them|it|you|everyone|everybody|all|back|my|the|a|an|this|that|these|those|messages|message|texts|text|threads|inbox|history|from|up|down|out)$/i;
+function splitNameBody(rest){
+  var words=String(rest).replace(/[,]+/g,' ').trim().split(/\s+/);if(!words.length||TXT_NOT_NAME.test(words[0]))return null;
+  var name=[];while(words.length&&name.length<2&&!TXT_NAME_STOP.test(words[0])&&!TXT_NOT_NAME.test(words[0]))name.push(words.shift());
+  if(!name.length)return null;
+  var body=words.join(' ').replace(/^(?:know\s+)?(?:that|saying|says|to say|and say|and tell (?:her|him|them)(?: that)?|about|:)\s+/i,'').trim();
+  if(!body)return null;return {name:titleCase(name.join(' ')),body:body};
+}
+function parseTextCmd(q){
+  var s=String(q).trim().replace(/[’]/g,"'");s=s.replace(/^(?:(?:hey|ok|okay|alright|so|um|uh|well|yo|and|now|then|mint|please|kindly|can you|could you|would you|will you|i want you to|i want to|i wanna|i'd like to|i would like to|i need to|i need you to|go ahead and|just|let me|lemme|let's|lets)[,\s]+)+/i,'').trim();
+  var m,r;
+  if((m=/^(?:send|shoot|drop|fire off|draft|write|compose|prepare|type up|put together|make)\s+(?:up\s+)?(?:a\s+|an\s+)?(?:quick\s+|short\s+|little\s+)?(?:text|message|sms|txt)(?:\s+message)?\s+(?:over\s+)?(?:to|for)\s+(.+)$/i.exec(s))&&(r=splitNameBody(m[1])))return r;
+  if((m=/^(?:send|shoot|drop|give|fire)\s+(.+?)\s+a\s+(?:quick\s+|short\s+|little\s+)?(?:text|message|sms|txt)\s*(.*)$/i.exec(s))){var nm=m[1].trim().split(/\s+/);if(nm.length<=2&&!TXT_NOT_NAME.test(nm[0])&&m[2].trim()){var b=m[2].replace(/^(?:know\s+)?(?:that|saying|says|to say|about|:)\s+/i,'').trim();if(b)return {name:titleCase(nm.join(' ')),body:b};}}
+  if((m=/^(?:text|txt|sms|message|msg|dm)\s+(.+)$/i.exec(s))&&(r=splitNameBody(m[1])))return r;
+  if((m=/^(?:tell|let)\s+(.+)$/i.exec(s))&&!/^(me|us|him|her|them|it)\b/i.test(m[1])&&(r=splitNameBody(m[1])))return r;
+  if((m=/^(?:reach out to|get in touch with|get back to|hit up|notify|ping|contact|write to|write|respond to|reply to|follow up with|check in with)\s+(.+)$/i.exec(s))&&(r=splitNameBody(m[1])))return r;
+  if((m=/^ask\s+(.+)$/i.exec(s))&&!/^(me|us|him|her|them|it)\b/i.test(m[1])&&(r=splitNameBody(m[1]))){r.body='ask '+(/^(?:if|whether|what|when|how|why|can|could|do|does|are|is)\b/i.test(r.body)?'':'if ')+r.body;return r;}
+  return null;
+}
+function simIntentWords(l){
+  if(/\b(cancel|never ?mind|forget it|don'?t send|do not send|dont send|hold off|scrap (?:it|that)|delete (?:it|that)|stop)\b/.test(l))return 'cancel';
+  if(/\b(redo|redraft|re-?draft|re-?write|reword|rephrase|again|different|another|shorter|longer|friendlier|nicer|softer|firmer|warmer|more (?:formal|casual|polite|direct|friendly|professional)|less (?:formal|wordy)|change it|change the|make it|try)\b/.test(l)&&!/\bsimulat\w*\b/.test(l))return 'redo';
+  if(/\b(simulat\w*|send\w*|sent|deliver\w*|play|run|go ahead|go for it|fire|do it|text it|ship|let it rip|make it happen|looks? (?:good|great|perfect|fine)|sounds? (?:good|great|perfect|fine)|that works|that'?s (?:good|great|perfect|fine|it)|perfect|all good|good to go|yes|yeah|yep|yup|sure|ok(?:ay)?|confirm|approve\w*|show me|let'?s see|let'?s do it|do that|go|execute|now)\b/.test(l))return 'send';
+  return null;
+}
+function routeKnown(q,opt){
+  var l=normQ(q);var s=stripFill(l);var wcq=q.split(/\s+/).length;
+  if(simCtl&&simCtl.node.isConnected&&wcq<=14&&!WX_RE.test(s)&&!/\b(calendar|schedule|timer|time is it|score|brief|needs me)\b/.test(s)){
+    var si=simIntentWords(s);
+    if(si==='cancel'){logMic('route','sim cancel');simClear();simCtl.done=true;$('hint').textContent='Draft dropped.';try{speak('Okay, dropped it.',false);}catch(e){}return true;}
+    if(si==='redo'){logMic('route','sim redraft');cmdTextSim(q,{name:simCtl.name,body:simCtl.body+' (Adjust the message like this: '+q+')'});return true;}
+    if(si==='send'){logMic('route','sim send');if(!simCtl.done){simCtl.deliver();$('hint').textContent='Simulated send. Nothing was actually sent.';try{speak('Sent. That was a simulation, so nothing actually went out.',false);}catch(e){}}return true;}
+  }
+  var ti=timerIntent(s);
+  if(ti){logMic('route','timer');
+    if(ti.cancel){if(tmr){clearInterval(tmr.iv);tmr=null;}beginAsk(q);finish({headline:'Timer cancelled.',small:true,spoken:'Okay, timer cancelled.',node:clockNode(),tags:[srcTag('live','On this screen')]});return true;}
+    if(ti.show){beginAsk(q);var lt=Math.max(0,tmr.end-Date.now());finish({headline:fmtMS(lt)+' left',small:true,spoken:fmtMS(lt).replace(':',' minutes ')+' seconds left.',node:timerNode(),tags:[srcTag('live','On this screen')]});return true;}
+    startTimer(ti.ms,ti.label);beginAsk(q);finish({headline:ti.label+' timer',small:true,spoken:'Timer set for '+ti.label+'.',node:timerNode(),tags:[srcTag('live','On this screen')],acts:[{label:'Cancel timer',fn:function(){if(tmr){clearInterval(tmr.iv);tmr=null;}run('what time is it',{});}}]});return true;}
+  if(timeIntent(l)){logMic('route','clock');beginAsk(q);var wantsDate=/\b(date|day)\b/.test(s)&&!/\btime\b/.test(s);finish({headline:wantsDate?prettyDay(etDay(0)):clockET(Date.now())+' ET',small:true,spoken:wantsDate?'Today is '+prettyDay(etDay(0))+'.':'It is '+clockET(Date.now())+'.',node:clockNode(),tags:[srcTag('live','This device clock')]});return true;}
+  var tx=parseTextCmd(q);if(tx){logMic('route','text sim');cmdTextSim(q,tx);return true;}
+  var ci=calIntent2(q,l);if(ci){logMic('route','calendar '+ci.mode);cmdCalendar(q,ci);return true;}
+  if(WX_RE.test(s)&&!/\b(reschedule|cancel|customer|deposit|text|message|book|invoice|refund)\b/.test(s)&&wcq<=22){logMic('route','weather');cmdWeather(q);return true;}
+  if((/\b(football|nfl|score|scores|who won|touchdown|playing|game|halftime|quarter|kickoff|lions|cowboys|chiefs|bills|eagles|packers|49ers|ravens|bengals|browns|steelers|cardinals|cats|wildcats|louisville cardinals|ohio state|michigan|alabama|georgia)\b/.test(s)||/how (is|are) (the )?[a-z .]+ (doing|playing)|did (the )?[a-z .]+ (win|lose)/.test(s))&&!/\b(schedule|calendar|appointment|customer|job)\b/.test(s)&&wcq<=16){logMic('route','football');cmdFootball(q);return true;}
+  return false;
 }
 
 function run(raw,opt){
@@ -1588,18 +1684,7 @@ function run(raw,opt){
   var wcq=q.split(/\s+/).length;
   if(MICOFF_RE.test(q)){micOff();return;}
   if(isGoodnight(q)){byeSleep(q);return;}
-  var _tm=parseTimer(l);
-  if(_tm){startTimer(_tm.ms,_tm.label);beginAsk(q);finish({headline:_tm.label+' timer',small:true,spoken:'Timer set for '+_tm.label+'.',node:timerNode(),tags:[srcTag('live','On this screen')],acts:[{label:'Cancel timer',fn:function(){if(tmr){clearInterval(tmr.iv);tmr=null;}run('what time is it',{});}}]});return;}
-  if(/^\W*(?:what(?:'s| is)?\s+)?(?:the\s+)?(?:current\s+)?time(?:\s+is\s+it|\s+is\s+it\s+now|\s+now|\s+right\s+now)?\W*$/.test(l)||/^\W*what time is it\W*$/.test(l)){beginAsk(q);finish({headline:clockET(Date.now())+' ET',small:true,spoken:'It is '+clockET(Date.now())+'.',node:clockNode(),tags:[srcTag('live','This device clock')]});return;}
-  if(simCtl&&simCtl.node.isConnected&&wcq<=12&&!/\b(weather|forecast|calendar|schedule|timer|time is it|score|brief|needs me)\b/.test(l)){
-    if(/\b(cancel|never ?mind|forget it|don'?t send|do not send|scrap (?:it|that)|delete (?:it|that))\b/.test(l)){simClear();simCtl.done=true;$('hint').textContent='Draft dropped.';try{speak('Okay, dropped it.',false);}catch(e){}return;}
-    if(/\b(redo|redraft|re-?draft|re-?write|reword|again|different|shorter|longer|friendlier|nicer|softer|firmer|more (?:formal|casual|polite|direct|friendly)|change it|make it|try)\b/.test(l)&&!/\b(simulat\w*)\b/.test(l)){cmdTextSim(q,{name:simCtl.name,body:simCtl.body+' (Adjust the message like this: '+q+')'});return;}
-    if(/\b(simulat\w*|send\w*|deliver\w*|play|run|go ahead|go for it|fire|do it|text it|looks? good|that works|that'?s good|perfect|yes|yeah|yep|yup|sure|ok(?:ay)?|confirm|show me|let'?s see)\b/.test(l)){if(!simCtl.done){simCtl.deliver();$('hint').textContent='Simulated send. Nothing was actually sent.';try{speak('Sent. That was a simulation, so nothing actually went out.',false);}catch(e){}}return;}
-  }
-  var _tx=parseTextCmd(q);if(_tx){cmdTextSim(q,_tx);return;}
-  if(/\b(weather|forecast|temperature|umbrella|how (hot|cold)|will it (rain|snow))\b/.test(l)&&(!BR||wcq<=16)){cmdWeather(q);return;}
-  if((/\b(football|nfl|score|scores|who won|touchdown|playing|game|halftime|quarter|kickoff)\b/.test(l)||/how (is|are) (the )?[a-z .]+ (doing|playing)|did (the )?[a-z .]+ (win|lose)/.test(l))&&!/schedule|calendar/.test(l)&&(!BR||wcq<=8)){cmdFootball(q);return;}
-  var _ci=calIntent(q,l);if(_ci){cmdCalendar(q,_ci);return;}
+  if(routeKnown(q,opt))return;
   if(BR){cmdBridge(q,opt);return;}
   if((/^(search|look up|google|find out|news)\b|latest news|what('?s| is) the news|\b(what time|when) (does|do|is) .+ (close|open|closes|opens)\b|\bhours\b|\bis .+ open\b|\bphone number\b|\baddress (for|of)\b|\bhow (much|many|old|tall|far)\b|^who (is|was)\b|^what (is|are|was) (a|an|the)\b/.test(l))&&!/deposit|payment|\bjobs?\b|customer|credit|usage|schedule|calendar|appointment|lead/.test(l)){var ch=!opt.clarified&&needsPlace(q);if(ch){askPlace(q,ch);return;}cmdWeb(q,opt);return;}
   if(/what('?s| is)? ?(needs|need) me|needs me|need my attention|waiting on me|what should i (do|handle)/.test(l)){cmdNeeds(q,opt);return;}
