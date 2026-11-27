@@ -2464,8 +2464,8 @@ async function cmdCalendar(q,spec,force){
   finish({headline:title+' · '+evs.length+plural(evs.length,' item',' items'),small:true,spoken:calSpoken(evs,spec.n,label),node:node,tags:[srcTag('snap','Calendar snapshot'),srcTag('live','Read '+clockET(Date.now())+' ET')],srcNote:'Read-only. The snapshot refreshes on its own schedule.',acts:acts});
 }
 /* ---------- text simulation (visual only; nothing is sent) ---------- */
-function fallbackDraft(name,body){var first=name.split(' ')[0];var b=body.replace(/\bher\b/gi,'your').replace(/\bhis\b/gi,'your').replace(/^we\b/i,'we').replace(/[.!]+$/,'');return 'Hi '+first+', it\'s Ali with Evermint Detailing. '+b.charAt(0).toUpperCase()+b.slice(1)+'. Let me know what works for you. Thanks!';}
-var SEND_URL='https://hook.us2.make.com/qa9mogabqtsnj4pb7t1id169kkcxpmej',dirCache={at:0,lines:null};
+function fallbackDraft(name,body){var first=/^\(\d{3}\)/.test(name)?'':name.split(' ')[0];var b=body.replace(/\bher\b/gi,'your').replace(/\bhis\b/gi,'your').replace(/^we\b/i,'we').replace(/[.!]+$/,'');return 'Hi'+(first?' '+first:'')+', it\'s Ali with Evermint Detailing. '+b.charAt(0).toUpperCase()+b.slice(1)+'. Let me know what works for you. Thanks!';}
+var SEND_NUM_URL='https://hook.us2.make.com/2rh3sisyvvp71x8xiizpxkmxtrx7peog',SEND_URL='https://hook.us2.make.com/qa9mogabqtsnj4pb7t1id169kkcxpmej',dirCache={at:0,lines:null};
 async function getDirectory(){
   if(dirCache.lines&&Date.now()-dirCache.at<600000)return dirCache.lines;
   if(!BR||!BR.code)return null;
@@ -2500,18 +2500,18 @@ function phoneNode(name,msg,live){
   var bar=el('div','sim-bar');var inp=el('div','sim-in','iMessage / text');var snd=el('button','sim-send','↑');snd.type='button';snd.disabled=true;bar.appendChild(inp);bar.appendChild(snd);ph.appendChild(bar);
   wrap.appendChild(ph);
   var side=el('div','sim-side');side.appendChild(el('div','sim-lbl','DRAFT TO '+name.toUpperCase()));var dr=el('div','sim-draft',msg);side.appendChild(dr);
-  var note=el('div','sim-note',live?'LIVE. This goes to '+live.name+' ('+live.to.replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'($1) $2-$3')+') from the Evermint line when you send it.':(live===false?'Visual simulation only. This person could not be matched to exactly one customer, so nothing can be sent.':'This is a visual simulation only.'));side.appendChild(note);
+  var note=el('div','sim-note',live?(live.explicit?'LIVE to a typed number. It only goes out if the number is on your approved list. ':'')+'LIVE. This goes to '+live.name+' ('+live.to.replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'($1) $2-$3')+') from the Evermint line when you send it.':(live===false?'Visual simulation only. This person could not be matched to exactly one customer, so nothing can be sent.':'This is a visual simulation only.'));side.appendChild(note);
   var go=el('button','btn pri',live?'Send for real':'Play the send (simulated)');go.type='button';go.disabled=true;side.appendChild(go);wrap.appendChild(side);
   function typeIt(){typing.style.display='none';bub.style.display='';var i=0;(function step(){if(!bub.isConnected)return;bt.textContent=msg.slice(0,i);bd.scrollTop=bd.scrollHeight;if(i<msg.length){i++;simTimers.push(setTimeout(step,msg.length>140?9:16));}else{inp.textContent='';go.disabled=false;snd.disabled=false;}})();}
   function anim(ok,label,stampTxt){st.textContent=label+' · '+clockET(Date.now());st.className=ok?'sim-st ok':'sim-st';if(ok)bub.classList.add('sent');var sp=el('div','sim-stamp',stampTxt);sp.style.whiteSpace='pre';ph.appendChild(sp);sfx(ok?'pick':'sleep');setTimeout(function(){if(sp.parentNode)sp.remove();},1800);}
   function deliver(){go.disabled=true;snd.disabled=true;inp.textContent='iMessage / text';st.textContent='Sending…';st.className='sim-st';bub.classList.remove('fly');void bub.offsetWidth;bub.classList.add('fly');ph.appendChild(el('div','sim-ripple'));sfx('open');
     if(live){
       var t0=Date.now();
-      fetch(SEND_URL,{method:'POST',body:new URLSearchParams({code:BR.code,action:'send',to:live.to,text:msg})}).then(function(r){return r.text();}).catch(function(){return 'NETERR';}).then(function(t){
+      fetch(live.explicit?SEND_NUM_URL:SEND_URL,{method:'POST',body:new URLSearchParams({code:BR.code,action:live.explicit?'sendnum':'send',to:live.to,text:msg})}).then(function(r){return r.text();}).catch(function(){return 'NETERR';}).then(function(t){
         var wait=Math.max(0,1100-(Date.now()-t0));
         simTimers.push(setTimeout(function(){
           if(/^M1NT_SENT/.test(t)){anim(true,'Delivered','SENT\nVIA QUO');try{addUse('quo',1);usageChip();}catch(e){}try{speak('Sent to '+live.name.split(' ')[0]+'.',false);}catch(e){}}
-          else{anim(false,'Not sent','NOT SENT');var why=/daily/.test(t)||/REFUSED/.test(t)?'The line refused it. Nothing went out.':'That did not go through. Nothing went out.';$('hint').textContent=why;try{speak(why,false);}catch(e){}}
+          else{anim(false,'Not sent','NOT SENT');var why=/NOT_APPROVED/.test(t)?'That number is not on your approved list, so nothing went out. Tell me to approve it, or give me a customer name.':(/daily/.test(t)||/REFUSED/.test(t)?'The line refused it. Nothing went out.':'That did not go through. Nothing went out.');if(simCtl)simCtl.done=false;$('hint').textContent=why;try{speak(why,false);}catch(e){}}
         },wait));
       });
       return;
@@ -2522,17 +2522,22 @@ function phoneNode(name,msg,live){
   inp.textContent='';simTimers.push(setTimeout(function(){inp.textContent=msg.slice(0,34)+'…';typeIt();},1400));
   return wrap;
 }
-function askTextBody(q,name){beginAsk(q);convo.pending={kind:'textbody',name:name,orig:q,until:Date.now()+120000};var f=name.split(' ')[0];finish({headline:'What should I tell '+f+'?',small:true,spoken:'What should I say to '+f+'?',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say what the text to '+name+' should say. It will only be a simulation.'}]});}
+function askTextBody(q,name){beginAsk(q);convo.pending={kind:'textbody',name:name,orig:q,until:Date.now()+120000};var f=name.split(' ')[0];finish({headline:'What should I tell '+f+'?',small:true,spoken:'What should I say to '+f+'?',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say what the text to '+name+' should say. I will show the draft first and only send when you say send it.'}]});}
 async function cmdTextSim(q,p){
   beginAsk(q);var my=cur;doing('drafting the message');setMode('thinking');
   var msg=null;
   try{
-    var t=await bridgePost('[DRAFT REQUEST] Write the text message Ali, owner of Evermint Detailing Co. (mobile detailing, Louisville), would send to '+p.name+'. What Ali wants it to say: '+p.body+'. Make it warm, short (one to three sentences), written in first person as Ali, plain text only, no emojis, no quotation marks, no markdown. Output ONLY the message text.','NOTE: a draft for the screen. Output only the message.',30000);
+    var t=await bridgePost('[DRAFT REQUEST] Write the text message Ali, owner of Evermint Detailing Co. (mobile detailing, Louisville), would send to '+(p.num?'someone (do not greet by name or number)':p.name)+'. What Ali wants it to say: '+p.body+'. Make it warm, short (one to three sentences), written in first person as Ali, plain text only, no emojis, no quotation marks, no markdown. Output ONLY the message text.','NOTE: a draft for the screen. Output only the message.',30000);
     msg=t.replace(/^["'“]+|["'”]+$/g,'').replace(/\s+/g,' ').trim();if(!msg||msg.length>600)msg=null;
   }catch(e){msg=null;}
   if(cur!==my)return;
   if(!msg)msg=fallbackDraft(p.name,p.body);
-  var ct=await findContact(p.name);if(cur!==my)return;
+  var ct;
+  if(p.num){var dg=p.num.replace(/\D/g,'');var DL=await getDirectory();var hit=DL&&DL.filter(function(x){return x.digits===dg;})[0];
+    if(hit)ct=/blacklist/i.test(hit.tags)?{why:'blocked'}:{to:'+'+hit.digits,name:hit.name};
+    else ct={to:p.num,name:p.name,explicit:true};}
+  else ct=await findContact(p.name);
+  if(cur!==my)return;
   var live=ct&&ct.to?ct:(ct&&ct.why==='nodir'?null:false);
   var f1=p.name.split(' ')[0];
   var spoken=live?'Here is the text to '+f1+'. Say send it when you are ready, or tell me what to change.':(ct&&ct.why==='blocked'?'Heads up, '+f1+' is blacklisted, so I will not send anything. Here is only a draft.':(ct&&ct.why==='many'?'I found more than one '+f1+', so I will only show a draft. Give me the full name to send.':(ct&&ct.why==='none'?'I do not see '+p.name+' in your customer list, so this is only a draft.':'Here is how that text to '+f1+' would look. This is only a simulation.')));
@@ -2859,7 +2864,14 @@ function splitNameBody(rest,allowEmpty){
   var body=words.join(' ').replace(/^(?:know\s+)?(?:that|saying|says|to say|and say|and tell (?:her|him|them)(?: that)?|about|:)\s+/i,'').trim();
   if(!body)return allowEmpty?{name:titleCase(name.join(' ')),body:''}:null;return {name:titleCase(name.join(' ')),body:body};
 }
-function parseTextCmd(q){
+var DW={zero:0,oh:0,o:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9};
+function phoneTokens(s){
+  s=s.replace(/\b((?:(?:zero|oh|one|two|three|four|five|six|seven|eight|nine)[\s,.-]+){9,10}(?:zero|oh|one|two|three|four|five|six|seven|eight|nine))\b/ig,function(m){return m.toLowerCase().split(/[\s,.-]+/).map(function(w){return DW[w];}).join('');});
+  return s.replace(/(?:\+?1[\s.-]?)?\(?\b(\d{3})\)?[\s.-]?(\d{3})[\s.-]?(\d{4})\b/g,function(m,a,b,c){return 'NUM1'+a+b+c;});
+}
+function numPretty(d){return '('+d.slice(1,4)+') '+d.slice(4,7)+'-'+d.slice(7);}
+function parseTextCmd(q){var r0=parseTextCmd0(phoneTokens(String(q)));if(r0){var mm=/^NUM(1\d{10})$/i.exec(String(r0.name).replace(/\s+/g,''));if(mm){r0.num='+'+mm[1];r0.name=numPretty(mm[1]);}}return r0;}
+function parseTextCmd0(q){
   var s=String(q).trim().replace(/[’]/g,"'");s=s.replace(/^(?:(?:hey|ok|okay|alright|so|um|uh|well|yo|and|now|then|mint|please|kindly|can you|could you|would you|will you|i want you to|i want to|i wanna|i'd like to|i would like to|i need to|i need you to|go ahead and|just|let me|lemme|let's|lets)[,\s]+)+/i,'').trim();
   var m,r;
   if((m=/^(?:send|shoot|drop|fire off|draft|write|compose|prepare|type up|put together|make)\s+(?:up\s+)?(?:a\s+|an\s+)?(?:quick\s+|short\s+|little\s+)?(?:text|message|sms|txt)(?:\s+message)?\s+(?:over\s+)?(?:to|for)\s+(.+)$/i.exec(s))&&(r=splitNameBody(m[1],true)))return r;
@@ -3122,11 +3134,11 @@ function calcIntent(s){
   s=numWords(s.replace(/,(?=\d{3}\b)/g,'').replace(/\$/g,'').replace(/\bwhats\b/g,'what is'));
   var m=new RegExp('\\b(?:convert\\s+)?(\\d+(?:\\.\\d+)?)\\s*(?:degrees?\\s+)?('+UNIT_RE+')\\s+(?:to|in|into|as)\\s+('+UNIT_RE+')\\b').exec(s);
   if(m){var v=parseFloat(m[1]),a=UNITS[m[2]],b=UNITS[m[3]];if(a&&b&&a[0]===b[0]){var out;if(a[0]==='tmp'){out=a[1]===b[1]?v:(a[1]==='F'?(v-32)*5/9:v*9/5+32);}else out=v*a[1]/b[1];return {top:fmtNum(v)+' '+a[2],big:fmtNum(out),unit:b[2],say:fmtNum(v)+' '+a[2]+' is '+fmtNum(out)+' '+b[2]+'.'};}}
-  var p=/(\d+(?:\.\d+)?)\s*(?:%|percent)\s+(?:of|on)\s+(\d+(?:\.\d+)?)/.exec(s);if(p&&!/\btip\b/.test(s)){var r=parseFloat(p[1])*parseFloat(p[2])/100;return {top:p[1]+'% of '+p[2],big:fmtNum(r),unit:'',say:p[1]+' percent of '+p[2]+' is '+fmtNum(r)+'.'};}
+  var p=/(\d+(?:\.\d+)?)\s*(?:%|percent)\s+(?:of|on)\s+(\d+(?:\.\d+)?)/.exec(s)||/^(?:what is|calculate|compute|how much is)\s+(\d+(?:\.\d+)?)\s+(?:of)\s+(\d+(?:\.\d+)?)\s*$/.exec(s);if(p&&!/\btip\b/.test(s)){var r=parseFloat(p[1])*parseFloat(p[2])/100;return {top:p[1]+'% of '+p[2],big:fmtNum(r),unit:'',say:p[1]+' percent of '+p[2]+' is '+fmtNum(r)+'.'};}
   if(/\btip\b/.test(s)){var t=/(?:(\d+(?:\.\d+)?)\s*(?:%|percent)\s+)?tip\s+(?:on|for|of)\s+(\d+(?:\.\d+)?)/.exec(s);if(t){var pc=t[1]?parseFloat(t[1]):20,bill=parseFloat(t[2]);if(bill>0){var tp=bill*pc/100;return {top:pc+'% tip on '+fmtNum(bill),big:'$'+fmtNum(tp),unit:'total $'+fmtNum(bill+tp),say:'A '+pc+' percent tip on '+fmtNum(bill)+' dollars is '+fmtNum(tp)+' dollars, for a total of '+fmtNum(bill+tp)+'.'};}}}
   var e=s.replace(/^(?:what is|what's|calculate|compute|how much is|figure out|work out|do|solve|math)\s+/,'').replace(/\s+(?:equals?|please)\s*$/,'');
   if(!/\d/.test(e))return null;
-  e=e.replace(/\bthe\s+/g,'').replace(/\bsquare root of (\d+(?:\.\d+)?)/g,'sqrt($1)').replace(/(\d+(?:\.\d+)?)\s*squared/g,'($1**2)').replace(/(\d+(?:\.\d+)?)\s*cubed/g,'($1**3)').replace(/\bto the power of\b/g,'**').replace(/\bplus\b/g,'+').replace(/\bminus\b/g,'-').replace(/\b(?:times|multiplied by|x)\b/g,'*').replace(/\b(?:divided by|over)\b/g,'/').replace(/\bmod\b/g,'%');
+  e=e.replace(/\bsquare root of (\d+(?:\.\d+)?)/g,'sqrt($1)').replace(/(\d+(?:\.\d+)?)\s*squared/g,'($1**2)').replace(/(\d+(?:\.\d+)?)\s*cubed/g,'($1**3)').replace(/\bto\s+(?:the\s+)?power\s+of\b/g,'**').replace(/\bthe\s+/g,'').replace(/\bplus\b/g,'+').replace(/\bminus\b/g,'-').replace(/\b(?:divided by|over)\b/g,'/').replace(/\b(?:times|multiplied by|x)\b|[×]|(?<=\d\s)by(?=\s\d)/g,'*').replace(/\bmod\b/g,'%');
   var disp=e.replace(/\*\*/g,'^').replace(/\*/g,' × ').replace(/\//g,' ÷ ');
   var chk=e.replace(/sqrt/g,'');
   if(!/^[0-9+\-*\/().%\s]+$/.test(chk)||(!/[+\-*\/%]/.test(chk.replace(/^\s*-/,''))&&!/sqrt/.test(e)))return null;
