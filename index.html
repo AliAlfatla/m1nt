@@ -233,7 +233,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v19-2026-11-26';
+var BUILD='v20-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -337,7 +337,7 @@ function setUi(state){
 function wakeUi(){if(app.getAttribute('data-state')==='asleep'){setUi('awake');}}
 function etHour(){try{return parseInt(new Intl.DateTimeFormat('en-US',{hour:'numeric',hour12:false,timeZone:'America/New_York'}).format(new Date()),10)%24;}catch(e){return new Date().getHours();}}
 function greetWord(){var h=etHour();return h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
-function byeSleep(){sleepUi();var m=etHour()>=17||etHour()<5?'Goodnight':'Goodbye';var t=m+', Ali.';$('hint').textContent='';try{speak(m+', Ollie.');}catch(e){}}
+function byeSleep(){sleepUi();var m=etHour()>=17||etHour()<5?'Goodnight':'Goodbye';var t=m+', Ali.';$('hint').textContent='';try{speak(m+', Ali.');}catch(e){}}
 function sleepUi(){stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
 var idleT=0;
 function armIdle(){clearTimeout(idleT);if(S.mode!=='idle'||app.getAttribute('data-state')!=='answer')return;idleT=setTimeout(function(){if(S.mode==='idle'&&app.getAttribute('data-state')==='answer'&&!drawer.classList.contains('show')&&!ptt.on){setUi('awake');$('hint').textContent='Ready. Ask me anything.';}},20000);}
@@ -891,7 +891,7 @@ function handleWake(t,isFinal){
     var wasAsleep=!isAwake();
     if(!isAwake()){wakeUi();try{window.focus();}catch(e){}$('hint').textContent='Awake and listening. Ask me anything. Say “Goodnight, Mint” to fold.';setMode('listening');}
     var rest=cleanQ(t.slice(wm.index+wm[0].length));
-    if(!rest){clearTimeout(silTimer);wakePend=null;if(wasAsleep){try{speak(greetWord()+', Ollie.');}catch(e){}}return;}
+    if(!rest){clearTimeout(silTimer);wakePend=null;if(wasAsleep){try{speak(greetWord()+', Ali.');}catch(e){}}return;}
     t=rest;
   }
   if(!isAwake())return;                 /* asleep: only “Wake up, Mint” does anything */
