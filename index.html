@@ -597,6 +597,7 @@ html.tv #tvCorner button svg{width:28px;height:28px}
 @keyframes dCL{from{transform:translateX(-102%)}to{transform:none}}@keyframes dCR{from{transform:translateX(102%)}to{transform:none}}
 #doors.close i:first-child{animation-name:dCL;animation-duration:.8s}#doors.close i:last-child{animation-name:dCR;animation-duration:.8s}
 #doors.close{transition:opacity .35s ease}#doors.close.fade{opacity:0}
+#simDock{position:fixed;right:12px;bottom:128px;z-index:36;width:min(360px,88vw);border:1px solid rgba(92,255,200,.55);border-radius:12px;background:rgba(3,22,22,.94);backdrop-filter:blur(6px);box-shadow:0 0 26px rgba(92,255,200,.22);padding:6px 8px 8px;max-height:46vh;overflow:auto}#simDock[hidden]{display:none}.dk-h{display:flex;align-items:center;gap:6px;font:600 11px var(--font-m);letter-spacing:.12em;color:var(--mint);margin-bottom:4px}.dk-h span{flex:1}.dk-h button{font:600 11px var(--font-m);color:#02130f;background:var(--mint);border:0;border-radius:6px;padding:4px 8px;cursor:pointer}.dk-h button.x{background:transparent;color:var(--muted);border:1px solid var(--line)}#simDock .sim{zoom:.62;margin:0}
 </style>
 <script type="application/json" id="claude-artifacts-manifest">{"permissions": []}</script>
 
@@ -784,7 +785,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v93-2026-11-27';
+var BUILD='v94-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1159,7 +1160,7 @@ function mkGhost(){
 function beginAsk(q){
   newCommandUse(q);wakeUi();setUi('answer');
   if(bridgeAbort){try{bridgeAbort.abort();}catch(e){}bridgeAbort=null;}
-  mkGhost();cur={q:q};app.removeAttribute('data-viz');simClear();wxBackdropStop();var oqb=$('qbar');if(oqb)oqb.remove();
+  mkGhost();cur={q:q};app.removeAttribute('data-viz');var simLive=simCtl&&!simCtl.done&&simCtl.node&&$('extra').contains(simCtl.node);if(simLive)sdkPut(simCtl);else if(!(simCtl&&!simCtl.done&&simCtl.docked))simClear();wxBackdropStop();var oqb=$('qbar');if(oqb)oqb.remove();
   $('asked').textContent='';$('asked').appendChild(el('b',null,'You asked  '));$('asked').appendChild(document.createTextNode(q));
   $('doing').className='doing';$('doing').textContent='';$('ans').textContent='';clear($('extra'));clear($('srcRow'));clear($('acts'));
   setMode('thinking');renderDock();
@@ -1171,6 +1172,8 @@ function finish(o){
   doneDoing('Done · '+clockET(Date.now())+' ET · '+usageLine());sfx('open');
   var a=$('ans');a.textContent=o.headline;a.className='ans'+(o.small?' small':'');
   var ex=$('extra');var ghost=txGhost;txGhost=null;if(ghost&&!o.node){killGhost(ghost);ghost=null;}
+  if(simCtl&&!simCtl.done&&simCtl.node&&o.node!==simCtl.node&&ex.contains(simCtl.node)&&!o.noDock){sdkPut(simCtl);}
+  else if(o.node&&simCtl&&o.node===simCtl.node){sdkClear();}
   clear(ex);
   if(o.node){var ncl=String(o.node.className||'');var isCv=/\bcv\b/.test(ncl);app.setAttribute('data-viz',o.viz||(isCv?'cal':(/\b(clk|tmx|swx|calc|toss)\b/.test(ncl)?'center':(/\b(sim|needs)\b/.test(ncl)?'board':'1'))));ex.appendChild(o.node);
     var fxk=isCv?'grid':(/\bbd-health\b/.test(ncl)?'pulse':(/\bbd-cust\b/.test(ncl)?'net':(/\bbd-leads\b/.test(ncl)?'stream':(/\bbd-(?:elite|vault)\b/.test(ncl)?'rings':(/\bbd-(?:hub|brief)\b/.test(ncl)?'radar':(/\bbd-(?:dep|fu)\b/.test(ncl)?'stream':(/\bneeds\b/.test(ncl)?'radar':(/\b(clk|tmx|swx|calc|toss)\b/.test(ncl)?'rings':(/\bsim\b/.test(ncl)?'chat':null)))))))));if(fxk){try{wxBackdrop(fxk);}catch(e){}}if(isCv)hudify(o.node);}
@@ -2487,9 +2490,16 @@ async function findContact(name){
   return {to:'+'+c.digits,name:c.name};
 }
 var simTimers=[],simCtl=null,lastDraft=null;
+function sdkEl(){var d=document.getElementById('simDock');if(!d){d=document.createElement('div');d.id='simDock';d.hidden=true;document.body.appendChild(d);}return d;}
+function sdkClear(){var d=document.getElementById('simDock');if(d){d.hidden=true;while(d.firstChild)d.removeChild(d.firstChild);}if(simCtl)simCtl.docked=false;}
+function sdkPut(c){var d=sdkEl();while(d.firstChild)d.removeChild(d.firstChild);
+  var h=document.createElement('div');h.className='dk-h';var t=document.createElement('span');t.textContent='DRAFT TO '+String(c.name).toUpperCase()+(c.armed?' · CONFIRM?':'');h.appendChild(t);
+  var o=document.createElement('button');o.type='button';o.textContent='Open';o.addEventListener('click',function(){if(simCtl&&simCtl.node){beginAsk('text messaging');finish({headline:'Text to '+simCtl.name,small:true,spoken:'',node:simCtl.node,tags:[srcTag('live','Draft still open')]});}});h.appendChild(o);
+  var x=document.createElement('button');x.type='button';x.className='x';x.textContent='✕';x.title='Close draft';x.addEventListener('click',function(){simClear();if(simCtl)simCtl.done=true;sdkClear();simCtl=null;});h.appendChild(x);
+  d.appendChild(h);d.appendChild(c.node);d.hidden=false;c.docked=true;}
 function simClear(){simTimers.forEach(clearTimeout);simTimers=[];}
 function phoneNode(name,msg,live){
-  simClear();
+  simClear();sdkClear();
   var wrap=el('div','sim');
   var ph=el('div','sim-phone');ph.style.position='relative';
   var hd=el('div','sim-hd');var av=el('div','sim-av',name.split(' ').map(function(w){return w.charAt(0);}).join('').slice(0,2).toUpperCase());hd.appendChild(av);
@@ -3025,15 +3035,15 @@ function routeKnown(q,opt,dry){
     if(lastDraft){cmdTextSim(lastDraft.q,lastDraft.p);return true;}
     textContacts(q);return true;}
   if(wcq<=6&&/^(?:ok(?:ay)?|alright|cool|great|perfect)?\s*(?:thanks?|thank you|that'?s all|we'?re good|all good|close (?:it|that|this)|dismiss(?: it)?)\b/.test(s)&&simCtl&&simCtl.node&&simCtl.node.isConnected){
-    if(dry)return true;logMic('route','dismiss card');simClear();if(simCtl)simCtl.done=true;simCtl=null;beginAsk(q);finish({headline:'You are welcome, Ali.',small:true,spoken:'You are welcome, Ali.',tags:[srcTag('live','Just talking')]});return true;}
+    if(dry)return true;logMic('route','dismiss card');sdkClear();simClear();if(simCtl)simCtl.done=true;simCtl=null;beginAsk(q);finish({headline:'You are welcome, Ali.',small:true,spoken:'You are welcome, Ali.',tags:[srcTag('live','Just talking')]});return true;}
   if(simCtl&&simCtl.node.isConnected&&wcq<=14&&!WX_RE.test(s)&&!/\b(calendar|schedule|timer|time is it|score|brief|needs me)\b/.test(s)){
     var si=simIntentWords(s);
     var rtg=!/\b(?:send it|yes)\b/.test(s)&&wcq<=22&&(/\b(?:actually|instead|wrong (?:person|number)|meant|not that|oops)\b/.test(l)||/NUM1\d{10}/.test(phoneTokens(q)))?parseTextCmd(q.replace(/^(?:(?:actually|instead|oops|no wait|wait|sorry|i meant|i mean|no)[,\s]+)+/i,'')):null;
     if(rtg&&(rtg.num||(!rtg.body&&rtg.name))&&!simCtl.done){if(dry)return true;logMic('route','sim retarget');cmdTextSim(q,{name:rtg.name,num:rtg.num,body:simCtl.body});return true;}
     if(si==='cancel'||(simCtl.armed&&/^(?:no|nope|nah|wrong|wrong number|not right|that'?s wrong)\b/.test(s))){if(dry)return true;logMic('route','sim cancel');simClear();simCtl.done=true;$('hint').textContent='Draft dropped.';try{speak('Okay, dropped it.',false);}catch(e){}return true;}
     if(si==='redo'){if(dry)return true;logMic('route','sim redraft');cmdTextSim(q,{name:simCtl.name,num:simCtl.num,body:simCtl.body+' (Adjust the message like this: '+q+')'});return true;}
-    if(!si&&wcq>=2&&!/^(?:what|who|when|where|how|why|is|are|do|does|did|can|could)\b/.test(s)&&!simCtl.done){if(dry)return true;logMic('route','sim edit by conversation');cmdTextSim(q,{name:simCtl.name,num:simCtl.num,body:simCtl.body+' (Adjust the message like this: '+q+')'});return true;}
-    if(si==='send'){if(dry)return true;logMic('route','sim send');if(!simCtl.done){var lv=simCtl.live;simCtl.deliver();if(!lv){$('hint').textContent='Simulated send. Nothing was actually sent.';try{speak('Sent. That was a simulation, so nothing actually went out.',false);}catch(e){}}}return true;}
+    if(!si&&wcq>=2&&!simCtl.docked&&!/^(?:what|who|when|where|how|why|is|are|do|does|did|can|could)\b/.test(s)&&!simCtl.done){if(dry)return true;logMic('route','sim edit by conversation');cmdTextSim(q,{name:simCtl.name,num:simCtl.num,body:simCtl.body+' (Adjust the message like this: '+q+')'});return true;}
+    if(si==='send'){if(dry)return true;logMic('route','sim send');if(simCtl.docked&&!simCtl.done){beginAsk(q);finish({headline:'Text to '+simCtl.name,small:true,spoken:'',node:simCtl.node,tags:[srcTag('live','Draft back on screen')]});}if(!simCtl.done){var lv=simCtl.live;simCtl.deliver();if(!lv){$('hint').textContent='Simulated send. Nothing was actually sent.';try{speak('Sent. That was a simulation, so nothing actually went out.',false);}catch(e){}}}return true;}
   }
   if(TSTAT_RE.test(s)&&!WX_RE.test(s)&&!/\b(set|start|make|create)\b.*\b\d/.test(s)){if(dry)return true;logMic('route','timer status');
     if(tmrs.length){var t1=tmrs.slice().sort(function(a,b){return a.end-b.end;})[0];showTimerView(t1,q);var sp1='Yes. '+(tmrs.length>1?'You have '+tmrs.length+' timers. The next one is ':'You have ')+'a '+t1.label+(t1.alarm?' alarm':' timer')+' with '+hms(Math.max(0,t1.end-Date.now())).replace(':',' minutes ')+' seconds left.';try{speak(sp1,false);}catch(e){}return true;}
@@ -3758,7 +3768,7 @@ function dashStart(){
  TV.lastUser=Date.now();dashShow(false);},true);});
 document.addEventListener('mousemove',function(){if(!TV.on)return;var h=document.documentElement;h.classList.add('cur');clearTimeout(TV.curT);TV.curT=setTimeout(function(){h.classList.remove('cur');},4000);});
 
-window.__t={parse:function(q){return parseTextCmd(q);},tok:function(q){return phoneTokens(q);},h2:H2,ptt:ptt,dashShow:dashShow,unlock:function(){LOCKED=false;},h2Go:h2Go,dashLoad:dashLoad,lexTalk:lexTalk,tvSet:tvSet,lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,lockReq:lockReq,doLock:doLock,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
+window.__t={sim:function(){return simCtl?{done:simCtl.done,conn:simCtl.node.isConnected,inEx:$('extra').contains(simCtl.node),docked:simCtl.docked}:null;},parse:function(q){return parseTextCmd(q);},tok:function(q){return phoneTokens(q);},h2:H2,ptt:ptt,dashShow:dashShow,unlock:function(){LOCKED=false;},h2Go:h2Go,dashLoad:dashLoad,lexTalk:lexTalk,tvSet:tvSet,lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,lockReq:lockReq,doLock:doLock,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
 function addReminder(q,s){
   var pw=parseWhen(s);var txt=remText(pw?pw.rest:s);
   if(!pw){convo.pending={kind:'remwhen',text:txt,orig:q,until:Date.now()+120000};beginAsk(q);finish({headline:'When should I remind you?',small:true,spoken:'When should I remind you'+(txt?' to '+txt:'')+'?',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say a time, like in 20 minutes, or tomorrow at 9.'}]});return;}
