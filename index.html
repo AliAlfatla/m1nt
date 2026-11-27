@@ -220,7 +220,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v11-2026-11-26';
+var BUILD='v12-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -550,7 +550,8 @@ function finish(o){
   pushHist({q:cur.q,a:o.headline+(o.rows&&o.rows.length?' · '+o.rows.map(function(r){return r.t+' '+r.n;}).join('; '):''),tags:(o.tags||[]).map(function(t){return t.textContent;}),use:usageLine(),at:Date.now()});
   updatePanels();
   var fk=o.clarify?'clarify':(o.follow?'follow':null);
-  if(o.follow)convo.last={kind:o.follow,q:cur.q,a:spoken,at:Date.now()};else if(o.clarify)convo.last=null;
+  if(o.follow)convo.last={kind:o.follow,q:cur.q,a:spoken,at:Date.now()};else convo.last=null;
+  convo.hist.push({q:cur.q,a:String(spoken||'')});if(convo.hist.length>8)convo.hist.shift();
   convo.armAfterSpeech=null;
   if(!muted)speak(spoken,false);else{setMode('idle');if(convo.armAfterSpeech)afterAnswerArm(300);}
 }
@@ -777,7 +778,10 @@ var SLEEP_RE=new RegExp('\\bgood\\s?night[,.!\\s]+'+NM+'\\b','i');
 var LEAD_RE=new RegExp('^(?:(?:hey|hay|hi|ok|okay|wake\\s?up)[,.!\\s]*)?(?:'+NM+')?[,.!\\s]*','i');
 var JUNK=/^(mint|min|mid|mind|man|men|amen|mean|hey|hay|hi|ok|okay|uh|um|a|the|and|so|well|up)$/i;
 var SIL=store('sil')||1000, silTimer=0, wakePend=null;
-var convo={pending:null,last:null,armAfterSpeech:null,armOk:false};
+var convo={pending:null,last:null,armAfterSpeech:null,armOk:false,hist:[]};
+var BR=store('bridge');
+function setBridge(sv){var p=String(sv||'').trim().split(/\s+/);var u=p[0],c=p[1];if(!/^https:\/\/hook\.[a-z0-9]+\.make\.com\/[A-Za-z0-9]+$/.test(u||'')||!c||c.length<12)return false;BR={url:u,code:c};store('bridge',BR);return true;}
+(function(){try{var m=/[#&]k=([^&]+)/.exec(location.hash||'');if(m){var dec=atob(decodeURIComponent(m[1]).replace(/-/g,'+').replace(/_/g,'/'));if(setBridge(dec.replace('|',' ')))logMic('bridge','linked from the address');history.replaceState(null,'',location.pathname+location.search);}}catch(e){}})();
 wake.reply=null;wake.temp=false;wake.replyT=0;wake.needTap=false;
 var CHAINS="walmart|kroger|target|qdoba|lowe'?s|home depot|autozone|o'?reilly|costco|sam'?s club|meijer|aldi|walgreens|cvs|starbucks|mcdonald'?s|chick-?fil-?a|taco bell|wendy'?s|panera|chipotle|dunkin|kfc|subway|burger king|speedway|publix|dollar general|family dollar|menards|harbor freight|best buy|lidl|rite aid|advance auto|jiffy lube";
 var CHAIN_RE=new RegExp('\\b('+CHAINS+')\\b','i');
@@ -1128,6 +1132,21 @@ async function freeClaude(q){
   if(rr.error){doneDoing('Claude did not answer');var b=el('div','banner na');b.appendChild(el('b',null,'CLAUDE. '));b.appendChild(document.createTextNode(rr.error));$('extra').insertBefore(b,$('extra').firstChild);setMode('idle');return;}
   doneDoing('Claude answered · '+usageLine());$('ans').textContent=rr.text;$('ans').className='ans small';pushHist({q:q,a:rr.text,tags:['Claude'],use:usageLine(),at:Date.now()});speak(rr.text,false);
 }
+function histText(){return convo.hist.slice(-8).map(function(h){return 'Ali: '+h.q+'\nM1NT: '+String(h.a).slice(0,500);}).join('\n');}
+function bridgeFail(q,why){finish({headline:'I could not reach Claude just now.',small:true,spoken:'I could not reach Claude just now.',tags:[srcTag('na','Unavailable')],banners:[{kind:'na',bold:'BRIDGE.',text:why+' Nothing was guessed.'}],acts:[{label:'Try again',pri:true,fn:function(){run(q,{});}}]});}
+async function cmdBridge(q,opt){
+  beginAsk(q);doing('thinking it through with Claude (live web and your data)');setMode('thinking');
+  var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},45000);
+  try{
+    var r=await fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,q:q,history:histText()}),signal:ctl.signal});
+    var t=(await r.text()).trim();clearTimeout(tm);
+    if(!r.ok)throw new Error('The bridge answered HTTP '+r.status+'.');
+    if(/^Accepted$/i.test(t)){bridgeFail(q,'The bridge did not accept the access code. Paste your link again in Setup.');return;}
+    if(!t||/^M1NT_BRIDGE_ERROR/.test(t)){bridgeFail(q,'Claude did not answer.');return;}
+    addUse('claude',1);usageChip();
+    finish({headline:t,small:true,spoken:t,tags:[srcTag('live','Claude via Make'),srcTag('live','Answered '+clockET(Date.now())+' ET')],srcNote:'Live web search plus your saved calendar, bookings and deposit snapshots. Read-only.',acts:[{label:'Ask again',fn:function(){run(q,{});}}]});
+  }catch(e){clearTimeout(tm);bridgeFail(q,e&&e.name==='AbortError'?'The lookup took longer than 45 seconds.':failCopy(e));}
+}
 function followUp(q,opt){
   var L=convo.last,l=q.toLowerCase();
   var wc=q.trim().split(/\s+/).length;
@@ -1155,10 +1174,12 @@ function run(raw,opt){
   else if(convo.pending&&Date.now()>convo.pending.until)convo.pending=null;
   if(opt.reply==='follow'&&convo.last&&Date.now()-convo.last.at<300000&&followUp(q,opt))return;
   var l=q.toLowerCase();
-  if(/\b(cancel|delete|refund|charge|transfer|send money|reschedule|resume|pause|book (a|an|me|him|her|them)|take (a )?payment|waive)\b/.test(l)){cmdLocked(q);return;}
+  if(!BR&&/\b(cancel|delete|refund|charge|transfer|send money|reschedule|resume|pause|book (a|an|me|him|her|them)|take (a )?payment|waive)\b/.test(l)){cmdLocked(q);return;}
+  var wcq=q.split(/\s+/).length;
   if(SLEEP_RE.test(q)||/^\s*good\s?night\b/i.test(q)){sleepUi();return;}
-  if(/\b(weather|forecast|temperature|umbrella|how (hot|cold)|will it (rain|snow))\b/.test(l)){cmdWeather(q);return;}
-  if((/\b(football|nfl|score|scores|who won|touchdown|playing|game|halftime|quarter|kickoff)\b/.test(l)||/how (is|are) (the )?[a-z .]+ (doing|playing)|did (the )?[a-z .]+ (win|lose)/.test(l))&&!/schedule|calendar/.test(l)){cmdFootball(q);return;}
+  if(/\b(weather|forecast|temperature|umbrella|how (hot|cold)|will it (rain|snow))\b/.test(l)&&(!BR||wcq<=8)){cmdWeather(q);return;}
+  if((/\b(football|nfl|score|scores|who won|touchdown|playing|game|halftime|quarter|kickoff)\b/.test(l)||/how (is|are) (the )?[a-z .]+ (doing|playing)|did (the )?[a-z .]+ (win|lose)/.test(l))&&!/schedule|calendar/.test(l)&&(!BR||wcq<=8)){cmdFootball(q);return;}
+  if(BR){cmdBridge(q,opt);return;}
   if((/^(search|look up|google|find out|news)\b|latest news|what('?s| is) the news|\b(what time|when) (does|do|is) .+ (close|open|closes|opens)\b|\bhours\b|\bis .+ open\b|\bphone number\b|\baddress (for|of)\b|\bhow (much|many|old|tall|far)\b|^who (is|was)\b|^what (is|are|was) (a|an|the)\b/.test(l))&&!/deposit|payment|\bjobs?\b|customer|credit|usage|schedule|calendar|appointment|lead/.test(l)){var ch=!opt.clarified&&needsPlace(q);if(ch){askPlace(q,ch);return;}cmdWeb(q,opt);return;}
   if(/what('?s| is)? ?(needs|need) me|needs me|need my attention|waiting on me|what should i (do|handle)/.test(l)){cmdNeeds(q,opt);return;}
   var sched=/(schedule|calendar|agenda|what'?s on|what is on|appointments?|jobs? (today|tomorrow)|what do i have)/.test(l);
@@ -1320,11 +1341,19 @@ function renderSetup(){
   var rows=[
     ['Microphone',mic.perm==='ready'?'Allowed in this window':mic.perm==='blocked'?'Blocked':mic.perm==='none'?'No device found':'Not checked yet'],
     ['Speech input',micBackend==='dictation'?'Claude dictation':micBackend==='webspeech'?'Browser speech recognition':'None offered in this window'],
+    ['Claude bridge',BR?'Connected':'Not connected'],
     ['Voice (wake word)',wake.on?'On':'Off (works only while this window is open)'],
     ['Voice output',tts&&pref.kind!=='local'?'Claude voices':(synth?'Windows/browser voices':'None available')],
     ['Connectors',['Make','Quo','Notion'].map(function(n){return n+': '+(servers[n]||'unknown');}).join(' · ')]
   ];
   var it=el('div','item');it.appendChild(el('div','k','STATUS'));var dl=el('dl','kv');rows.forEach(function(r){dl.appendChild(el('dt',null,r[0]));dl.appendChild(el('dd',null,r[1]));});it.appendChild(dl);dBody.appendChild(it);
+  var bi=el('div','item');bi.appendChild(el('div','k','CLAUDE BRIDGE'));
+  bi.appendChild(el('div','sm',BR?'Connected. Questions go to Claude with live web search and your saved calendar and bookings. Read-only.':'Not connected. Paste your private link or the web address and code, then press Save.'));
+  var bin=el('input','sel');bin.type='text';bin.placeholder='Paste: https://hook… then a space and your code';bin.style.cssText='width:100%;margin-top:8px';bin.setAttribute('aria-label','Bridge address and code');
+  var bs=el('button','btn pri','Save');bs.type='button';bs.addEventListener('click',function(){if(setBridge(bin.value)){bin.value='';renderSetup();}else bi.appendChild(el('div','sm','That does not look right. It should be the https://hook… address, a space, then the code.'));});
+  var bt=el('button','btn','Test');bt.type='button';bt.addEventListener('click',function(){if(!BR)return;closeDrawer();run('Say hello in one short sentence.',{});});
+  var bf=el('button','btn','Forget');bf.type='button';bf.addEventListener('click',function(){BR=null;store('bridge',null);renderSetup();});
+  var bb=el('div');bb.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:8px';bb.appendChild(bs);bb.appendChild(bt);bb.appendChild(bf);bi.appendChild(bin);bi.appendChild(bb);dBody.appendChild(bi);
   var mi=el('div','item');mi.appendChild(el('div','k','MICROPHONE'));
   var eb=el('button','btn pri','Enable microphone');eb.type='button';eb.addEventListener('click',function(){eb.disabled=true;enableMic().then(function(){eb.disabled=false;});});
   var tb=el('button','btn','Test speech recognition');tb.type='button';tb.addEventListener('click',async function(){tb.disabled=true;tb.textContent='Listening 4 s… speak';await initMic();wakeUi();var r=await testMicRecognition();mic.diag=mic.diag||{at:Date.now()};mic.diag.speechTest=r;renderSetup();});
