@@ -716,7 +716,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v62-2026-11-27';
+var BUILD='v63-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -837,8 +837,11 @@ function wakeUi(){if(typeof LOCKED!=='undefined'&&LOCKED){try{showLock();}catch(
 function etHour(){try{return parseInt(new Intl.DateTimeFormat('en-US',{hour:'numeric',hour12:false,timeZone:'America/New_York'}).format(new Date()),10)%24;}catch(e){return new Date().getHours();}}
 function greetWord(){var h=etHour();return h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
 var standby=false;
-function byeSleep(t){var k=sleepKind(t)||'goodnight';if(k==='standby'){if(standby)return;standby=true;wxBackdropStop();stopSpeak();closeDrawer();setUi('awake');setMode('listening');$('hint').textContent='Standing by. Say “Hey, Mint” and then talk as long as you like. Say “Stand by, Mint” to pause again.';try{speak('Standing by, Ali.');}catch(e){}return;}standby=false;sleepUi();var n=etHour();var m=k==='standby'?'Standing by':k==='thatsall'?(n>=17?'See you later':'Okay'):(n>=17||n<5?'Goodnight':'Goodbye');$('hint').textContent='';try{speak(m+', Ali.');}catch(e){}}
-function sleepUi(){sfx('sleep');if(TV.on){try{TV.lastUser=0;stopSpeak();setUi('awake');setMode('idle');dashShow(true);}catch(e){}return;}if(LOCKON){LOCKED=true;lkBusy=false;setTimeout(function(){showLock();},700);}wxBackdropStop();stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
+var LOCK_RE=/\block\b(?:\s+(?:it|yourself|up|the\s+screen|m1nt|mint|down|everything|the\s+app|this))?/i;
+function lockReq(t){t=String(t||'').trim();var w=t.split(/\s+/).length;return w<=9&&!/\?\s*$/.test(t)&&/\block\b/i.test(t)&&!/\b(?:unlock|don'?t|do not|not)\b/i.test(t)&&/\b(?:lock\s+(?:it|yourself|up|the\s+screen|m1nt|mint|mine|min|man|down|everything|this|the\s+app)|(?:please|hey|ok|okay)\W+lock|^\W*lock\W*$|lock\s+now|lock\W*$)/i.test(t);}
+function doLock(){try{stopSpeak();closeDrawer();wxBackdropStop();standby=false;}catch(e){}if(app.getAttribute('data-state')!=='asleep'){try{sfx('sleep');setUi('asleep');setMode('idle');}catch(e){}}$('hint').textContent='';LOCKED=true;lkBusy=false;setTimeout(function(){showLock();},500);}
+function byeSleep(t){var k=sleepKind(t)||'goodnight';if(k==='standby'){if(standby)return;standby=true;wxBackdropStop();stopSpeak();closeDrawer();setUi('awake');setMode('listening');$('hint').textContent='Standing by. Say “Hey, Mint” and then talk as long as you like. Say “Stand by, Mint” to pause again.';try{speak('Standing by, Ali.');}catch(e){}return;}standby=false;sleepUi(LOCK_RE.test(t));var n=etHour();var m=k==='standby'?'Standing by':k==='thatsall'?(n>=17?'See you later':'Okay'):(n>=17||n<5?'Goodnight':'Goodbye');$('hint').textContent='';try{speak(m+', Ali.');}catch(e){}}
+function sleepUi(lk){sfx('sleep');if(TV.on){try{TV.lastUser=0;stopSpeak();setUi('awake');setMode('idle');dashShow(true);}catch(e){}return;}if(LOCKON&&lk){LOCKED=true;lkBusy=false;setTimeout(function(){showLock();},700);}wxBackdropStop();stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
 var idleT=0;
 function armIdle(){clearTimeout(idleT);if(S.mode!=='idle'||app.getAttribute('data-state')!=='answer')return;var dl=document.querySelector('#extra .cv,#extra .wx,#extra .sb,#extra .sim,#extra .needs,#extra .notes')?45000:20000;idleT=setTimeout(function(){if(S.mode==='idle'&&app.getAttribute('data-state')==='answer'&&!drawer.classList.contains('show')&&!ptt.on){wxBackdropStop();setUi('awake');$('hint').textContent=standby?'Standing by. Say “Hey, Mint” to talk.':'Ready. Ask me anything.';renderDock();}},dl);}
 ['pointerdown','keydown'].forEach(function(n){document.addEventListener(n,function(){armIdle();},true);});
@@ -1440,6 +1443,8 @@ function handleWake(t,isFinal){
     t=after;$('hint').textContent='';}
   if(isAwake()&&retractOnly(cleanQ(t)||t)){if(isFinal)dropHeard(t);return;}
   if(MICOFF_RE.test(t)){logMic('voice','mic off by voice');micOff();$('hint').textContent='Mic off. Press Voice to turn listening back on.';return;}
+  if(isFinal&&lockReq(cleanQ(t)||t)){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;doLock();return;}
+  if(lockReq(t))return;
   if(isGoodnight(t)){if(isAwake()){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;byeSleep(t);}return;}
   if(S.mode==='speaking'&&STOP_RE.test(t)&&t.trim().split(/\s+/).length<=4){stopSpeak();setMode('idle');logMic('barge','stopped by voice: '+t.slice(0,30));return;}
   if(/\bgood\s?night\b/i.test(t)&&t.trim().split(/\s+/).length<=3)return;   /* bare goodnight is never a question */
@@ -2742,7 +2747,7 @@ async function lkTry(){
   var code=lkBuf;if(code.length<LKN)return;lkBusy=true;var ok=await lkCheck(code);
   if(!ok){lkBusy=false;lkFail();return;}
   lkFails=0;LOCKED=false;$('lock').classList.add('ok');$('lkT').textContent='ACCESS GRANTED';$('lkS').textContent='';sfx('unlock');
-  setTimeout(function(){hideLock();lkBusy=false;try{wakeUi();}catch(e){}try{preloadData();}catch(e){}try{if(BR)getStatus();}catch(e){}$('hint').textContent=BR?'':'This address is new. Open Setup once and paste your bridge link and access code.';try{speak(greetWord()+', Ali.');}catch(e){}setTimeout(remCheck,800);},1700);
+  setTimeout(function(){hideLock();lkBusy=false;try{if(TV.on)wakeUi();else{setUi('asleep');setMode('idle');}}catch(e){}try{preloadData();}catch(e){}try{if(BR)getStatus();}catch(e){}$('hint').textContent=BR?'':'This address is new. Open Setup once and paste your bridge link and access code.';try{if(TV.on)speak(greetWord()+', Ali.');}catch(e){}setTimeout(remCheck,800);},1700);
 }
 function hideLock(){$('lock').classList.remove('on','ok');}
 function lkKey(k){
@@ -2978,7 +2983,7 @@ function dashStart(){
 }
 ['keydown'].forEach(function(ev){document.addEventListener(ev,function(e){if(TV.on&&DASH.shown&&!LOCKED&&/^(Arrow|Enter| )/.test(e.key)){TV.lastUser=Date.now();dashShow(false);}},true);});
 
-window.__t={dashLoad:dashLoad,lexTalk:lexTalk,tvSet:tvSet,lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
+window.__t={dashLoad:dashLoad,lexTalk:lexTalk,tvSet:tvSet,lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,lockReq:lockReq,doLock:doLock,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
 function addReminder(q,s){
   var pw=parseWhen(s);var txt=remText(pw?pw.rest:s);
   if(!pw){convo.pending={kind:'remwhen',text:txt,orig:q,until:Date.now()+120000};beginAsk(q);finish({headline:'When should I remind you?',small:true,spoken:'When should I remind you'+(txt?' to '+txt:'')+'?',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say a time, like in 20 minutes, or tomorrow at 9.'}]});return;}
@@ -3059,6 +3064,7 @@ function run(raw,opt){
   var wcq=q.split(/\s+/).length;
   if(retractOnly(q)){dropHeard(q);return;}
   if(MICOFF_RE.test(q)){micOff();return;}
+  if(lockReq(q)){doLock();return;}
   if(isGoodnight(q)){byeSleep(q);return;}
   if(/\b(?:tv|television) mode\b|\b(?:turn|switch|put) (?:this )?(?:on|into|to) (?:the )?(?:tv|television)\b|\bwall ?mode\b/.test(l)&&wcq<=8){var off=/\b(off|exit|stop|leave|normal)\b/.test(l);beginAsk(q);tvSet(!off);finish({headline:off?'TV mode off.':'TV mode on. Use the up and down arrows on the remote to fit the edges of your screen.',small:true,spoken:off?'TV mode off.':'TV mode on.',tags:[srcTag('live','TV mode')]});return;}
   if(/^(?:(?:hey |ok |okay |so |and |can you |could you |would you |will you |please |mint )*)(?:text|send|message|txt|shoot|email)\s+(?:me|my (?:phone|cell|number))\b/.test(l)&&wcq>=3){logMic('route','text me');cmdTextMe(q);return;}
@@ -3103,7 +3109,7 @@ document.addEventListener('keydown',function(e){
   else if(e.key==='Escape'&&app.getAttribute('data-state')!=='asleep'&&document.activeElement===document.body){sleepUi();}
 });
 ["What's on my schedule today?","What's on my schedule tomorrow?","What needs me?"].forEach(function(t){var b=el('button','btn',t);b.type='button';b.addEventListener('click',function(){run(t,{});});$('sugs').appendChild(b);});
-var fold=el('button','btn foldbtn','Fold into core');fold.type='button';fold.addEventListener('click',sleepUi);$('sugs').appendChild(fold);
+var fold=el('button','btn foldbtn','Fold into core');fold.type='button';fold.addEventListener('click',function(){sleepUi(false);});$('sugs').appendChild(fold);
 
 /* ---------- side panels ---------- */
 function updatePanels(){
