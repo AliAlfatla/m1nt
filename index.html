@@ -709,7 +709,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v46-2026-11-26';
+var BUILD='v47-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1621,11 +1621,30 @@ function boardNode(cls,chips,items){
   w.appendChild(g);return w;
 }
 var lastClaude={ok:null,at:0};
+var statusCache={at:0,rows:null,asof:''};
+async function getStatus(){
+  if(statusCache.rows&&Date.now()-statusCache.at<120000)return statusCache;
+  if(!BR||!BR.code)return null;
+  var c=new AbortController(),tm=setTimeout(function(){c.abort();},12000);
+  try{var r=await fetch(SEND_URL,{method:'POST',body:new URLSearchParams({code:BR.code,action:'status'}),signal:c.signal});var t=await r.text();if(!/^SYSTEM STATUS/.test(t))return null;
+    var ls=t.split('\n');var asof=(ls[0].match(/taken (.*)$/)||[])[1]||'';
+    statusCache={at:Date.now(),asof:asof,rows:ls.slice(1).map(function(l){var a=l.split('|');return {area:a[0],name:a[1]||'',state:a[2]||'OK',detail:a[3]||''};}).filter(function(x){return x.name;})};return statusCache;
+  }catch(e){return null;}finally{clearTimeout(tm);}
+}
+var STAT_MAP=[[/watchdog/,/watchdog/i],[/fixer/,/fixer/i],[/self.?heal/,/self-heal/i],[/booking sync|sync/,/booking sync/i],[/back ?up/,/backup/i],[/credit/,/credit/i],[/(?:morning|daily) briefing/,/morning|daily/i],[/evening briefing|briefings?/,/evening/i],[/follow.?up manager|follow.?ups?/,/follow-up manager/i],[/deposit remind/,/deposit reminder/i],[/calendar sync/,/calendar sync/i],[/david/,/david/i],[/notion/,/notion/i],[/\bquo\b/,/quo/i],[/\bmake\b/,/^make/i],[/urable/,/urable/i]];
+function statusAnswer(q,S){
+  var l=String(q).toLowerCase();
+  for(var i=0;i<STAT_MAP.length;i++){if(STAT_MAP[i][0].test(l)){var m=S.rows.filter(function(r){return STAT_MAP[i][1].test(r.name);});if(m.length){var r=m[0];return r.name+': '+(r.state==='OK'?'all good. ':(r.state==='WATCH'?'worth a look. ':'problem. '))+r.detail;}}}
+  var tot=S.rows.length,w=S.rows.filter(function(r){return r.state!=='OK';});
+  return (tot-w.length)+' of '+tot+' checks look fine.'+(w.length?' To watch: '+w.map(function(r){return r.name+' ('+r.detail+')';}).join('; ')+'.':' Nothing needs you.')+' That is from the snapshot taken '+S.asof+'.';
+}
 async function cmdHealth(q){
   beginAsk(q);doing('checking the screen\'s connections');var my=cur;var items=[];
   items.push({type:BR?'OK':'WARN',icon:'⚡',k:'CLAUDE BRIDGE',who:BR?'Connected':'Not set up',detail:BR?(lastClaude.at?(lastClaude.ok?'Last answer ':'Last attempt failed ')+ageText(Date.now()-lastClaude.at):'No question asked yet this session'):'Paste your link in Setup',pill:BR?'READY':'SETUP',pillk:BR?'':'warn'});
   var wxt=0,wxok=false;try{var t0=performance.now();await jget('https://api.open-meteo.com/v1/forecast?latitude=38.25&longitude=-85.76&current=temperature_2m');wxt=Math.round(performance.now()-t0);wxok=true;}catch(e){}
   if(cur!==my)return;
+  var SS=await getStatus();if(cur!==my)return;
+  if(SS){var AIC={MAKE:'⚙',TASK:'⏰',APP:'◈'},ALB={MAKE:'MAKE',TASK:'SCHEDULED TASK',APP:'CONNECTION'};SS.rows.forEach(function(r){items.push({type:r.state==='OK'?'OK':(r.state==='BAD'?'BAD':'WARN'),icon:AIC[r.area]||'•',k:(ALB[r.area]||r.area)+' · '+r.name.toUpperCase(),who:r.state==='OK'?'Healthy':(r.state==='WATCH'?'Worth a look':'Problem'),detail:r.detail,pill:r.state==='OK'?'OK':(r.state==='WATCH'?'WATCH':'DOWN'),pillk:r.state==='OK'?'':(r.state==='WATCH'?'warn':'bad')});});}
   items.push({type:wxok?'OK':'BAD',icon:'☁',k:'WEATHER FEED',who:wxok?'Open-Meteo online':'Not reachable',detail:wxok?'Responded in '+wxt+' ms':'Weather will not load until it is back',pill:wxok?'FREE':'DOWN',pillk:wxok?'':'bad'});
   var cks=Object.keys(calCache),ca=cks.length?Math.max.apply(null,cks.map(function(k){return calCache[k].at;})):0;
   items.push({type:'OK',icon:'▦',k:'CALENDAR DATA',who:ca?'Loaded '+ageText(Date.now()-ca):'Loads when you wake or ask',detail:'Snapshot refreshes about 6:30 PM ET',pill:'READ-ONLY'});
@@ -1633,10 +1652,11 @@ async function cmdHealth(q){
   items.push({type:SR?'OK':'BAD',icon:'🎙',k:'VOICE',who:SR?'Speech recognition available':'Not supported in this browser',detail:SR?(isAwake()?'Awake and listening for you':'Asleep. Say wake up Mint'):'Use Chrome',pill:SR?'CHROME':'NO',pillk:SR?'':'bad'});
   items.push({type:'OK',icon:'🧠',k:'MEMORY',who:Object.keys(ACACHE).length+' remembered answers',detail:'Say clear your memory to wipe them',pill:'ON THIS DEVICE'});
   items.push({type:'OK',icon:'⏱',k:'TIMERS',who:tmrs.length?tmrs.length+(tmrs.length===1?' running':' running'):'None running',detail:sw.made?'Stopwatch '+(sw.on?'running':'stopped'):'No stopwatch',pill:'LOCAL'});
-  var cc=use.session.claude;items.push({type:'OK',icon:'¢',k:'THIS SESSION',who:cc+' Claude calls',detail:'About '+(cc*6)+' Make credits · Quo 0 (texting is simulated)',pill:'ESTIMATE'});
+  var cc=use.session.claude;items.push({type:'OK',icon:'¢',k:'THIS SESSION',who:cc+' Claude calls',detail:'About '+(cc*6)+' Make credits · Quo '+use.session.quo+' texts sent from the screen',pill:'ESTIMATE'});
   items.push({type:'OK',icon:'#',k:'BUILD',who:BUILD,detail:'Sounds '+(sfxOn?'on':'off')+' · memory '+(Object.keys(ACACHE).length)+' items'});
   var bad=items.filter(function(i){return i.type==='BAD';}).length,warn=items.filter(function(i){return i.type==='WARN';}).length;
   var sp=bad?'I found '+bad+(bad===1?' problem':' problems')+'. The weather feed is not reachable.':(warn?'Mostly good. One thing needs setup: the Claude bridge link.':'All systems look good. '+(wxok?'The weather feed answered in '+wxt+' milliseconds. ':'')+(BR?'The Claude bridge is connected.':''));
+  if(SS)sp=statusAnswer(q,SS);
   finish({headline:bad?bad+' problem'+(bad===1?'':'s')+' found':(warn?'Mostly good':'All systems normal'),small:true,spoken:sp,node:boardNode('bd-health',[[items.length-bad-warn,'OK'],[warn,'Setup'],[bad,'Down']].filter(function(c){return c[0]>0;}),items),tags:[srcTag('live','Checked '+clockET(Date.now())+' ET'),srcTag('live','Free checks')],srcNote:'Checks the screen itself. Nothing here costs Make credits.',acts:[{label:'Check again',fn:function(){run(q,{});}}]});
 }
 var custCache=null;
@@ -1800,6 +1820,44 @@ async function cmdBriefing(q,opt){
   finish({headline:b.kind+' briefing · '+stampET(b.at),small:true,spoken:'Your '+b.kind.toLowerCase()+' briefing from '+clockET(b.at)+'. '+spokenBrief(b.text),rows:b.text.split(/\n\n+/).map(function(sec){var lines=sec.split('\n');var head=/^[A-Z][A-Z ]{3,}$/.test(lines[0])?lines.shift():'';return {t:head||'Note',n:lines.join('\n')};}),tags:[tagFor(r.rec),srcTag('live','Text sent to you via Quo')],acts:[{label:'Refresh',fn:function(){run(q,{});}}]});
 }
 function cmdLocked(q){beginAsk(q);finish({headline:'That one stays on your texts.',small:true,spoken:'That action needs your safety code. Text it to M1NT and it goes through the usual approval.',tags:[srcTag('snap','Rule')],banners:[{kind:'warn',bold:'LOCKED.',text:'Cancelling, booking, deleting, money, and pausing or resuming customers are not done from this screen. It is read-only; text it to M1NT and the same approval steps apply. “Voice” only opens this screen.'}]});}
+var ST_PICK=function(a){return a[Math.floor(Math.random()*a.length)];};
+function smallTalk(q){
+  var l=String(q).toLowerCase().replace(/[^a-z' ]/g,' ').replace(/\s+/g,' ').trim();var w=l.split(' ').length;if(w>9||w<1)return null;
+  l=l.replace(/\b(mint|man|dude|bro|buddy|my guy|homie|boss|partner|there)\b/g,'').replace(/^(?:hey|hi|hello|yo|ok|okay)\s+(?=\w)/,'').replace(/\s+/g,' ').trim();
+  var R=[
+   [/^(?:hey|hi|hello|yo|sup|howdy|hiya|what'?s up|whats up|what up|wassup|wazzup|what'?s good|whats good|what'?s going on|how'?s it going|hows it going|how are you|how are ya|how you doing|how you been|how have you been|you good|you doing ok(?:ay)?|you alright|you ok(?:ay)?|what you up to|what are you up to|what'?s new)(?: today| tonight| this morning)?$/,['Hey Ali. All good here, everything is running. What do you need?','Not much, Ali. Keeping an eye on the system for you. What are we doing?','Doing great, Ali. Glad you are here. What can I do for you?','Hey. I am good, and the business is humming along. Whatever you need.']],
+   [/^(?:i appreciate you|appreciate you|i appreciate it|appreciate it|thank you so much|thanks so much|thanks a lot|thank you|thanks|thx|ty|you(?:'re| are) the best|you rock|you(?:'re| are) awesome|you(?:'re| are) amazing|you(?:'re| are) a lifesaver|you(?:'re| are) incredible|love you|love this|good job|great job|nice work|nice job|well done|good stuff|nice one|you did good|that was great|that'?s awesome|that'?s perfect|perfect|awesome|amazing|beautiful|sweet|nice|cool|great)(?: for everything| today| tonight)?$/,['Anytime, Ali. That is what I am here for.','Right back at you, Ali. Glad I can help.','Happy to, Ali. We make a good team.','Always, Ali. Let me know what is next.']],
+   [/^(?:who are you|what are you|what'?s your name|whats your name|what do i call you|introduce yourself)$/,['I am M1NT, your right hand at Evermint. I watch the calendar, leads, deposits and the automations, and I can text for you.']],
+   [/^(?:how was your day|how'?s your day|hows your day|how'?s your night|how is your day|having a good day)$/,['Quiet and busy at the same time, the way I like it. Yours?','Smooth. Everything held up. How was yours, Ali?']],
+   [/^(?:i'?m tired|im tired|long day|rough day|tough day|i'?m exhausted|im exhausted|i'?m beat|im beat|what a day|today was (?:long|rough|crazy))$/,['That sounds like a long one, Ali. You have earned a break. Anything I can take off your plate before you rest?','Rough day, huh. You are doing a lot. Want me to line up tomorrow so you can switch off?']],
+   [/^(?:i'?m (?:good|fine|great|ok(?:ay)?|doing good|doing great|doing well|alright)|im (?:good|fine|great|ok(?:ay)?)|doing good|doing great|not bad|pretty good|all good|can'?t complain)$/,['Good to hear, Ali.','Love that. Let me know when you want me to jump on something.']],
+   [/^(?:lol|haha|ha ha|hahaha|lmao|that'?s funny|you(?:'re| are) funny|you(?:'re| are) hilarious)$/,['Ha, I try.','Glad that landed.']],
+   [/^(?:tell me a joke|got any jokes|say something funny|make me laugh|joke)$/,['Why did the detailer bring a ladder? To reach the high standards. I will see myself out.','What do you call a car that has been detailed too much? Spotless, but a little shell shocked.','I would tell you a joke about clay bars, but they tend to stick.']],
+   [/^(?:you there|you up|are you there|are you up|can you hear me|do you hear me|hello are you there)$/,['Right here, Ali. What do you need?','I am here. Go ahead.']],
+   [/^(?:i love you|love you mint)$/,['Aw, thanks Ali. I am pretty fond of you too, and of the business.']]
+  ];
+  for(var i=0;i<R.length;i++){if(R[i][0].test(l))return ST_PICK(R[i][1]);}
+  return null;
+}
+async function cmdTextMe(q){
+  beginAsk(q);var my=cur;
+  if(!BR){finish({headline:'Texting you needs the Claude link.',small:true,spoken:'Texting you needs the Claude link in Setup.',tags:[srcTag('na','Unavailable')]});return;}
+  doing('writing your text');setMode('thinking');
+  var msg=null;
+  try{
+    var t=await bridgePost('[DRAFT REQUEST] Write the plain text message that M1NT will send to Ali\'s own phone. Ali asked: "'+q+'". Use only the business data (calendar snapshot, booked jobs, leads snapshot). If the data does not cover it, say so in one short line. Plain text, no markdown, no emojis, short lines separated by line breaks, under 430 characters in total. Output ONLY the message text.','NOTE: a text to Ali. Output only the message.',45000);
+    addUse('claude',1);msg=String(t).replace(/^["'“]+|["'”]+$/g,'').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim();
+    if(msg.length>470){var cut=msg.slice(0,470),nl=cut.lastIndexOf('\n');msg=(nl>200?cut.slice(0,nl):cut.replace(/\s+\S*$/,''))+'…';}
+    if(!msg||/^M1NT_BRIDGE_ERROR/.test(msg))msg=null;
+  }catch(e){msg=null;}
+  if(cur!==my)return;
+  if(!msg){finish({headline:'I could not write that text.',small:true,spoken:'I could not put that text together. Try again in a moment.',tags:[srcTag('na','Not sent')]});return;}
+  var res='NETERR';try{var r=await fetch(SEND_URL,{method:'POST',body:new URLSearchParams({code:BR.code,action:'textme',text:msg})});res=await r.text();}catch(e){}
+  if(cur!==my)return;
+  var ok=/^M1NT_SENT/.test(res);if(ok){addUse('quo',1);usageChip();}
+  var n=el('div','sim-side');n.appendChild(el('div','sim-lbl',ok?'TEXTED TO YOUR PHONE':'NOT SENT'));var d=el('div','sim-draft',msg);d.style.whiteSpace='pre-wrap';n.appendChild(d);
+  finish({headline:ok?'Sent to your phone.':'That did not send.',small:true,spoken:ok?'Done. Check your phone.':'That did not go through, so nothing was sent.',node:n,tags:[ok?srcTag('live','Texted via Quo'):srcTag('na','Not sent'),srcTag('snap','Written by Claude')],srcNote:ok?'Sent to your own number only.':'Nothing was sent.'});
+}
 function cmdUnknown(q){beginAsk(q);finish({headline:'I do not have a direct lookup for that.',small:true,spoken:'I do not have a direct lookup for that one. I can ask Claude, which uses your Claude usage.',tags:[srcTag('snap','No direct lookup')],banners:[{kind:'',bold:'TRY.',text:'“What needs me?”, “What’s on my schedule tomorrow?”, “today”, “this week”, “leads”, “deposits”, “system health”.'}],acts:[{label:'Ask Claude (uses your Claude usage)',fn:function(){freeClaude(q);}}]});}
 async function freeClaude(q){
   var snap={calendar:D.cal&&D.cal.data&&nextWeekEvents(D.cal.data).map(function(e){return e.title+' '+e.start;}),leads:D.leads&&D.leads.data&&D.leads.data.slice(0,12)};
@@ -2580,7 +2638,7 @@ async function lkTry(){
   var code=lkBuf;if(code.length<LKN)return;lkBusy=true;var ok=await lkCheck(code);
   if(!ok){lkBusy=false;lkFail();return;}
   lkFails=0;LOCKED=false;$('lock').classList.add('ok');$('lkT').textContent='ACCESS GRANTED';$('lkS').textContent='';sfx('unlock');
-  setTimeout(function(){hideLock();lkBusy=false;try{wakeUi();}catch(e){}try{preloadData();}catch(e){}$('hint').textContent='';try{speak(greetWord()+', Ali.');}catch(e){}setTimeout(remCheck,800);},1700);
+  setTimeout(function(){hideLock();lkBusy=false;try{wakeUi();}catch(e){}try{preloadData();}catch(e){}$('hint').textContent=BR?'':'This address is new. Open Setup once and paste your bridge link and access code.';try{speak(greetWord()+', Ali.');}catch(e){}setTimeout(remCheck,800);},1700);
 }
 function hideLock(){$('lock').classList.remove('on','ok');}
 function lkKey(k){
@@ -2658,7 +2716,7 @@ function remCheck(){
   try{if(window.Notification&&Notification.permission==='granted')new Notification('M1NT reminder',{body:r.t});}catch(e){}
   var late=now-r.at>120000;showRems('Reminder',(late?'Missed reminder. ':'Reminder. ')+due.map(function(x){return x.t;}).join('. ')+'.',r,true);
 }
-window.__t={lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText};setInterval(remCheck,3000);setTimeout(remCheck,2500);
+window.__t={lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
 function addReminder(q,s){
   var pw=parseWhen(s);var txt=remText(pw?pw.rest:s);
   if(!pw){convo.pending={kind:'remwhen',text:txt,orig:q,until:Date.now()+120000};beginAsk(q);finish({headline:'When should I remind you?',small:true,spoken:'When should I remind you'+(txt?' to '+txt:'')+'?',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say a time, like in 20 minutes, or tomorrow at 9.'}]});return;}
@@ -2740,6 +2798,9 @@ function run(raw,opt){
   if(retractOnly(q)){dropHeard(q);return;}
   if(MICOFF_RE.test(q)){micOff();return;}
   if(isGoodnight(q)){byeSleep(q);return;}
+  if(/^(?:(?:hey |ok |okay |so |and |can you |could you |would you |will you |please |mint )*)(?:text|send|message|txt|shoot|email)\s+(?:me|my (?:phone|cell|number))\b/.test(l)&&wcq>=3){logMic('route','text me');cmdTextMe(q);return;}
+  if(wcq<=14&&/\b(?:how(?:'?s| is| are)|is|are|did|has|have|check|status of|what'?s|whats)\b/.test(l)&&/\b(watchdog|fixer|self.?heal|booking sync|back ?up|credit total|(?:morning|daily|evening) briefings?|calendar sync|follow.?up manager|deposit reminders?|notion|quo|make|urable)\b/.test(l)&&/\b(doing|working|running|ran|run|status|healthy|ok|okay|alright|fine|broken|down|last|going|holding)\b/.test(l)&&!/\b(weather|forecast)\b/.test(l)){logMic('route','system status');cmdHealth(q);return;}
+  var stk=smallTalk(q);if(stk){logMic('route','small talk');beginAsk(q);finish({headline:stk,small:true,spoken:stk,tags:[srcTag('live','Just talking')]});return;}
   if(routeKnown(q,opt))return;
   if(BR){cmdBridge(q,opt);return;}
   if((/^(search|look up|google|find out|news)\b|latest news|what('?s| is) the news|\b(what time|when) (does|do|is) .+ (close|open|closes|opens)\b|\bhours\b|\bis .+ open\b|\bphone number\b|\baddress (for|of)\b|\bhow (much|many|old|tall|far)\b|^who (is|was)\b|^what (is|are|was) (a|an|the)\b/.test(l))&&!/deposit|payment|\bjobs?\b|customer|credit|usage|schedule|calendar|appointment|lead/.test(l)){var ch=!opt.clarified&&needsPlace(q);if(ch){askPlace(q,ch);return;}cmdWeb(q,opt);return;}
