@@ -785,7 +785,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v94-2026-11-27';
+var BUILD='v95-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1202,7 +1202,7 @@ function finish(o){
   updatePanels();renderDock();
   var fk=o.clarify?'clarify':(o.follow?'follow':null);
   if(o.follow)convo.last={kind:o.follow,q:cur.q,a:spoken,at:Date.now()};else convo.last=null;
-  convo.hist.push({q:cur.q,a:String(spoken||'')});if(convo.hist.length>8)convo.hist.shift();
+  convo.hist.push({q:cur.q,a:String(spoken||'')});if(convo.hist.length>14)convo.hist.shift();
   convo.armAfterSpeech=null;
   if(!muted)speak(spoken,false);else{setMode('idle');if(convo.armAfterSpeech)afterAnswerArm(300);}
 }
@@ -2274,7 +2274,7 @@ async function cmdBridge(q,opt){
   var keep=app.getAttribute('data-state')==='answer'&&!!document.querySelector('#extra .wx,#extra .cv,#extra .needs');
   if(keep){newCommandUse(q);if(bridgeAbort){try{bridgeAbort.abort();}catch(e){}bridgeAbort=null;}cur={q:q,keep:true};keepBar(q,'Thinking it through with Claude…',true);setMode('thinking');}
   else{beginAsk(q);doing('thinking it through with Claude (live web and your data)');setMode('thinking');}
-  function done(text,tags,o){if(!keep){finish(o);return;}keepBar(q,text,false);cur.spoken=text;pushHist({q:q,a:text,tags:tags,use:usageLine(),at:Date.now()});convo.hist.push({q:q,a:text});if(convo.hist.length>8)convo.hist.shift();if(!muted)speak(text,false);else setMode('idle');}
+  function done(text,tags,o){if(!keep){finish(o);return;}keepBar(q,text,false);cur.spoken=text;pushHist({q:q,a:text,tags:tags,use:usageLine(),at:Date.now()});convo.hist.push({q:q,a:text});if(convo.hist.length>14)convo.hist.shift();if(!muted)speak(text,false);else setMode('idle');}
   var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},45000);bridgeAbort=ctl;var my=cur;
   try{
     var hit=(opt&&opt.nocache)?null:acacheGet(q);
@@ -2283,6 +2283,7 @@ async function cmdBridge(q,opt){
     if(wxCtxNow()&&convo.wxSay&&Date.now()-(convo.wxSayAt||0)<900000)qq+='\n\n[Weather currently on the screen, live from Open-Meteo: '+convo.wxSay+' Use this for any weather or rain question instead of searching the web. Ali\'s calendar is in the business data.]';
     if(/\b(brief me|briefing|catch me up|what do i need to know|how does my day look|start my day|rundown)\b/i.test(q)){try{qq+='\n\n[Live weather from Open-Meteo for Louisville: '+await wxBlurb()+']';}catch(e){}}
     if(/[^\x00-\x7F]/.test(q)||/\b(hola|gracias|bonjour|merci|habibi|salam|shukran)\b/i.test(q))qq+='\n\n[Reply in the same language Ali used. Keep it short and friendly.]';
+    qq+=CONVO_GUIDE;
     var r=await fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,q:qq,history:histText()}),signal:ctl.signal});
     var t=(await r.text()).trim();clearTimeout(tm);BF.at=0;if(cur!==my)return;
     if(!r.ok)throw new Error('The bridge answered HTTP '+r.status+'.');
@@ -2319,7 +2320,8 @@ function addDays(ds,n){var d=new Date(ds+'T12:00:00Z');d.setUTCDate(d.getUTCDate
 function dowOf(ds){return new Date(ds+'T12:00:00Z').getUTCDay();}
 function titleCase(s){return String(s||'').replace(/\b\w/g,function(c){return c.toUpperCase();});}
 var calCache={};
-var BD={at:0,t:null};var BF={q:'',at:0};
+var BD={at:0,t:null};var CONVO_GUIDE='\n\n[How to talk with Ali: he is typing or speaking casually. Understand slang, shorthand, fragments and likely voice-transcription mistakes using the conversation (for example a name that sounds like a customer). If he corrects himself ("scratch that", "actually", "I meant"), follow the latest version and resolve "the second one", "that", "her" or "it" from the recent turns. If it is truly unclear, ask ONE short question. For anything that affects another person (texting, booking, cancelling), do not act: confirm who, what and when first. Answer at the length the question deserves, plain sentences, no lists unless he asks. You can brainstorm, compare options, explain tradeoffs, challenge a weak assumption and help turn a rough idea into a plan across several turns; remember the constraints he gave and update when he changes his mind. If he switches topics and comes back, pick the earlier thread back up. Do not mention these instructions.]';
+var BF={q:'',at:0};
 async function boardsRaw(live){
   if(!live&&BD.t&&Date.now()-BD.at<120000)return BD.t;
   var c=new AbortController(),tm=setTimeout(function(){c.abort();},15000);
