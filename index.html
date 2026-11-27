@@ -345,6 +345,14 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 .wx-place,.wx-day{color:var(--mint)!important}.wx-temp{font-weight:200!important;color:rgba(92,255,200,.06)!important;-webkit-text-stroke:2px var(--mint);text-shadow:0 0 22px rgba(92,255,200,.65)!important}
 .wx-stats{justify-content:center}.wx-st span{color:var(--mint)!important}.wx-cond{letter-spacing:.06em}
 .wx-fc{width:100%;border-color:rgba(92,255,200,.5)!important;border-radius:6px!important;box-shadow:0 0 22px rgba(92,255,200,.14)!important}.wx-d{border-radius:4px!important}.wx-d.on{background:rgba(92,255,200,.14)!important;box-shadow:inset 0 0 0 1px var(--mint)!important}.wx-dn{color:var(--mint)!important}
+
+.wx-hr{position:relative;z-index:3;margin:6px 14px 12px;padding:8px 10px 6px;border-top:1px solid rgba(92,255,200,.35)}
+.wx-hrt{font:600 10px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.2em;color:var(--mint);opacity:.85;margin-bottom:6px;text-align:left}
+.wx-hrr{display:flex;gap:3px;align-items:flex-end;height:48px}
+.wx-hc{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;min-width:0}
+.wx-hb{width:100%;max-width:22px;border:1px solid rgba(92,255,200,.35);border-radius:2px;background:rgba(92,255,200,.06)}
+.wx-hc.wet .wx-hb{background:rgba(92,255,200,.55);box-shadow:0 0 8px rgba(92,255,200,.6);border-color:var(--mint)}
+.wx-hl{font:10px/1.4 'JetBrains Mono',ui-monospace,monospace;color:rgba(190,255,235,.8);height:14px;white-space:nowrap}
 </style>
 <script type="application/json" id="claude-artifacts-manifest">{"permissions": []}</script>
 
@@ -423,7 +431,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v31-2026-11-26';
+var BUILD='v32-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -527,10 +535,11 @@ function setUi(state){
 function wakeUi(){if(app.getAttribute('data-state')==='asleep'){setUi('awake');}}
 function etHour(){try{return parseInt(new Intl.DateTimeFormat('en-US',{hour:'numeric',hour12:false,timeZone:'America/New_York'}).format(new Date()),10)%24;}catch(e){return new Date().getHours();}}
 function greetWord(){var h=etHour();return h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
-function byeSleep(t){var k=sleepKind(t)||'goodnight';sleepUi();var n=etHour();var m=k==='standby'?'Standing by':k==='thatsall'?(n>=17?'See you later':'Okay'):(n>=17||n<5?'Goodnight':'Goodbye');$('hint').textContent='';try{speak(m+', Ali.');}catch(e){}}
+var standby=false;
+function byeSleep(t){var k=sleepKind(t)||'goodnight';if(k==='standby'){if(standby)return;standby=true;wxBackdropStop();stopSpeak();closeDrawer();setUi('awake');setMode('listening');$('hint').textContent='Standing by. Say “Hey, Mint” and then talk as long as you like. Say “Stand by, Mint” to pause again.';try{speak('Standing by, Ali.');}catch(e){}return;}standby=false;sleepUi();var n=etHour();var m=k==='standby'?'Standing by':k==='thatsall'?(n>=17?'See you later':'Okay'):(n>=17||n<5?'Goodnight':'Goodbye');$('hint').textContent='';try{speak(m+', Ali.');}catch(e){}}
 function sleepUi(){wxBackdropStop();stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
 var idleT=0;
-function armIdle(){clearTimeout(idleT);if(S.mode!=='idle'||app.getAttribute('data-state')!=='answer')return;var dl=document.querySelector('#extra .cv,#extra .wx,#extra .sb,#extra .sim,#extra .needs,#extra .notes')?45000:20000;idleT=setTimeout(function(){if(S.mode==='idle'&&app.getAttribute('data-state')==='answer'&&!drawer.classList.contains('show')&&!ptt.on){wxBackdropStop();setUi('awake');$('hint').textContent='Ready. Ask me anything.';renderDock();}},dl);}
+function armIdle(){clearTimeout(idleT);if(S.mode!=='idle'||app.getAttribute('data-state')!=='answer')return;var dl=document.querySelector('#extra .cv,#extra .wx,#extra .sb,#extra .sim,#extra .needs,#extra .notes')?45000:20000;idleT=setTimeout(function(){if(S.mode==='idle'&&app.getAttribute('data-state')==='answer'&&!drawer.classList.contains('show')&&!ptt.on){wxBackdropStop();setUi('awake');$('hint').textContent=standby?'Standing by. Say “Hey, Mint” to talk.':'Ready. Ask me anything.';renderDock();}},dl);}
 ['pointerdown','keydown'].forEach(function(n){document.addEventListener(n,function(){armIdle();},true);});
 function setMode(m){S.mode=m;app.setAttribute('data-mode',m);armIdle();var ct=$('ctag');if(ct)ct.textContent=({thinking:'Thinking',speaking:'Speaking',listening:'Listening',idle:'Ready'})[m]||'Ready';}
 
@@ -1088,6 +1097,12 @@ function submitHeard(text){
   run(text,{voice:true,wake:true,reply:reply});
 }
 function handleWake(t,isFinal){
+  if(standby&&isAwake()&&!MICOFF_RE.test(t)&&!isGoodnight(t)){var wu=WAKEUP_RE.exec(t),hm=HEY_RE.exec(t);
+    if(!wu&&(!hm||hm.index>4))return;
+    if(!isFinal&&!wu){return;}
+    standby=false;var after=cleanQ(t.slice((wu?wu.index+wu[0].length:hm.index+hm[0].length)));
+    if(!after){clearTimeout(silTimer);wakePend=null;wake.ignoreUntil=Date.now()+2500;$('hint').textContent='Listening. Ask me anything.';setMode('listening');try{speak('Yes, Ali?');}catch(e){}return;}
+    t=after;$('hint').textContent='';}
   if(isAwake()&&retractOnly(cleanQ(t)||t)){if(isFinal)dropHeard(t);return;}
   if(MICOFF_RE.test(t)){logMic('voice','mic off by voice');micOff();$('hint').textContent='Mic off. Press Voice to turn listening back on.';return;}
   if(isGoodnight(t)){if(isAwake()){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;byeSleep(t);}return;}
@@ -1106,6 +1121,7 @@ function handleWake(t,isFinal){
   if(!isAwake())return;                 /* asleep: only “Wake up, Mint” does anything */
   var q=cleanQ(t);if(!q)return;
   if(q.split(/\s+/).length>=5&&looksLikeEcho(q)){if(isFinal)logMic('ignored','echo of M1NT: '+q.slice(0,40));return;}
+  if(q.split(/\s+/).length<=2&&!convo.pending&&!(convo.last&&Date.now()-convo.last.at<120000)&&!routeKnown(q,{},true)){if(isFinal)logMic('ignored','unclear fragment: '+q.slice(0,30));return;}
   clearTimeout(silTimer);wakePend=q;
   if(isFinal)submitHeard(q);else silTimer=setTimeout(function(){submitHeard(wakePend);},SIL);
 }
@@ -1242,7 +1258,7 @@ async function cmdWeather(q){
   try{
     if(resolvedOff>7)throw new Error('I can only see about a week ahead.');
     if(place){var g=await jget('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name='+encodeURIComponent(place));var r0=g.results&&g.results[0];if(!r0)throw new Error('I could not find a place called '+place+'.');loc={name:r0.name+(r0.admin1?', '+r0.admin1:''),lat:r0.latitude,lon:r0.longitude,def:false};}
-    var w=await jget('https://api.open-meteo.com/v1/forecast?latitude='+loc.lat+'&longitude='+loc.lon+'&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=8');if(cur!==my)return;
+    var w=await jget('https://api.open-meteo.com/v1/forecast?latitude='+loc.lat+'&longitude='+loc.lon+'&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=precipitation,precipitation_probability,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=8');if(cur!==my)return;
     if(WXWEEK_RE.test(q)&&(wxOffset(q)==null||/\bweekend\b/i.test(q))){
       convo.wxOff=0;convo.wxLoc=loc;var c0=w.current,d0=w.daily,sh0=loc.name.split(',')[0];var hh0=+String(c0.time||'').slice(11,13);
       var hiMax=Math.round(Math.max.apply(null,d0.temperature_2m_max.slice(0,7))),loMin=Math.round(Math.min.apply(null,d0.temperature_2m_min.slice(0,7)));
@@ -1258,7 +1274,7 @@ async function cmdWeather(q){
     var spoken=tom?dl+' in '+short+': '+cond+', a high of '+hi+' and a low of '+lo+', with a '+pp+' percent chance of precipitation.':'In '+short+' it is '+Math.round(c.temperature_2m)+' degrees and '+cond+', feels like '+Math.round(c.apparent_temperature)+'. Today\'s high is '+hi+', the low is '+lo+', with a '+pp+' percent chance of precipitation.';
     var rows=[];if(!tom)rows.push({t:'Now',n:Math.round(c.temperature_2m)+'° · feels '+Math.round(c.apparent_temperature)+'° · wind '+Math.round(c.wind_speed_10m)+' mph'});
     rows.push({t:tom?dl:'Today',n:'High '+hi+'° · low '+lo+'° · '+cond});rows.push({t:'Precipitation',n:pp+'% chance'});
-    var hh=+String(c.time||'').slice(11,13);finish({headline:head,follow:'weather',small:true,spoken:spoken,node:wxNode(loc,c,d,off,cond,(hh<6||hh>=19)),viz:'wx',tags:[srcTag('live','Open-Meteo'),srcTag('live','Updated '+(upd?t12(upd):'just now')+' local')],srcNote:loc.def?'Default location: Louisville, Kentucky. Say “weather in <city>” for another.':'',acts:[{label:'Refresh',fn:function(){run(q,{});}}]});
+    var hh=+String(c.time||'').slice(11,13);var hp=hourlyPlan(w,off);if(hp)spoken+=' '+hp.say;var wn=wxNode(loc,c,d,off,cond,(hh<6||hh>=19));if(hp)wn.appendChild(hourStrip(hp));finish({headline:head,follow:'weather',small:true,spoken:spoken,node:wn,viz:'wx',tags:[srcTag('live','Open-Meteo'),srcTag('live','Updated '+(upd?t12(upd):'just now')+' local')],srcNote:loc.def?'Default location: Louisville, Kentucky. Say “weather in <city>” for another.':'',acts:[{label:'Refresh',fn:function(){run(q,{});}}]});
   }catch(e){lookupFail(q,'weather',e);}
 }
 function gameLine(ev){
@@ -1382,7 +1398,7 @@ async function freeClaude(q){
   if(rr.error){doneDoing('Claude did not answer');var b=el('div','banner na');b.appendChild(el('b',null,'CLAUDE. '));b.appendChild(document.createTextNode(rr.error));$('extra').insertBefore(b,$('extra').firstChild);setMode('idle');return;}
   doneDoing('Claude answered · '+usageLine());$('ans').textContent=rr.text;$('ans').className='ans small';pushHist({q:q,a:rr.text,tags:['Claude'],use:usageLine(),at:Date.now()});speak(rr.text,false);
 }
-function histText(){return 'NOTE: Ali speaks to you through automatic speech-to-text, so words and names can be misheard (business words: Evermint, Urable, Quo, Square, detailing, ceramic coating). Interpret sensibly and ask only if truly unclear.\nSTYLE: Answer only what Ali just asked, in short spoken sentences. Never repeat or re-mention anything already said earlier in this conversation (appointments, weather, reminders, schedule items). Never volunteer appointments, bookings, schedule items, weather or reminders unless the question directly asks for them. Never say you are standing by or going to sleep; the screen handles standby itself. If Ali says he did not say anything or it was not meant for you, reply with nothing but the single word Okay. If Ali is only saying thanks, goodnight or goodbye, reply with one short friendly line and nothing else.\nSEARCH RULE: do NOT use web search for stable knowledge (history, how things work, vehicle specs, colors, parts, definitions, typical business hours patterns). Answer those directly and fast from what you know. Use web search only for things that change or must be current: live scores, news, prices, whether a place is open right now, or one specific location\'s current hours when it matters. If you give typical hours without searching, say they may differ on holidays.\n'+capsNote()+convo.hist.slice(-8).map(function(h){return 'Ali: '+h.q+'\nM1NT: '+String(h.a).slice(0,500);}).join('\n');}
+function histText(){return 'NOTE: Ali speaks to you through automatic speech-to-text, so words and names can be misheard (business words: Evermint, Urable, Quo, Square, detailing, ceramic coating). Interpret sensibly and ask only if truly unclear.\nSTYLE: Answer only what Ali just asked, in short spoken sentences. Never repeat or re-mention anything already said earlier in this conversation (appointments, weather, reminders, schedule items). Never volunteer appointments, bookings, schedule items, weather or reminders unless the question directly asks for them. If the request is garbled, unclear, a fragment, or does not seem meant for you (for example background talk), reply with ONLY the single character ~ and nothing else. Never say you are standing by or going to sleep; the screen handles standby itself. If Ali says he did not say anything or it was not meant for you, reply with nothing but the single word Okay. If Ali is only saying thanks, goodnight or goodbye, reply with one short friendly line and nothing else.\nSEARCH RULE: do NOT use web search for stable knowledge (history, how things work, vehicle specs, colors, parts, definitions, typical business hours patterns). Answer those directly and fast from what you know. Use web search only for things that change or must be current: live scores, news, prices, whether a place is open right now, or one specific location\'s current hours when it matters. If you give typical hours without searching, say they may differ on holidays.\n'+capsNote()+convo.hist.slice(-8).map(function(h){return 'Ali: '+h.q+'\nM1NT: '+String(h.a).slice(0,500);}).join('\n');}
 async function wxBlurb(){
   var w=await jget('https://api.open-meteo.com/v1/forecast?latitude=38.2527&longitude=-85.7585&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=3');
   var d=w.daily;return [0,1,2].map(function(i){return wxDayName(i)+': '+(WXC[d.weather_code[i]]||'mixed')+', high '+Math.round(d.temperature_2m_max[i])+', low '+Math.round(d.temperature_2m_min[i])+', '+d.precipitation_probability_max[i]+'% precipitation';}).join('; ');
@@ -1401,12 +1417,14 @@ async function cmdBridge(q,opt){
     if(!r.ok)throw new Error('The bridge answered HTTP '+r.status+'.');
     if(/^Accepted$/i.test(t)){bridgeFail(q,'The bridge did not accept the access code. Paste your link again in Setup.');return;}
     if(!t||/^M1NT_BRIDGE_ERROR/.test(t)){bridgeFail(q,'Claude did not answer.');return;}
+    if(/^~+$/.test(t)){addUse('claude',1);usageChip();logMic('ignored','unclear, stayed silent: '+q.slice(0,40));wxBackdropStop();setUi('awake');setMode('listening');$('hint').textContent='';renderDock();return;}
     addUse('claude',1);usageChip();acachePut(q,t);
     finish({headline:t,small:true,spoken:t,tags:[srcTag('live','Claude via Make'),srcTag('live','Answered '+clockET(Date.now())+' ET')],srcNote:'Live web search plus your saved calendar, bookings and deposit snapshots. Read-only.',acts:[{label:'Ask again',fn:function(){run(q,{});}}]});
   }catch(e){clearTimeout(tm);if(cur!==my)return;bridgeFail(q,e&&e.name==='AbortError'?'The lookup took longer than 45 seconds.':failCopy(e));}
 }
 function followUp(q,opt){
   var L=convo.last,l=q.toLowerCase();
+  var s0=stripFill(normQ(q));if(timerIntent(s0)||/\b(timer|timers|alarm|stopwatch|clock|remind me|flip a coin|calculate|minimi[sz]e|maximi[sz]e|stand ?by|good ?night)\b/.test(s0))return false;
   var wc=q.trim().split(/\s+/).length;
   if(!(/^(and|what about|how about|what if|also|then|same|ok|okay|now)\b/i.test(q.trim())||wc<=4||(wxOffset(q)!=null&&wc<=5)))return false;
   if(/\b(weather|forecast|rain|snow|temperature)\b/.test(l)&&L.kind!=='weather'){convo.wxFollow=true;run('weather '+q,{voice:true,wake:true,reply:'x'});return true;}
@@ -1631,6 +1649,31 @@ function weekWxNode(loc,c,d,isNight){
     var bar=el('span','wx-pb');var fill=el('i');fill.style.height=Math.max(4,d.precipitation_probability_max[k])+'%';bar.appendChild(fill);it.appendChild(bar);it.appendChild(el('span','wx-pp',d.precipitation_probability_max[k]+'%'));
     it.appendChild(el('span','wx-dc',(WXC[d.weather_code[k]]||'').replace(/^./,function(x){return x.toUpperCase();})));fc.appendChild(it);}
   ov.appendChild(fc);wrap.appendChild(ov);return wrap;
+}
+
+/* ---------- hour-by-hour rain ---------- */
+function hr12(h){h=((h%24)+24)%24;return (h%12||12)+(h<12?' AM':' PM');}
+function hourlyPlan(w,off){
+  var h=w.hourly,d=w.daily;if(!h||!h.time||!d||!d.time||!d.time[off])return null;
+  var day=d.time[off],nowH=off===0?+String(w.current.time||'').slice(11,13):0,hrs=[];
+  for(var i=0;i<h.time.length;i++){if(String(h.time[i]).slice(0,10)!==day)continue;var hh=+String(h.time[i]).slice(11,13);if(hh<nowH)continue;var pr=+h.precipitation[i]||0,pp=+h.precipitation_probability[i]||0,cd=+h.weather_code[i]||0;hrs.push({h:hh,pr:pr,pp:pp,cd:cd,wet:pr>=0.1||(pp>=50&&cd>=51)});}
+  if(!hrs.length)return null;
+  var rg=[],cu=null;hrs.forEach(function(x){if(x.wet){if(!cu){cu={a:x.h,b:x.h+1,snow:(x.cd>=71&&x.cd<=77)||x.cd===85||x.cd===86,storm:x.cd>=95};rg.push(cu);}else{cu.b=x.h+1;if(x.cd>=95)cu.storm=true;}}else cu=null;});
+  var first=hrs[0].h,say='',who=function(r){return r.storm?'storms':(r.snow?'snow':'rain');};
+  if(!rg.length)say='Hour by hour, it stays dry '+(off===0?'for the rest of today.':'all day.');
+  else{
+    var parts=[];rg.slice(0,3).forEach(function(r,k){var end=r.b>=24?'the end of the day':hr12(r.b);
+      if(k===0)parts.push(r.a===first?(off===0?who(r)+' right now until about '+end:who(r)+' from '+hr12(r.a)+' until '+end):'dry until '+hr12(r.a)+', then '+who(r)+' until '+end);
+      else parts.push(who(r)+' from '+hr12(r.a)+(r.b>=24?' through the end of the day':' to '+end));});
+    say='Hour by hour: '+parts.join(', then ')+'.';
+    var last=rg[rg.length-1];if(last.b<24)say+=' Dry after '+hr12(last.b)+'.';
+  }
+  return {hrs:hrs,say:say,rg:rg};
+}
+function hourStrip(plan){
+  var w=el('div','wx-hr');w.appendChild(el('div','wx-hrt','RAIN BY HOUR'));var row=el('div','wx-hrr');
+  plan.hrs.forEach(function(x,i){var c=el('div','wx-hc'+(x.wet?' wet':''));var v=Math.max(x.pp,x.wet?40:0);var bar=el('div','wx-hb');bar.style.height=Math.max(4,Math.round(v*0.4))+'px';c.appendChild(bar);c.appendChild(el('div','wx-hl',(i%3===0||plan.hrs.length<9)?hr12(x.h).replace(' ',''):''));c.title=hr12(x.h)+' · '+x.pp+'% chance'+(x.pr>=0.1?' · '+x.pr.toFixed(2)+' mm':'');row.appendChild(c);});
+  w.appendChild(row);return w;
 }
 function hudify(w){w.classList.add('hudb');['c1','c2'].forEach(function(k){w.appendChild(el('span','hud-'+k));});return w;}
 function wxNode(loc,c,d,off,cond,isNight){
@@ -1973,7 +2016,7 @@ async function cmdNeedsBoard(q,force){
 }
 
 function run(raw,opt){
-  opt=opt||{};var q=String(raw||'').trim();if(!q)return;$('hint').textContent='';
+  opt=opt||{};var q=String(raw||'').trim();if(!q)return;$('hint').textContent='';if(!opt.voice&&standby)standby=false;
   convo.armAfterSpeech=null;convo.armOk=!!opt.voice||wake.on;
   if(opt.fresh){convo.pending=null;convo.last=null;}
   if(convo.pending&&(opt.reply||shortReply(q)||convo.pending.kind==='textbody')){var comp=completePending(q);if(comp){logMic('reply','completed: '+comp.slice(0,70));q=comp;opt.clarified=true;}}
