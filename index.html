@@ -187,6 +187,32 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 .app.mob[data-state="answer"] .center{display:block;padding:92px 8px 124px;overflow:auto}
 .app.mob[data-state="answer"] .resp{width:100%;max-height:none;padding:14px 12px;margin:0}
 .app.mob .wakebtn{width:230px;height:230px;margin:-115px 0 0 -115px}
+
+.nc.hub{cursor:pointer;transition:transform .2s,box-shadow .2s}.nc.hub:hover{transform:translateY(-3px);box-shadow:0 0 26px rgba(92,255,200,.45)}
+.nc.fu{cursor:pointer}.nc.fu.done{opacity:.45}.nc.fu.done .nc-w{text-decoration:line-through}
+.vault{position:relative;width:min(780px,100%);height:min(440px,62vh);margin:14px auto;perspective:1400px}
+.v-in{position:absolute;inset:0;overflow:auto;padding:6px;border-radius:18px;border:1px solid var(--line);background:rgba(4,22,19,.75)}
+.v-door{position:absolute;inset:0;transform-origin:left center;transition:transform 1.5s cubic-bezier(.6,0,.2,1),opacity .4s 1.2s;border:2px solid var(--mint);border-radius:18px;background:repeating-linear-gradient(135deg,rgba(92,255,200,.05) 0 8px,transparent 8px 16px),linear-gradient(160deg,#0a2d27,#041512);box-shadow:0 0 40px rgba(92,255,200,.3),inset 0 0 40px rgba(0,0,0,.6);display:grid;place-items:center;backface-visibility:hidden}
+.vault.open .v-door{transform:rotateY(-112deg);opacity:0}
+.v-wheel{width:190px;height:190px;border-radius:50%;border:3px solid var(--mint);position:relative;display:grid;place-items:center;box-shadow:0 0 30px rgba(92,255,200,.5)}
+.v-wheel::before,.v-wheel::after{content:'';position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 10deg,rgba(92,255,200,.9) 10deg 12deg,transparent 12deg 30deg);-webkit-mask:radial-gradient(circle,transparent 58%,#000 60%,#000 100%);mask:radial-gradient(circle,transparent 58%,#000 60%,#000 100%);animation:vspin 3.2s cubic-bezier(.5,0,.3,1) forwards}
+.v-wheel::after{inset:18px;animation-direction:reverse;opacity:.7;animation-duration:2.6s}
+.vault.unlocked .v-wheel{animation:vclunk .5s}
+@keyframes vspin{to{transform:rotate(720deg)}}
+@keyframes vclunk{40%{transform:scale(1.08) rotate(14deg)}}
+.v-core{font:700 13px var(--font-m);letter-spacing:.16em;color:var(--mint)}
+.v-code{display:flex;gap:10px;position:absolute;top:34px}
+.v-slot{width:46px;height:58px;border:1px solid var(--mint);border-radius:10px;display:grid;place-items:center;font:700 26px var(--font-m);color:var(--mint);background:rgba(0,0,0,.4)}
+.v-slot.lk{background:rgba(92,255,200,.25);box-shadow:0 0 18px rgba(92,255,200,.7)}
+.v-st{position:absolute;bottom:26px;font:600 11px var(--font-m);letter-spacing:.18em;color:var(--mint);text-align:center;padding:0 12px}
+.sim-ripple{position:absolute;right:20px;bottom:70px;width:30px;height:30px;border-radius:50%;border:2px solid var(--mint);animation:ripple 1s ease-out forwards;pointer-events:none}
+@keyframes ripple{to{transform:scale(7);opacity:0}}
+.sim-bub.fly{animation:flyin .7s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes flyin{0%{transform:translateY(120px) scale(.7);opacity:.2}100%{transform:none;opacity:1}}
+.sim-stamp{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-8deg) scale(.4);border:3px solid var(--mint);color:var(--mint);font:800 20px var(--font-m);letter-spacing:.14em;padding:8px 16px;border-radius:10px;opacity:0;animation:stampin 1.6s ease-out forwards;background:rgba(3,16,13,.7);pointer-events:none;text-align:center}
+@keyframes stampin{20%{opacity:1;transform:translate(-50%,-50%) rotate(-8deg) scale(1.15)}35%{transform:translate(-50%,-50%) rotate(-8deg) scale(1)}85%{opacity:1}100%{opacity:0}}
+.app[data-viz="board"] .sim-phone{width:min(400px,92vw);min-height:min(60vh,560px)}
+.app[data-viz="board"] .sim{gap:30px;align-items:stretch}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* ===== visual screens ===== */
 .app[data-state="answer"][data-viz] .center{padding:10px 24px 4px 230px}
@@ -516,6 +542,105 @@ var ET='America/New_York', MAKE='Make', QUO='Quo', NOTION='Notion';
 var INSPECTOR=7197564, SCRATCH=211760, PAUSES=209760, DEPOSITS=209683, CONFIG=209770, TEAM=2358449;
 var QUO_INBOX='+15028062444', ALI='+15027162230';
 var LEADS_URL='collection://d4976344-8214-48f0-b38f-6514c1f793f0';
+
+/* ---------- shared data helpers ---------- */
+function parseNext(str){
+  var m=/^(?:\w+\s+)?([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2})(?:,?\s+(\d{4}))?/.exec(String(str||'').trim());if(!m)return null;
+  var MO={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};var mo=MO[m[1].toLowerCase()];if(mo==null)return null;
+  var td=etDay(0),y=m[3]?+m[3]:+td.slice(0,4);var ds=y+'-'+('0'+(mo+1)).slice(-2)+'-'+('0'+m[2]).slice(-2);
+  if(!m[3]&&ds<addDays(td,-200))ds=(y+1)+ds.slice(4);return ds;
+}
+async function getLeadRows(live){
+  var t;if(!live&&leadsCache&&Date.now()-leadsCache.at<300000)t=leadsCache.t;else{t=await bridgePost(LEADS_Q,'NOTE: machine-readable request from the screen. Output exactly the lines requested.',50000);leadsCache={at:Date.now(),t:t};addUse('claude',1);usageChip();}
+  return String(t).split(/\n+/).map(function(l){return l.split('|').map(function(x){return x.trim();});}).filter(function(p){return p.length>=6&&p[0];}).map(function(p){var nd=parseNext(p[5]);return {name:p[0],veh:p[1],status:p[2],stage:p[3],got:p[4],next:p[5],nd:nd,note:p[6]||'',g:leadGroup(p)};});
+}
+async function getCustRows(live){
+  var t;if(!live&&custCache&&Date.now()-custCache.at<300000)t=custCache.t;else{t=await bridgePost(CUST_Q,'NOTE: machine-readable request from the screen. Output exactly the lines requested.',50000);custCache={at:Date.now(),t:t};addUse('claude',1);usageChip();}
+  if(/^\W*none\W*$/i.test(t))return [];
+  return String(t).split(/\n+/).map(function(l){return l.split('|').map(function(x){return x.trim();});}).filter(function(p){return p.length>=4&&p[0];}).map(function(p){var pay=p[3].toLowerCase();return {name:p[0],veh:p[1],when:p[2],pay:p[3],bad:/none|balance due/.test(pay),paid:/paid/.test(pay)&&!/none/.test(pay),waived:/waive/.test(pay)};});
+}
+function initials(n){return n.split(/\s+/).map(function(w){return w.charAt(0);}).join('').slice(0,2).toUpperCase();}
+
+/* ---------- hub: pick a tab, it maximizes; thanks/done brings you back ---------- */
+var HUB=[{t:'Calendar',ic:'▦',d:'Today and this week',say:"what's on my schedule today"},{t:'Weather',ic:'☁',d:'Forecast and rain by the hour',say:'show me the weather'},{t:'Leads',ic:'◎',d:'Pipeline by status',say:'how are my leads looking'},{t:'Follow-ups',ic:'✓',d:'Who to text today',say:'who should I follow up with'},{t:'Elite clients',ic:'♛',d:'Your four VIPs',say:'how are my elite clients looking'},{t:'Customers',ic:'☺',d:'Coming up, next 30 days',say:'show me my customers'},{t:'Deposits',ic:'$',d:'Who has paid',say:'show me the deposits'},{t:'Morning briefing',ic:'☀',d:'Your day, set up',say:'morning briefing'},{t:'Evening briefing',ic:'☾',d:'Tomorrow, set up',say:'evening briefing'},{t:'What needs me',ic:'!',d:'Things waiting on you',say:'what needs me'},{t:'System',ic:'⚡',d:'Is everything running',say:"how's the system running"},{t:'Vault',ic:'🔒',d:'Money and expenses',say:'pull up the expenses for the week'}];
+function cmdHub(q,opt){
+  beginAsk(q);var items=HUB.map(function(h){return {type:'CUSTOMER',icon:h.ic,k:'OPEN',who:h.t,detail:h.d};});
+  var node=boardNode('bd-hub',[[HUB.length,'Tabs']],items);
+  [].forEach.call(node.querySelectorAll('.nc'),function(c,i){c.classList.add('hub');c.setAttribute('role','button');c.tabIndex=0;var go=function(){sfx('pick');run(HUB[i].say,{});};c.addEventListener('click',go);c.addEventListener('keydown',function(e){if(e.key==='Enter')go();});});
+  finish({headline:'What would you like to open?',small:true,spoken:(opt&&opt.back)?'Anytime, Ali. What would you like to open next?':'Here is everything I can open. Tap one, or just say it, like open leads or open the calendar. Say thanks when you are done and I will bring you back here.',node:node,viz:'board',tags:[srcTag('live','Tabs')],srcNote:'Tap a tab. Say thanks or all done to come back here.'});
+}
+
+/* ---------- deposits board ---------- */
+async function cmdDeposits(q,opt){
+  beginAsk(q);doing('reading deposits and payments through Make');var my=cur;
+  if(!BR){finish({headline:'Deposits need the Claude link.',small:true,spoken:'Deposits need the Claude link in Setup.',tags:[srcTag('na','Unavailable')]});return;}
+  try{var rows=await getCustRows(!!(opt&&opt.live));if(cur!==my)return;
+    if(!rows.length){finish({headline:'No upcoming jobs to check.',small:true,spoken:'I do not see any upcoming jobs, so there are no deposits to check.',tags:[srcTag('live','Make data')]});return;}
+    var order=function(r){return r.bad?0:(r.paid?2:(r.waived?3:1));};rows.sort(function(a,b){return order(a)-order(b);});
+    var items=rows.map(function(r){return {type:r.bad?'WARN':'CUSTOMER',icon:r.bad?'!':(r.paid?'✓':(r.waived?'–':'?')),k:r.when.toUpperCase(),who:r.name,detail:r.veh,pill:r.pay.toUpperCase(),pillk:r.bad?'warn':''};});
+    var bad=rows.filter(function(r){return r.bad;}).length,paid=rows.filter(function(r){return r.paid;}).length,wv=rows.filter(function(r){return r.waived;}).length;
+    finish({headline:bad?bad+(bad===1?' deposit still missing':' deposits still missing'):'Deposits look good',small:true,spoken:(bad?bad+(bad===1?' customer has':' customers have')+' not paid a deposit yet: '+rows.filter(function(r){return r.bad;}).map(function(r){return r.name+', '+r.when;}).join('. ')+'. ':'Every upcoming customer is covered. ')+paid+' paid'+(wv?' and '+wv+' waived by you':'')+'.',node:boardNode('bd-dep',[[bad,'Missing'],[paid,'Paid'],[wv,'Waived']].filter(function(c){return c[0]>0;}),items),tags:[srcTag('live','Claude via Make'),srcTag('live','Read '+clockET(Date.now())+' ET')],srcNote:'From booked jobs and recorded payments. Read-only.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}}]});
+  }catch(e){if(cur!==my)return;bridgeFail(q,failCopy(e));}
+}
+
+/* ---------- follow-up list ---------- */
+async function cmdFollowups(q,opt){
+  beginAsk(q);doing('ranking your follow-ups from Notion through Make');var my=cur;
+  if(!BR){finish({headline:'Follow-ups need the Claude link.',small:true,spoken:'Follow-ups need the Claude link in Setup.',tags:[srcTag('na','Unavailable')]});return;}
+  try{var rows=await getLeadRows(!!(opt&&opt.live));if(cur!==my)return;
+    if(!rows.length){finish({headline:'I cannot see your leads yet.',small:true,spoken:'I cannot read the leads snapshot right now, so I cannot rank follow-ups.',tags:[srcTag('na','Not connected')]});return;}
+    var td=etDay(0),tm=addDays(td,1);
+    var act=rows.filter(function(r){return r.g!=='future'||(r.nd&&r.nd<=tm);}).sort(function(a,b){return (a.nd||'9999')<(b.nd||'9999')?-1:1;});
+    var due=act.filter(function(r){return r.nd&&r.nd<=tm;});var later=act.filter(function(r){return !(r.nd&&r.nd<=tm);});
+    var list=due.concat(later).slice(0,14);
+    var items=list.map(function(r){var d=r.nd&&r.nd<=tm;return {type:d?'WARN':'CUSTOMER',icon:'○',k:(r.nd&&r.nd<td?'OVERDUE':(r.nd===td?'TODAY':(r.nd===tm?'TOMORROW':(r.next||'NO DATE').toUpperCase()))),who:r.name,detail:(r.note||r.status)+' · '+r.veh,pill:r.status.toUpperCase(),pillk:d?'warn':''};});
+    var node=boardNode('bd-fu',[[due.length,'Due now'],[later.length,'Later']].filter(function(c){return c[0]>0;}),items);
+    [].forEach.call(node.querySelectorAll('.nc'),function(c){c.classList.add('fu');c.addEventListener('click',function(){var on=c.classList.toggle('done');c.querySelector('.nc-g').textContent=on?'✓':'○';sfx(on?'pick':'tick');});});
+    var top=due.slice(0,3).map(function(r){return r.name;});
+    finish({headline:due.length?due.length+(due.length===1?' follow-up due':' follow-ups due'):'No follow-ups due',small:true,spoken:due.length?'Start with '+top.join(', ')+(due.length>3?', and '+(due.length-3)+' more':'')+'. Tap a card to check it off on screen.':'Nothing is due by tomorrow. The next ones are listed.',node:node,tags:[srcTag('live','Notion via Make'),srcTag('live','Snapshot, not live')],srcNote:'Ranked by next follow-up date. Check-offs are only on this screen; nothing is sent or saved.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}}]});
+  }catch(e){if(cur!==my)return;bridgeFail(q,failCopy(e));}
+}
+
+/* ---------- morning / evening briefing ---------- */
+async function cmdBrief2(q,kind,opt){
+  beginAsk(q);doing('building your '+kind+' briefing');var my=cur;
+  if(!BR){finish({headline:'Briefings need the Claude link.',small:true,spoken:'Briefings need the Claude link in Setup.',tags:[srcTag('na','Unavailable')]});return;}
+  var eve=kind==='evening',day=eve?addDays(etDay(0),1):etDay(0),live=!!(opt&&opt.live);
+  var wxP=jget('https://api.open-meteo.com/v1/forecast?latitude=38.25&longitude=-85.76&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&timezone=America%2FNew_York&temperature_unit=fahrenheit&forecast_days=3').catch(function(){return null;});
+  var calP=calBridgeFetch(day,day,live).catch(function(){return null;});
+  var ldP=getLeadRows(live).catch(function(){return null;});
+  var cuP=getCustRows(live).catch(function(){return null;});
+  var res=await Promise.all([wxP,calP,ldP,cuP]);if(cur!==my)return;
+  var wx=res[0],cal=res[1],leads=res[2],cust=res[3];var items=[],say=[];
+  var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];var dd=new Date(day+'T12:00:00Z');var dl=WD[dd.getUTCDay()];
+  say.push(eve?'Good evening, Ali. Here is tomorrow.':'Good morning, Ali. Here is your day.');
+  if(wx&&wx.daily){var i=eve?1:0,hi=Math.round(wx.daily.temperature_2m_max[i]),lo=Math.round(wx.daily.temperature_2m_min[i]),pp=wx.daily.precipitation_probability_max[i],cd=wx.daily.weather_code[i];var kn=wxKind(cd,false);var wet=/rain|drizzle|snow|storm/.test(kn);
+    items.push({type:wet?'WARN':'OK',icon:wxGlyph(cd),k:'WEATHER '+(eve?'TOMORROW':'TODAY'),who:hi+'° / '+lo+'°',detail:kn.charAt(0).toUpperCase()+kn.slice(1)+' · '+pp+'% chance of precipitation',pill:wet?'PLAN FOR IT':'CLEAR ENOUGH',pillk:wet?'warn':''});say.push('It will be '+hi+' degrees with '+kn+(wet?', so plan for it':'')+'.');}
+  else{items.push({type:'WARN',icon:'?',k:'WEATHER',who:'Not available',detail:'The forecast did not load',pill:'UNAVAILABLE',pillk:'warn'});}
+  var jobs=cal?cal.events.filter(function(e){return e.start.length>10&&e.start.slice(0,10)===day;}):null;
+  if(jobs){if(!jobs.length){items.push({type:'OK',icon:'▦',k:'SCHEDULE',who:'Nothing booked',detail:'A clear '+(eve?'tomorrow':'day'),pill:'OPEN'});say.push('Nothing is booked.');}
+    else{jobs.forEach(function(e){var pr=e.title.split(/:\s+/);items.push({type:'CUSTOMER',icon:initials(pr[0]),k:t12(e.start.slice(11,16))+' – '+t12(e.end.slice(11,16)),who:pr[0],detail:pr[1]||'',pill:'JOB'});});say.push('You have '+jobs.length+(jobs.length===1?' job: ':' jobs: ')+jobs.map(function(e){return e.title.split(/:\s+/)[0]+' at '+t12(e.start.slice(11,16));}).join(', ')+'.');}}
+  else{items.push({type:'WARN',icon:'?',k:'SCHEDULE',who:'Not available',detail:'The calendar did not load',pill:'UNAVAILABLE',pillk:'warn'});}
+  var pay=0;if(cust){cust.filter(function(r){return r.bad&&r.when.slice(0,3)===dl;}).forEach(function(r){pay++;items.push({type:'WARN',icon:'$',k:'DEPOSIT',who:r.name,detail:r.when+' · '+r.veh,pill:r.pay.toUpperCase(),pillk:'warn'});});if(pay)say.push(pay+(pay===1?' deposit is':' deposits are')+' still missing.');}
+  var ld=0;if(leads){var lim=eve?addDays(etDay(0),1):etDay(0);leads.filter(function(r){return r.nd&&r.nd<=lim&&r.g!=='future'||r.nd&&r.nd<=lim;}).slice(0,6).forEach(function(r){ld++;items.push({type:'WARN',icon:'◎',k:'FOLLOW UP · '+(r.nd<etDay(0)?'OVERDUE':(r.nd===etDay(0)?'TODAY':'TOMORROW')),who:r.name,detail:(r.note||r.status),pill:r.status.toUpperCase(),pillk:'warn'});});if(ld)say.push(ld+(ld===1?' lead follow-up is':' lead follow-ups are')+' due.');}
+  else{items.push({type:'WARN',icon:'?',k:'LEADS',who:'Not available',detail:'The leads snapshot did not load',pill:'UNAVAILABLE',pillk:'warn'});}
+  finish({headline:(eve?'Evening':'Morning')+' briefing',small:true,spoken:say.join(' '),node:boardNode('bd-brief',[[jobs?jobs.length:0,'Jobs'],[ld,'Follow-ups'],[pay,'Deposits']],items),tags:[srcTag('live','Weather · Calendar · Notion'),srcTag('live','Built '+clockET(Date.now())+' ET')],srcNote:'Built live from the forecast, calendar snapshot and leads snapshot. Read-only.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}},{label:eve?'Morning briefing':'Evening briefing',fn:function(){run(eve?'morning briefing':'evening briefing',{});}}]});
+}
+
+/* ---------- vault (money) ---------- */
+function vaultNode(){
+  simClear();var w=el('div','vault');var inn=el('div','v-in');
+  inn.appendChild(boardNode('bd-vault',[[0,'Connected']],[{type:'WARN',icon:'$',k:'EXPENSES',who:'Not connected',detail:'Your expenses live in Square and your bank. This screen is not connected to either, so I will not guess a number.',pill:'NEEDS A YES',pillk:'warn'},{type:'WARN',icon:'▤',k:'REVENUE',who:'Not connected',detail:'Booked revenue lives in Urable. Not connected to this screen yet.',pill:'NEEDS A YES',pillk:'warn'},{type:'OK',icon:'🔒',k:'SAFE RULE',who:'Money actions stay on your texts',detail:'Paying, refunding, charging and waiving always need your safety code in the usual approval text.',pill:'READ-ONLY'}]));
+  w.appendChild(inn);var door=el('div','v-door');var code=el('div','v-code');var slots=[0,1,2,3].map(function(){var d=el('div','v-slot','•');code.appendChild(d);return d;});door.appendChild(code);var wh=el('div','v-wheel');wh.appendChild(el('div','v-core','VAULT'));door.appendChild(wh);var st=el('div','v-st','AUTHENTICATING · VISUAL ONLY, NO CODE IS USED');door.appendChild(st);w.appendChild(door);
+  var T=function(f,ms){simTimers.push(setTimeout(f,ms));};
+  slots.forEach(function(sl,i){var n=0;(function spin(){if(!w.isConnected||sl.classList.contains('lk'))return;sl.textContent=String(Math.floor(Math.random()*10));n++;T(spin,70);})();T(function(){sl.classList.add('lk');sl.textContent='✱';sfx('tick');},650+i*480);});
+  T(function(){st.textContent='CODE ACCEPTED';w.classList.add('unlocked');sfx('unlock');},2700);
+  T(function(){st.textContent='';w.classList.add('open');},3300);
+  return w;
+}
+function cmdVault(q){
+  beginAsk(q);finish({headline:'Opening the vault',small:true,spoken:'Vault open. I cannot see your expenses or revenue yet, because this screen is not connected to Square or your bank, and I will not make up numbers. Say the word and I can connect them read only.',node:vaultNode(),viz:'board',tags:[srcTag('na','Money not connected'),srcTag('snap','Rule: read-only')],srcNote:'The animation is visual only. This screen never asks for or uses your safety code.'});
+}
 var ELITE=['Richard Decker','Marc Clark','Rebecca Lucas','David Wilson'];
 var $=function(id){return document.getElementById(id);};
 var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -531,7 +656,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v39-2026-11-26';
+var BUILD='v40-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -637,7 +762,7 @@ function setUi(state){
 var sfxOn=store('sfx')!==false,sfxCtx=null;
 function sfx(kind){
   if(!sfxOn)return;try{var A=window.AudioContext||window.webkitAudioContext;if(!A)return;sfxCtx=sfxCtx||new A();var a=sfxCtx;if(a.state==='suspended')a.resume();
-    var seqs={open:[[660,0,.09],[990,.07,.12]],wake:[[392,0,.12],[587,.1,.12],[784,.2,.22]],sleep:[[587,0,.14],[440,.12,.14],[294,.24,.26]],pick:[[880,0,.07]],tick:[[1200,0,.03]],whoosh:null};
+    var seqs={open:[[660,0,.09],[990,.07,.12]],wake:[[392,0,.12],[587,.1,.12],[784,.2,.22]],sleep:[[587,0,.14],[440,.12,.14],[294,.24,.26]],pick:[[880,0,.07]],tick:[[1200,0,.03]],unlock:[[180,0,.06],[240,.45,.06],[300,.9,.06],[360,1.35,.06],[520,1.9,.1],[1040,2.1,.3]],whoosh:null};
     var now=a.currentTime,vol=.03;
     if(kind==='whoosh'){var len=Math.floor(a.sampleRate*.5),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);for(var i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.sin(Math.PI*i/len);var src=a.createBufferSource();src.buffer=buf;var f=a.createBiquadFilter();f.type='bandpass';f.Q.value=1.2;f.frequency.setValueAtTime(400,now);f.frequency.exponentialRampToValueAtTime(3200,now+.45);var g=a.createGain();g.gain.value=.05;src.connect(f);f.connect(g);g.connect(a.destination);src.start(now);return;}
     (seqs[kind]||[]).forEach(function(n){var o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=n[0];g.gain.setValueAtTime(0,now+n[1]);g.gain.linearRampToValueAtTime(vol,now+n[1]+.015);g.gain.exponentialRampToValueAtTime(.0008,now+n[1]+n[2]+.12);o.connect(g);g.connect(a.destination);o.start(now+n[1]);o.stop(now+n[1]+n[2]+.15);});
@@ -889,7 +1014,7 @@ function finish(o){
   var ex=$('extra');var ghost=txGhost;txGhost=null;if(ghost&&!o.node){killGhost(ghost);ghost=null;}
   clear(ex);
   if(o.node){var ncl=String(o.node.className||'');var isCv=/\bcv\b/.test(ncl);app.setAttribute('data-viz',o.viz||(isCv?'cal':(/\b(clk|tmx|swx|calc|toss)\b/.test(ncl)?'center':(/\b(sim|needs)\b/.test(ncl)?'board':'1'))));ex.appendChild(o.node);
-    var fxk=isCv?'grid':(/\bbd-health\b/.test(ncl)?'pulse':(/\bbd-cust\b/.test(ncl)?'net':(/\bbd-leads\b/.test(ncl)?'stream':(/\bbd-elite\b/.test(ncl)?'rings':(/\bneeds\b/.test(ncl)?'radar':(/\b(clk|tmx|swx|calc|toss)\b/.test(ncl)?'rings':(/\bsim\b/.test(ncl)?'chat':null)))))));if(fxk){try{wxBackdrop(fxk);}catch(e){}}if(isCv)hudify(o.node);}
+    var fxk=isCv?'grid':(/\bbd-health\b/.test(ncl)?'pulse':(/\bbd-cust\b/.test(ncl)?'net':(/\bbd-leads\b/.test(ncl)?'stream':(/\bbd-(?:elite|vault)\b/.test(ncl)?'rings':(/\bbd-(?:hub|brief)\b/.test(ncl)?'radar':(/\bbd-(?:dep|fu)\b/.test(ncl)?'stream':(/\bneeds\b/.test(ncl)?'radar':(/\b(clk|tmx|swx|calc|toss)\b/.test(ncl)?'rings':(/\bsim\b/.test(ncl)?'chat':null)))))))));if(fxk){try{wxBackdrop(fxk);}catch(e){}}if(isCv)hudify(o.node);}
   if(o.rows&&o.rows.length){var rs=el('div','rows');o.rows.forEach(function(r){var row=el('div','row');row.appendChild(el('div','t',r.t));var n=el('div','n');if(r.link){var al=el('a',null,r.n);al.href=r.link;al.target='_blank';al.rel='noopener noreferrer';al.style.color='var(--mint)';n.appendChild(al);}else n.appendChild(document.createTextNode(r.n));if(r.note)n.appendChild(el('div','note',r.note));row.appendChild(n);rs.appendChild(row);});ex.appendChild(rs);}
   if(o.cards){var cs=el('div','cards');o.cards.forEach(function(c){var b=el('button','card');b.type='button';var h=el('h3');h.appendChild(el('span',null,c.title));h.appendChild(c.tag);b.appendChild(h);b.appendChild(el('div','big',c.big));b.appendChild(el('div','l1',c.line));b.addEventListener('click',function(){openView(c.view);});cs.appendChild(b);});ex.appendChild(cs);}
   (o.banners||[]).forEach(function(b){var d=el('div','banner '+(b.kind||''));d.appendChild(el('b',null,b.bold+' '));d.appendChild(document.createTextNode(b.text));ex.appendChild(d);});
@@ -1482,7 +1607,7 @@ async function cmdLeads(q,opt){
     if(cur!==my)return;var rows=String(t).split(/\n+/).map(function(l){return l.split('|').map(function(x){return x.trim();});}).filter(function(p){return p.length>=6&&p[0];});
     if(!rows.length){finish({headline:'I cannot see your leads yet.',small:true,spoken:'The leads snapshot is not connected to this screen yet, so I have nothing real to show. I will not make anything up.',node:boardNode('bd-leads',[[0,'Leads']],[{type:'WARN',icon:'?',k:'NOT CONNECTED',who:'Leads snapshot not readable',detail:'The data is saved in Make, but the screen bridge has not been allowed to read it yet.',pill:'NEEDS YES',pillk:'warn'}]),tags:[srcTag('na','Not connected')]});return;}
     var G={new:'New',quoted:'Quoted',waiting:'Waiting',future:'Later'};
-    var recs=rows.map(function(p){var g=leadGroup(p);var due=/^nov 2[67]$|today|tomorrow/i.test(p[5]||'');return {g:g,due:due,type:due?'WARN':'CUSTOMER',icon:p[0].split(/\s+/).map(function(w){return w.charAt(0);}).join('').slice(0,2).toUpperCase(),k:(p[2]||'').toUpperCase(),who:p[0],detail:p[1]+(p[6]?' · '+p[6]:''),pill:(p[5]&&!/none/i.test(p[5]))?'NEXT '+p[5].toUpperCase():'NO DATE',pillk:due?'warn':''};});
+    var recs=rows.map(function(p){var g=leadGroup(p);var nd0=parseNext(p[5]);var due=!!(nd0&&nd0<=addDays(etDay(0),1));return {g:g,due:due,type:due?'WARN':'CUSTOMER',icon:p[0].split(/\s+/).map(function(w){return w.charAt(0);}).join('').slice(0,2).toUpperCase(),k:(p[2]||'').toUpperCase(),who:p[0],detail:p[1]+(p[6]?' · '+p[6]:''),pill:(p[5]&&!/none/i.test(p[5]))?'NEXT '+p[5].toUpperCase():'NO DATE',pillk:due?'warn':''};});
     var cnt=function(k){return recs.filter(function(r){return r.g===k;}).length;};
     var w=el('div','needs bd-leads');var tabs=el('div','ltabs');var holder=el('div','lhold');
     var defs=[['all','All',recs.length],['new','New',cnt('new')],['quoted','Quoted',cnt('quoted')],['waiting','Waiting',cnt('waiting')],['future','Later',cnt('future')],['due','Due now',recs.filter(function(r){return r.due;}).length]];
@@ -1790,7 +1915,7 @@ function simClear(){simTimers.forEach(clearTimeout);simTimers=[];}
 function phoneNode(name,msg){
   simClear();
   var wrap=el('div','sim');
-  var ph=el('div','sim-phone');
+  var ph=el('div','sim-phone');ph.style.position='relative';
   var hd=el('div','sim-hd');var av=el('div','sim-av',name.split(' ').map(function(w){return w.charAt(0);}).join('').slice(0,2).toUpperCase());hd.appendChild(av);
   var who=el('div','sim-who');who.appendChild(el('b',null,name));who.appendChild(el('span',null,'Text message · Evermint line'));hd.appendChild(who);hd.appendChild(el('div','sim-badge','SIMULATION'));ph.appendChild(hd);
   var bd=el('div','sim-body');var day=el('div','sim-day','Today '+clockET(Date.now()));bd.appendChild(day);
@@ -1803,7 +1928,7 @@ function phoneNode(name,msg){
   var note=el('div','sim-note','This is a visual simulation only. M1NT is not connected to your texting line yet, so nothing leaves the screen.');side.appendChild(note);
   var go=el('button','btn pri','Play the send (simulated)');go.type='button';go.disabled=true;side.appendChild(go);wrap.appendChild(side);
   function typeIt(){typing.style.display='none';bub.style.display='';var i=0;(function step(){if(!bub.isConnected)return;bt.textContent=msg.slice(0,i);bd.scrollTop=bd.scrollHeight;if(i<msg.length){i++;simTimers.push(setTimeout(step,msg.length>140?9:16));}else{inp.textContent='';go.disabled=false;snd.disabled=false;}})();}
-  function deliver(){go.disabled=true;snd.disabled=true;inp.textContent='iMessage / text';st.textContent='Sending…';st.className='sim-st';simTimers.push(setTimeout(function(){st.textContent='Delivered (simulated) · '+clockET(Date.now());st.className='sim-st ok';bub.classList.add('sent');},1100));}
+  function deliver(){go.disabled=true;snd.disabled=true;inp.textContent='iMessage / text';st.textContent='Sending…';st.className='sim-st';bub.classList.remove('fly');void bub.offsetWidth;bub.classList.add('fly');ph.appendChild(el('div','sim-ripple'));sfx('open');simTimers.push(setTimeout(function(){st.textContent='Delivered (simulated) · '+clockET(Date.now());st.className='sim-st ok';bub.classList.add('sent');var sp=el('div','sim-stamp','DELIVERED\nSIMULATED');sp.style.whiteSpace='pre';ph.appendChild(sp);sfx('pick');setTimeout(function(){if(sp.parentNode)sp.remove();},1800);},1100));}
   go.addEventListener('click',deliver);snd.addEventListener('click',deliver);
   simCtl={node:wrap,name:name,body:msg,done:false,deliver:function(){if(simCtl&&simCtl.done)return;simCtl.done=true;deliver();}};
   inp.textContent='';simTimers.push(setTimeout(function(){inp.textContent=msg.slice(0,34)+'…';typeIt();},1400));
@@ -2207,6 +2332,13 @@ function routeKnown(q,opt,dry){
     beginAsk(q);finish({headline:'No timers running.',small:true,spoken:'No, there is no timer running right now.',node:clockNode(),tags:[srcTag('live','On this screen')]});return true;}
   if(HELP_RE.test(s)){if(dry)return true;logMic('route','help');beginAsk(q);finish({headline:'Here is what I can do',small:true,spoken:'Here is what I can do. Tap any example to try it.',node:helpNode(),viz:'1',tags:[srcTag('live','Built in')]});return true;}
   /* --- boards, sounds --- */
+  var wcs0=s.split(' ').length;var _viz=app.getAttribute('data-viz')||'';
+  if(wcs0<=8&&/^(?:(?:ok(?:ay)?|alright|cool|great|yeah|yep|perfect)[, ]+)?(?:thanks?(?: so much| a lot| mint)?|thank you(?: so much| mint)?|all done|i'?m done|we'?re done|done|got it|that works|sounds good|nice|perfect|awesome|all good|we'?re good|good to go|that'?s perfect|looks good|that looks good)(?: mint)?$/.test(s)&&/^(cal|board|wx)$/.test(_viz)&&!/^(?:ok(?:ay)?[, ]+)?(?:yes|no)$/.test(s)){if(dry)return true;logMic('route','hub back');cmdHub(q,{back:true});return true;}
+  if(wcs0<=7&&/^(?:(?:ok(?:ay)?|alright|now)[, ]+)?(?:(?:go |take me |bring me )?(?:back|home)(?: to (?:the )?(?:menu|tabs|home|main(?: menu)?|options|selection))?|(?:the |main )?menu|show (?:me )?(?:the )?(?:menu|tabs|options|everything|home|selection)|(?:what|which) (?:can|do) (?:you|i) (?:do|have|open)|what do you have|what are my options|home screen|main screen|selection|tabs|options|all (?:the )?tabs)(?: mint)?$/.test(s)){if(dry)return true;logMic('route','hub');cmdHub(q);return true;}
+  if(/\b(?:morning|evening|nightly|daily|day|today'?s|tomorrow'?s|end of day|start of day)\s+(?:briefing|brief|rundown|recap|debrief|summary|report|update)\b|\b(?:briefing|brief me|rundown|catch me up|start my day|end my day|wrap up (?:my|the) day|end of day|how does my (?:day|tomorrow) look)\b/.test(s)&&!/\b(text|send|message|read me the text|last text)\b/.test(s)&&wcq<=14){if(dry)return true;logMic('route','briefing');var _hr=+new Date().toLocaleString('en-US',{timeZone:ET,hour:'numeric',hour12:false});var _ev=/\b(evening|tonight|night|end of day|end my day|wrap|tomorrow)\b/.test(s)?true:(/\b(morning|start|today)\b/.test(s)?false:_hr>=14);cmdBrief2(q,_ev?'evening':'morning',/refresh/.test(s)?{live:true}:undefined);return true;}
+  if(/\b(deposits?|unpaid|outstanding|who (?:has|hasn'?t|have|haven'?t|owes?|still owes?) (?:paid|me|a deposit)|payments? due|payment status|who owes)\b/.test(s)&&!/\b(send|request|text|waive|refund|charge|take|link|remind|remove|cancel|record|mark|log)\b/.test(s)&&wcq<=13){if(dry)return true;logMic('route','deposits');cmdDeposits(q,/refresh/.test(s)?{live:true}:undefined);return true;}
+  if(/\bfollow ?-?ups?\b|\bwho (?:should|do|must|can) i (?:need to |have to |got to |gotta )?(?:text|follow|call|reach|contact|message|check|chase)|\bwho (?:needs|needing) (?:a )?(?:text|follow|call|nudge|check)|\bwho haven'?t i (?:texted|followed|called|contacted)|\bwho (?:to|should i) (?:text|call|chase)\b|\bwho to follow\b/.test(s)&&!/\b(send|text (?:him|her|them)|text [a-z]+ (?:saying|that)|set|schedule|remind me|create|add|automat)/.test(s)&&wcq<=13){if(dry)return true;logMic('route','followups');cmdFollowups(q,/refresh/.test(s)?{live:true}:undefined);return true;}
+  if(/\b(expenses?|spending|spent|revenue|income|profit|payroll|cash ?flow|bank|earnings?|how much (?:did|have|do) we (?:make|made|earn|spend|spent|bring)|what did we (?:make|spend|earn|bring)|money|finances?|financials?|bookkeeping|books|sales (?:this|for|last|today)|vault|safe)\b/.test(s)&&!/\b(send|pay|refund|charge|transfer|waive|take|deposits?|text|call|book|cancel|invoice|how do i|tips? for|advice)\b/.test(s)&&wcq<=14){if(dry)return true;logMic('route','vault');cmdVault(q);return true;}
   var _sysSubj=/\b(systems?|connections?|the bridge|the setup|everything|all systems|the screen|the app)\b/.test(s),_sysQ=/\b(how|what|is|are|check|status|health|running|looking|look|doing|working|ok|okay|fine|good|diagnos|pull up|show|run|up|online|connected|healthy|alive|go)\b/.test(s);
   if((/\b(system health|health check|health report|diagnostics?|system status|status check|status report|all systems|anything (?:broken|wrong|down|failing)|any (?:problems|issues|errors|bugs)|what.s (?:broken|down|wrong|not working)|is anything (?:broken|down|wrong))\b/.test(s)||(_sysSubj&&_sysQ&&wcq<=10&&!/\b(you|your|i|my day|schedule|business)\b.*\b(doing|going)\b/.test(s.replace(/\b(the system|system)\b/g,''))))&&!/\b(weather|timer|calendar|text|message|send|book|cancel)\b/.test(s)){if(dry)return true;logMic('route','health');cmdHealth(q);return true;}
   if(/\b(?:my|our|the) (?:upcoming )?(?:customers|clients)\b|\b(?:customer|client) list\b|\bwho(?:'?s| is| are) (?:coming|booked|on (?:the )?books)\b|\bshow (?:me )?(?:all )?(?:customers|clients)\b|\bpull up (?:the |my )?(?:customers|clients)\b/.test(s)&&!/\b(text|message|call|email|send|tell|remind)\b/.test(s)&&wcq<=12){if(dry)return true;logMic('route','customers');cmdCustomers(q,opt);return true;}
@@ -2227,7 +2359,7 @@ function routeKnown(q,opt,dry){
   if(wcs<=9&&/\b(maximi[sz]e|expand|enlarge|bring (?:it |that |the timer )?(?:up|back|out)|pull (?:it |that |the timer )?up|open (?:up )?(?:the |my )?(?:timer|stopwatch|clock)|show me (?:the |my )?(?:timer|stopwatch)|(?:can i )?see (?:it|the timer|my timer|that|the stopwatch)|look (?:in )?(?:at )?the bottom left|bottom left)\b/.test(s)&&(tmrs.length||sw.made)){
     if(dry)return true;logMic('route','maximize timer');if(tmrs.length&&!(sw.made&&/stopwatch/.test(s))){var tm0=tmrs.slice().sort(function(a,b){return a.end-b.end;})[0];showTimerView(tm0,q);}else showStopwatch(q);return true;}
   if(wcs<=8&&(/\b(minimi[sz]e|shrink|put away|tuck|hide|close|take away|dismiss|get rid of)\s+(?:it|that|this|the (?:timer|calendar|weather|forecast|clock|stopwatch|schedule|screen|window|view|board|notes|text|simulation)|my (?:timer|calendar|schedule))\b/.test(s)||/^(?:minimi[sz]e|shrink|put it away|hide it)$/.test(s)||/\bmove (?:it|that|the timer) (?:to )?(?:the )?corner\b/.test(s))&&!/\b(mic|microphone|drawer|setup|history)\b/.test(s)){
-    if(dry)return true;logMic('route','minimize');app.removeAttribute('data-viz');wxBackdropStop();setUi('awake');$('hint').textContent=(tmrs.length||sw.made)?'Minimized. Timers keep running in the corner.':'Ready. Ask me anything.';renderDock();return true;}
+    if(dry)return true;logMic('route','minimize');if(/^(cal|board|wx)$/.test(app.getAttribute('data-viz')||'')){cmdHub(q,{back:true});return true;}app.removeAttribute('data-viz');wxBackdropStop();setUi('awake');$('hint').textContent=(tmrs.length||sw.made)?'Minimized. Timers keep running in the corner.':'Ready. Ask me anything.';renderDock();return true;}
   var ti=timerIntent(s);
   if(ti){if(dry)return true;logMic('route','timer');
     if(ti.cancel){var nn=cancelTimers(ti.spec);beginAsk(q);finish({headline:nn?'Timer cancelled.':'No timer running.',small:true,spoken:nn?'Okay, timer cancelled.':'There is no timer running.',node:clockNode(),tags:[srcTag('live','On this screen')]});return true;}
