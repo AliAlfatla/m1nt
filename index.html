@@ -353,6 +353,10 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 .wx-hb{width:100%;max-width:22px;border:1px solid rgba(92,255,200,.35);border-radius:2px;background:rgba(92,255,200,.06)}
 .wx-hc.wet .wx-hb{background:rgba(92,255,200,.55);box-shadow:0 0 8px rgba(92,255,200,.6);border-color:var(--mint)}
 .wx-hl{font:10px/1.4 'JetBrains Mono',ui-monospace,monospace;color:rgba(190,255,235,.8);height:14px;white-space:nowrap}
+
+.wx-hc.foc{background:rgba(92,255,200,.09);outline:1px dashed rgba(92,255,200,.55);outline-offset:1px}
+.wx-hc.evh .wx-hl:before{content:'◆ ';color:var(--mint)}
+.wx-dw{cursor:pointer}.wx-dw:hover{box-shadow:inset 0 0 0 1px var(--mint),0 0 18px rgba(92,255,200,.35)}
 </style>
 <script type="application/json" id="claude-artifacts-manifest">{"permissions": []}</script>
 
@@ -431,7 +435,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v32-2026-11-26';
+var BUILD='v33-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1017,7 +1021,7 @@ function sleepKind(t){t=stripRetract(String(t||'').trim());if(t.split(/\s+/).len
   return null;}
 function isGoodnight(t){return !!sleepKind(t);}
 var MICOFF_RE=new RegExp('^\\s*(?:(?:hey|ok|okay)[,.!\\s]*)?(?:(?:'+SNM+'[,.!\\s]+)?(?:please\\s+)?turn\\s+(?:my\\s+|the\\s+)?(?:mic|microphone)\\s+off[,.!\\s]*'+SNM+'|(?:please\\s+)?turn\\s+(?:my\\s+|the\\s+)?(?:mic|microphone)\\s+off[,.!\\s]*(?:please)?)[.!\\s]*$','i');
-var LEAD_RE=new RegExp('^(?:(?:hey|hay|hi|ok|okay|wake\\s?up)[,.!\\s]*)?(?:'+NM+')?[,.!\\s]*','i');
+var LEAD_RE=new RegExp('^(?:(?:hey|hay|hi|okay|ok|wake\\s?up)[,.!\\s]*)?(?:'+NM+')?[,.!\\s]*','i');
 var JUNK=/^(mint|min|mid|mind|man|men|amen|mean|hey|hay|hi|ok|okay|uh|um|a|the|and|so|well|up)$/i;
 var SIL=store('sil')||1300, silTimer=0, wakePend=null;
 var convo={pending:null,last:null,armAfterSpeech:null,armOk:false,hist:[]};
@@ -1248,6 +1252,7 @@ function wxOffset(q){
 }
 function wxDayName(off){if(off===0)return 'Today';if(off===1)return 'Tomorrow';return new Date(etDay(off)+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});}
 async function cmdWeather(q){
+  var cardRects=Array.prototype.map.call(document.querySelectorAll('#extra .wx-dw'),function(n){var r=n.getBoundingClientRect();return {l:r.left,t:r.top,w:r.width,h:r.height};});
   beginAsk(q);var my=cur;doing('checking live weather');
   var m=q.match(/\b(?:in|for|at)\s+([A-Za-z .'-]+?)(?:\s+(?:today|tonight|tomorrow|right now|this (?:week|weekend)|now)\b|[?.!,]|$)/i);
   var place=m?m[1].trim():'';if(/^(the|a|my)?\s*(morning|afternoon|evening|week|weekend)$/i.test(place)||/\b(day|week|weekend|tomorrow|morning|afternoon|evening|night|that|then|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i.test(place))place='';
@@ -1258,7 +1263,7 @@ async function cmdWeather(q){
   try{
     if(resolvedOff>7)throw new Error('I can only see about a week ahead.');
     if(place){var g=await jget('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name='+encodeURIComponent(place));var r0=g.results&&g.results[0];if(!r0)throw new Error('I could not find a place called '+place+'.');loc={name:r0.name+(r0.admin1?', '+r0.admin1:''),lat:r0.latitude,lon:r0.longitude,def:false};}
-    var w=await jget('https://api.open-meteo.com/v1/forecast?latitude='+loc.lat+'&longitude='+loc.lon+'&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=precipitation,precipitation_probability,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=8');if(cur!==my)return;
+    var w=await jget('https://api.open-meteo.com/v1/forecast?latitude='+loc.lat+'&longitude='+loc.lon+'&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation,precipitation_probability,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=8');if(cur!==my)return;
     if(WXWEEK_RE.test(q)&&(wxOffset(q)==null||/\bweekend\b/i.test(q))){
       convo.wxOff=0;convo.wxLoc=loc;var c0=w.current,d0=w.daily,sh0=loc.name.split(',')[0];var hh0=+String(c0.time||'').slice(11,13);
       var hiMax=Math.round(Math.max.apply(null,d0.temperature_2m_max.slice(0,7))),loMin=Math.round(Math.min.apply(null,d0.temperature_2m_min.slice(0,7)));
@@ -1274,7 +1279,17 @@ async function cmdWeather(q){
     var spoken=tom?dl+' in '+short+': '+cond+', a high of '+hi+' and a low of '+lo+', with a '+pp+' percent chance of precipitation.':'In '+short+' it is '+Math.round(c.temperature_2m)+' degrees and '+cond+', feels like '+Math.round(c.apparent_temperature)+'. Today\'s high is '+hi+', the low is '+lo+', with a '+pp+' percent chance of precipitation.';
     var rows=[];if(!tom)rows.push({t:'Now',n:Math.round(c.temperature_2m)+'° · feels '+Math.round(c.apparent_temperature)+'° · wind '+Math.round(c.wind_speed_10m)+' mph'});
     rows.push({t:tom?dl:'Today',n:'High '+hi+'° · low '+lo+'° · '+cond});rows.push({t:'Precipitation',n:pp+'% chance'});
-    var hh=+String(c.time||'').slice(11,13);var hp=hourlyPlan(w,off);if(hp)spoken+=' '+hp.say;var wn=wxNode(loc,c,d,off,cond,(hh<6||hh>=19));if(hp)wn.appendChild(hourStrip(hp));finish({headline:head,follow:'weather',small:true,spoken:spoken,node:wn,viz:'wx',tags:[srcTag('live','Open-Meteo'),srcTag('live','Updated '+(upd?t12(upd):'just now')+' local')],srcNote:loc.def?'Default location: Louisville, Kentucky. Say “weather in <city>” for another.':'',acts:[{label:'Refresh',fn:function(){run(q,{});}}]});
+    var hh=+String(c.time||'').slice(11,13);var hp=hourlyPlan(w,off);var foc=hourFocus(q),evh=[],fsay='';
+    if(foc&&off>0)foc.label=foc.label.replace(/^This /,off===1?'Tomorrow ':new Date(d.time[off]+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'long'})+' ').replace(/^Tonight$/,off===1?'Tomorrow night':'That night');
+    if(DETAIL_RE.test(q)){
+      var evs=[];if(BR){try{var cr=await calBridgeFetch(etDay(off),etDay(off));if(cur!==my)return;evs=cr.events.filter(function(e){return e.start.length>10&&e.start.slice(0,10)===etDay(off);});}catch(e2){evs=null;}}
+      if(evs&&foc&&!foc.hour)evs=evs.filter(function(e){var h2=+e.start.slice(11,13);return h2>=foc.a&&h2<foc.b+1;});
+      if(evs&&evs.length){var bits=[];evs.slice(0,3).forEach(function(e,ix){var sh=+e.start.slice(11,13),eh=e.end&&e.end.length>10?Math.ceil(+e.end.slice(11,13)+(+e.end.slice(14,16)>0?1:0)):sh+2;evh.push(sh);if(ix===0)foc={a:Math.max(0,sh-1),b:Math.min(24,Math.max(sh+2,eh+1)),label:'Your '+t12(e.start.slice(11,16))+' '+evName(e.title)};var tx=winText(w,off,Math.max(0,sh-1),Math.min(24,Math.max(sh+2,eh+1)),'For your '+t12(e.start.slice(11,16))+' '+evName(e.title));if(tx)bits.push(tx);});fsay=bits.join(' ');head+=' · your '+t12(evs[0].start.slice(11,16))+' '+evName(evs[0].title);}
+      else if(evs===null)fsay='I could not read your calendar, so here is the general forecast.';
+      else fsay='I do not see a '+(foc&&!foc.hour?foc.label.replace(/^This /,'').toLowerCase()+' ':'')+'detail on your calendar '+(off===0?'today':off===1?'tomorrow':'that day')+'.';
+    }else if(foc){fsay=winText(w,off,foc.a,foc.b,foc.label)||'';}
+    if(fsay)spoken=fsay+' '+(tom?dl+' overall: '+cond+', high '+hi+', low '+lo+'.':'Overall today: '+cond+', high '+hi+', low '+lo+'.');else if(hp)spoken+=' '+hp.say;
+    var wn=wxNode(loc,c,d,off,cond,(hh<6||hh>=19));if(hp)wn.appendChild(hourStrip(hp,foc,evh));flipFrom(cardRects[off],'#extra .wx:not(.wxw)');finish({headline:head,follow:'weather',small:true,spoken:spoken,node:wn,viz:'wx',tags:[srcTag('live','Open-Meteo'),srcTag('live','Updated '+(upd?t12(upd):'just now')+' local')],srcNote:loc.def?'Default location: Louisville, Kentucky. Say “weather in <city>” for another.':'',acts:[{label:'Refresh',fn:function(){run(q,{});}}]});
   }catch(e){lookupFail(q,'weather',e);}
 }
 function gameLine(ev){
@@ -1426,7 +1441,7 @@ function followUp(q,opt){
   var L=convo.last,l=q.toLowerCase();
   var s0=stripFill(normQ(q));if(timerIntent(s0)||/\b(timer|timers|alarm|stopwatch|clock|remind me|flip a coin|calculate|minimi[sz]e|maximi[sz]e|stand ?by|good ?night)\b/.test(s0))return false;
   var wc=q.trim().split(/\s+/).length;
-  if(!(/^(and|what about|how about|what if|also|then|same|ok|okay|now)\b/i.test(q.trim())||wc<=4||(wxOffset(q)!=null&&wc<=5)))return false;
+  if(!(/^(and|what about|how about|what if|also|then|same|ok|okay|now)\b/i.test(q.trim())||wc<=4||(wxOffset(q)!=null&&wc<=(L&&L.kind==='weather'?16:5))||(L&&L.kind==='weather'&&hourFocus(q)&&wc<=12)))return false;
   if(/\b(weather|forecast|rain|snow|temperature)\b/.test(l)&&L.kind!=='weather'){convo.wxFollow=true;run('weather '+q,{voice:true,wake:true,reply:'x'});return true;}
   if(/\b(schedule|calendar|deposit|lead|customer|jobs?|brief|needs me)\b/.test(l))return false;
   if(L.kind==='schedule'){if(wxOffset(q)==null&&!/\b(evening|morning|afternoon)\b/.test(l))return false;run('schedule '+q,{voice:true,wake:true,reply:'x'});return true;}
@@ -1641,7 +1656,7 @@ function weekWxNode(loc,c,d,isNight){
   var wrap=el('div','wx wxw wx-'+kind);hudify(wrap);var ov=el('div','wx-ov');
   var top=el('div','wx-l');top.appendChild(el('div','wx-place',loc.name));top.appendChild(el('div','wx-day','Next 7 days · now '+Math.round(c.temperature_2m)+'° and '+(WXC[c.weather_code]||'mixed')));ov.appendChild(top);
   var fc=el('div','wx-fc wx-fcw');
-  for(var k=0;k<Math.min(7,d.time.length);k++){var it=el('div','wx-d wx-dw');it.style.setProperty('--d',(0.08*k)+'s');
+  for(var k=0;k<Math.min(7,d.time.length);k++){var it=el('div','wx-d wx-dw');it.style.setProperty('--d',(0.08*k)+'s');(function(kk){it.addEventListener('click',function(){run('what is the weather '+(kk===0?'today':'on '+new Date(d.time[kk]+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'long'})),{});});})(k);
     it.appendChild(el('span','wx-dn',k===0?'Today':new Date(d.time[k]+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short'})));
     it.appendChild(el('span','wx-dnum',new Date(d.time[k]+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric'})));
     it.appendChild(el('span','wx-dg wx-dgb',wxGlyph(d.weather_code[k])));
@@ -1670,10 +1685,39 @@ function hourlyPlan(w,off){
   }
   return {hrs:hrs,say:say,rg:rg};
 }
-function hourStrip(plan){
+function hourStrip(plan,foc,evs){
   var w=el('div','wx-hr');w.appendChild(el('div','wx-hrt','RAIN BY HOUR'));var row=el('div','wx-hrr');
-  plan.hrs.forEach(function(x,i){var c=el('div','wx-hc'+(x.wet?' wet':''));var v=Math.max(x.pp,x.wet?40:0);var bar=el('div','wx-hb');bar.style.height=Math.max(4,Math.round(v*0.4))+'px';c.appendChild(bar);c.appendChild(el('div','wx-hl',(i%3===0||plan.hrs.length<9)?hr12(x.h).replace(' ',''):''));c.title=hr12(x.h)+' · '+x.pp+'% chance'+(x.pr>=0.1?' · '+x.pr.toFixed(2)+' mm':'');row.appendChild(c);});
+  plan.hrs.forEach(function(x,i){var c=el('div','wx-hc'+(x.wet?' wet':'')+((foc&&x.h>=foc.a&&x.h<foc.b)?' foc':'')+((evs&&evs.indexOf(x.h)>=0)?' evh':''));var v=Math.max(x.pp,x.wet?40:0);var bar=el('div','wx-hb');bar.style.height=Math.max(4,Math.round(v*0.4))+'px';c.appendChild(bar);c.appendChild(el('div','wx-hl',(i%3===0||plan.hrs.length<9)?hr12(x.h).replace(' ',''):''));c.title=hr12(x.h)+' · '+x.pp+'% chance'+(x.pr>=0.1?' · '+x.pr.toFixed(2)+' mm':'');row.appendChild(c);});
   w.appendChild(row);return w;
+}
+
+var DETAIL_RE=/\b(?:my|the|our)\s+(?:\w+\s+)?(?:detail|details|detailing|appointment|appointments|job|jobs|booking|bookings|customer|customers|client|clients|first car|next car|first appointment|next appointment|first job|next job|first detail|next detail|ceramic|coating|wash)\b|\bwhen i(?:'m| am) (?:working|detailing)\b|\bduring (?:the )?(?:job|detail|appointment)\b/i;
+function hourFocus(q){
+  var l=String(q).toLowerCase().replace(/a\.m\./g,'am').replace(/p\.m\./g,'pm');
+  var m=/\b(?:at|around|by|about|near|before|after|for the)\s+(\d{1,2})(?::(\d\d))?\s*(a m|p m|am|pm|o'?clock)?\b/.exec(l);
+  if(m&&!/\b(days?|degrees?|percent|minutes?|hours?)\b/.test(l.slice(m.index,m.index+m[0].length+10))){var h=+m[1],ap=(m[3]||'').replace(' ','');if(h>=1&&h<=12){if(ap==='pm'&&h<12)h+=12;else if(ap==='am'&&h===12)h=0;else if(!ap&&h<=6)h+=12;return {a:Math.max(0,h-1),b:Math.min(24,h+2),label:'Around '+hr12(h),hour:h};}}
+  if(/\bmorning\b/.test(l))return {a:6,b:12,label:'This morning'};
+  if(/\bafternoon\b/.test(l))return {a:12,b:17,label:'This afternoon'};
+  if(/\b(evening)\b/.test(l))return {a:17,b:21,label:'This evening'};
+  if(/\b(tonight|overnight|at night)\b/.test(l))return {a:20,b:24,label:'Tonight'};
+  if(/\b(noon|lunch|midday)\b/.test(l))return {a:11,b:14,label:'Around noon'};
+  return null;
+}
+function winText(w,off,a,b,lab){
+  var h=w.hourly,d=w.daily;if(!h||!h.time||!d||!d.time[off])return null;var day=d.time[off],nowH=off===0?+String(w.current.time||'').slice(11,13):0,hrs=[];
+  for(var i=0;i<h.time.length;i++){if(String(h.time[i]).slice(0,10)!==day)continue;var hh=+String(h.time[i]).slice(11,13);if(hh<Math.max(a,nowH)||hh>=b)continue;var pr=+h.precipitation[i]||0,pp=+h.precipitation_probability[i]||0,cd=+h.weather_code[i]||0;hrs.push({h:hh,t:+h.temperature_2m[i],pp:pp,cd:cd,wet:pr>=0.1||(pp>=50&&cd>=51)});}
+  if(!hrs.length)return null;
+  var lo=Math.round(Math.min.apply(null,hrs.map(function(x){return x.t;}))),hi=Math.round(Math.max.apply(null,hrs.map(function(x){return x.t;}))),mp=Math.max.apply(null,hrs.map(function(x){return x.pp;}));
+  var wet=hrs.filter(function(x){return x.wet;}),txt;
+  if(wet.length){var snow=wet.some(function(x){return (x.cd>=71&&x.cd<=77)||x.cd===85||x.cd===86;}),storm=wet.some(function(x){return x.cd>=95;});var wn=storm?'storms':(snow?'snow':'rain');txt=(wet.length===hrs.length)?wn+' the whole time':wn+' from '+hr12(wet[0].h)+' until '+hr12(wet[wet.length-1].h+1);}
+  else txt='dry'+(mp>=40?', though there is a '+mp+' percent chance of rain':'');
+  return lab+': '+(lo===hi?'about '+hi:lo+' to '+hi)+' degrees and '+txt+'.';
+}
+function flipFrom(rect,sel){
+  if(!rect)return;setTimeout(function(){var nw=document.querySelector(sel);if(!nw||!nw.animate)return;var nr=nw.getBoundingClientRect();if(!nr.width)return;
+    var dx=rect.l-nr.left,dy=rect.t-nr.top,sx=Math.max(.05,rect.w/nr.width),sy=Math.max(.05,rect.h/nr.height);
+    nw.style.transformOrigin='0 0';nw.animate([{transform:'translate('+dx+'px,'+dy+'px) scale('+sx+','+sy+')',opacity:.35,filter:'blur(2px)'},{transform:'none',opacity:1,filter:'none'}],{duration:760,easing:'cubic-bezier(.2,.85,.2,1)'});
+    var hr=nw.querySelector('.wx-hr');if(hr&&hr.animate)hr.animate([{opacity:0,transform:'translateY(14px)'},{opacity:0,transform:'translateY(14px)',offset:.55},{opacity:1,transform:'none'}],{duration:1100,easing:'ease-out'});},40);
 }
 function hudify(w){w.classList.add('hudb');['c1','c2'].forEach(function(k){w.appendChild(el('span','hud-'+k));});return w;}
 function wxNode(loc,c,d,off,cond,isNight){
@@ -1717,6 +1761,7 @@ function normQ(q){return String(q).toLowerCase().replace(/[’]/g,"'").replace(/
 function stripFill(l){return l.replace(FILL_RE,'').trim();}
 var VIEW_V='(?:pull up|bring up|show(?: me)?|open|display|see|view|check|look at|look up|let me see|give me|get me|show up)';
 var WX_RE=/\b(weather|forecast|forecasts|temperature|temperatures|temp|temps|degrees|rain|raining|rainy|snow|snowing|snowy|storm|storms|stormy|thunder|thunderstorm|thunderstorms|sunny|cloudy|overcast|humid|humidity|windy|freezing|chilly|sleet|icy|hail|umbrella|jacket|coat)\b|how (?:hot|cold|warm|bad|nice) (?:is it|will it be)|will it (?:rain|snow|storm|be (?:hot|cold|warm|nice))|is it (?:raining|snowing|cold|hot|warm|nice|gonna|going to)|what'?s it like out|how'?s it (?:looking|looks) out|how is it out/i;
+WX_RE=new RegExp(WX_RE.source+'|\\b(?:what|how)(?:\'s| is| will| would| does)? (?:it|the day|the day look)(?: going to| gonna| be)? (?:look|be|feel|going to be) like\\b|\\b(?:look|feel|be) like (?:out|outside)\\b|\\bgoing to be like (?:out|outside|tomorrow|today|then)\\b|\\b(?:when|what time|what hour) (?:will|does|is|do) (?:it|the rain|the snow|the storm|the storms) (?:stop|start|begin|end|clear|let up|pass|move)\\b|\\b(?:stop|stops|stopping|start|starts|clear|clears|let up) (?:raining|snowing)\\b|\\bhour by hour\\b|\\bhourly\\b',WX_RE.flags);
 var WXWEEK_RE=/\b(week|weekly|weekend|7 day|seven day|7 days|seven days|ten day|10 day|extended|few days|next days|coming days|rest of the week|days ahead|ahead)\b/i;
 var SCHED_RE=/\b(calendar|calendars|schedule|schedules|agenda|appointment|appointments|booking|bookings|booked|jobs?|what do i have|what have i got|what'?ve i got|what am i doing|am i free|am i busy|am i booked|how busy|do i have (?:anything|any|something|a)|anything (?:on|scheduled|booked)|what'?s on|what is on|what'?s coming up|what is coming up|coming up|lined up|on deck|on the books|my day|my week|my month|my plans|who do i have|who'?s coming|who is coming|who'?s booked|who am i seeing|who am i meeting|what'?s next|what is next|upcoming|on my plate)\b/i;
 function calDayOff(l){
@@ -1731,7 +1776,7 @@ function calIntent2(q,l){
   var hasSched=SCHED_RE.test(s);var viewCal=new RegExp('\\b'+VIEW_V+'\\b.*\\b(calendar|schedule|agenda)\\b').test(s)||/^(?:my\s+)?(calendar|schedule|agenda)$/.test(s)||/\b(open|pull up|bring up|show|display)\b.*\bmy\s+(calendar|schedule)\b/.test(s);
   var monthWord=MONTHS.some(function(x){return x!=='may'&&new RegExp('\\b'+x+'\\b').test(s);})&&new RegExp('\\b'+VIEW_V+'\\b').test(s);
   if(!hasSched&&!viewCal&&!monthWord)return null;
-  if(WX_RE.test(s)&&!/\b(calendar|schedule|agenda|appointments?|bookings?|jobs?)\b/.test(s))return null;
+  if(WX_RE.test(s)&&(DETAIL_RE.test(s)||!/\b(calendar|schedule|agenda|appointments?|bookings?|jobs?)\b/.test(s)))return null;
   var W={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,few:3,couple:2};
   var m=/\b(?:next|following|coming|upcoming|few|following|over the next|for the next|in the next)\s+(\d+|one|two|three|four|five|six|seven|few|couple(?: of)?)\s*(?:more\s+)?days?\b/.exec(s)||/\b(\d+|one|two|three|four|five|six|seven)\s+days?\b/.exec(s);
   if(m){var raw=m[1].replace(/ of$/,'');var n=Math.max(1,Math.min(7,W[raw]||parseInt(raw,10)||3));return {mode:'days',start:etDay(0),n:n,label:'over the next '+n+plural(n,' day',' days')};}
@@ -1834,7 +1879,7 @@ function routeKnown(q,opt,dry){
     if(si==='redo'){if(dry)return true;logMic('route','sim redraft');cmdTextSim(q,{name:simCtl.name,body:simCtl.body+' (Adjust the message like this: '+q+')'});return true;}
     if(si==='send'){if(dry)return true;logMic('route','sim send');if(!simCtl.done){simCtl.deliver();$('hint').textContent='Simulated send. Nothing was actually sent.';try{speak('Sent. That was a simulation, so nothing actually went out.',false);}catch(e){}}return true;}
   }
-  if(TSTAT_RE.test(s)&&!/\b(set|start|make|create)\b.*\b\d/.test(s)){if(dry)return true;logMic('route','timer status');
+  if(TSTAT_RE.test(s)&&!WX_RE.test(s)&&!/\b(set|start|make|create)\b.*\b\d/.test(s)){if(dry)return true;logMic('route','timer status');
     if(tmrs.length){var t1=tmrs.slice().sort(function(a,b){return a.end-b.end;})[0];showTimerView(t1,q);var sp1='Yes. '+(tmrs.length>1?'You have '+tmrs.length+' timers. The next one is ':'You have ')+'a '+t1.label+(t1.alarm?' alarm':' timer')+' with '+hms(Math.max(0,t1.end-Date.now())).replace(':',' minutes ')+' seconds left.';try{speak(sp1,false);}catch(e){}return true;}
     if(sw.made){showStopwatch(q);return true;}
     beginAsk(q);finish({headline:'No timers running.',small:true,spoken:'No, there is no timer running right now.',node:clockNode(),tags:[srcTag('live','On this screen')]});return true;}
