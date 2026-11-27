@@ -716,7 +716,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v68-2026-11-27';
+var BUILD='v69-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1461,6 +1461,7 @@ function handleWake(t,isFinal){
   }
   if(!isAwake())return;                 /* asleep: only “Wake up, Mint” does anything */
   var q=cleanQ(t);if(!q)return;
+  if(!standby&&isFinal&&lockReq(q)){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;doLock(q);return;}
   if(q.split(/\s+/).length>=5&&looksLikeEcho(q)){if(isFinal)logMic('ignored','echo of M1NT: '+q.slice(0,40));return;}
   if(q.split(/\s+/).length<=2&&!convo.pending&&!(convo.last&&Date.now()-convo.last.at<120000)&&!routeKnown(q,{},true)){if(isFinal)logMic('ignored','unclear fragment: '+q.slice(0,30));return;}
   clearTimeout(silTimer);wakePend=q;
@@ -3064,7 +3065,7 @@ function run(raw,opt){
   var wcq=q.split(/\s+/).length;
   if(retractOnly(q)){dropHeard(q);return;}
   if(MICOFF_RE.test(q)){micOff();return;}
-  if(isAwake()&&lockReq(q)){doLock(q);return;}
+  if(isAwake()&&!standby&&lockReq(q)){doLock(q);return;}
   if(isGoodnight(q)){byeSleep(q);return;}
   if(/\b(?:tv|television) mode\b|\b(?:turn|switch|put) (?:this )?(?:on|into|to) (?:the )?(?:tv|television)\b|\bwall ?mode\b/.test(l)&&wcq<=8){var off=/\b(off|exit|stop|leave|normal)\b/.test(l);beginAsk(q);tvSet(!off);finish({headline:off?'TV mode off.':'TV mode on. Use the up and down arrows on the remote to fit the edges of your screen.',small:true,spoken:off?'TV mode off.':'TV mode on.',tags:[srcTag('live','TV mode')]});return;}
   if(/^(?:(?:hey |ok |okay |so |and |can you |could you |would you |will you |please |mint )*)(?:text|send|message|txt|shoot|email)\s+(?:me|my (?:phone|cell|number))\b/.test(l)&&wcq>=3){logMic('route','text me');cmdTextMe(q);return;}
