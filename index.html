@@ -3410,7 +3410,7 @@ async function dashLoad(){
     if(sec.LEADS){var today=new Date().toLocaleDateString('en-US',{timeZone:ET,month:'short',day:'numeric'});var yr=+etDay(0).slice(0,4);var tdt=Date.parse(today+' '+yr+' 12:00');
       D.leads=[];sec.LEADS.split('\n').forEach(function(line){var a=line.split('|');if(a.length<7)return;var fu=a[5].trim();if(!/^[A-Z][a-z]{2} \d/.test(fu))return;var fd=Date.parse(fu.replace(/\s+\d{4}$/,'')+' '+(/\d{4}$/.test(fu)?fu.slice(-4):yr)+' 12:00');if(fd&&fd<=tdt)D.leads.push({name:a[0].trim(),vehicle:a[1].trim(),note:a[6].trim()});});}
   }catch(e){}
-  try{var cr=await fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,action:'chatlog'})});D.chat=(await cr.text()).split('\n').filter(function(l){return l.split('|').length>=4;}).slice(-8);}catch(e){}
+  if(DASH.data&&DASH.data.chat)D.chat=DASH.data.chat;
   try{D.status=await getStatus();}catch(e){}
   try{var j=await jget('https://api.open-meteo.com/v1/forecast?latitude=38.25&longitude=-85.76&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=1');
     D.wx={t:j.current.temperature_2m,c:WXT[j.current.weather_code]||'',hi:j.daily.temperature_2m_max[0],lo:j.daily.temperature_2m_min[0],rain:j.daily.precipitation_probability_max[0]};}catch(e){if(DASH.data&&DASH.data.wx)D.wx=DASH.data.wx;}
@@ -3568,9 +3568,10 @@ function h2Card(k){
   try{c.animate([{opacity:0,transform:'translateX(40px)'},{opacity:1,transform:'none'}],{duration:500,easing:'ease-out'});}catch(e){}
   setTimeout(function(){if(H2.on)dashRoll(c);},560);
 }
+function h2Quiet(){var h=+new Date().toLocaleString('en-US',{timeZone:ET,hour:'numeric',hour12:false});return h>=22||h<6;}
 function h2Go(i){
   H2.idx=((i%8)+8)%8;H2.rot=Date.now();h2Card(H2P[H2.idx][0]);
-  if(H2P[H2.idx][0]==='messages'&&BR&&BR.url){fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,action:'chatlog'})}).then(function(r){return r.text();}).then(function(t){if(!DASH.data)return;DASH.data.chat=String(t||'').split('\n').filter(function(l){return l.split('|').length>=4;}).slice(-8);if(H2.on&&H2P[H2.idx][0]==='messages')h2Card('messages');}).catch(function(){});}
+  if(H2P[H2.idx][0]==='messages'&&BR&&BR.url&&Date.now()-(H2.chatAt||0)>600000&&!h2Quiet()){H2.chatAt=Date.now();fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,action:'chatlog'})}).then(function(r){return r.text();}).then(function(t){if(!DASH.data)return;DASH.data.chat=String(t||'').split('\n').filter(function(l){return l.split('|').length>=4;}).slice(-8);if(H2.on&&H2P[H2.idx][0]==='messages')h2Card('messages');}).catch(function(){});}
 }
 function h2Refresh(){
   H2P.forEach(function(p){try{H2.warn[p[0]]=!!h2Panel(p[0]).warn;}catch(e){}});
@@ -3703,7 +3704,7 @@ function dashStart(){
   clearInterval(DASH.timer);
   DASH.timer=setInterval(function(){
     if(!TV.on){if(DASH.shown)dashShow(false);return;}
-    if(DASH.shown){dashClock();if(Date.now()-DASH.at>300000)dashLoad();}
+    if(DASH.shown){dashClock();if(Date.now()-DASH.at>900000&&!h2Quiet())dashLoad();}
     else if(!LOCKED&&Date.now()-(TV.lastUser||0)>45000&&S.mode==='idle')dashShow(true);
   },1000);
   if(!LOCKED)dashShow(true);
