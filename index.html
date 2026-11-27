@@ -716,7 +716,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v63-2026-11-27';
+var BUILD='v64-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -838,8 +838,10 @@ function etHour(){try{return parseInt(new Intl.DateTimeFormat('en-US',{hour:'num
 function greetWord(){var h=etHour();return h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
 var standby=false;
 var LOCK_RE=/\block\b(?:\s+(?:it|yourself|up|the\s+screen|m1nt|mint|down|everything|the\s+app|this))?/i;
-function lockReq(t){t=String(t||'').trim();var w=t.split(/\s+/).length;return w<=9&&!/\?\s*$/.test(t)&&/\block\b/i.test(t)&&!/\b(?:unlock|don'?t|do not|not)\b/i.test(t)&&/\b(?:lock\s+(?:it|yourself|up|the\s+screen|m1nt|mint|mine|min|man|down|everything|this|the\s+app)|(?:please|hey|ok|okay)\W+lock|^\W*lock\W*$|lock\s+now|lock\W*$)/i.test(t);}
-function doLock(){try{stopSpeak();closeDrawer();wxBackdropStop();standby=false;}catch(e){}if(app.getAttribute('data-state')!=='asleep'){try{sfx('sleep');setUi('asleep');setMode('idle');}catch(e){}}$('hint').textContent='';LOCKED=true;lkBusy=false;setTimeout(function(){showLock();},500);}
+var LOCK_PH=/\b(?:lock\s+(?:it|yourself|up|down|the\s+screen|the\s+vault|the\s+door|everything|this|the\s+app|m1nt|mint|mine|min|man)|(?:m1nt|mint|mine|min|man|hey)\W+lock(?:\s+(?:it|up|down|now))?|lock\s+now|please\s+lock|lock\s+please|(?:engage|activate|initiate)\s+(?:lock\s?down|security|the\s+vault|vault\s+mode|stealth)|lock\s?down|vault\s+(?:mode|up)|seal\s+(?:it|the\s+vault|yourself|up)|secure\s+(?:it|yourself|the\s+(?:vault|screen|system)|everything)|shields?\s+up|go\s+dark|stealth\s+mode|go\s+(?:into\s+)?(?:the\s+)?vault|(?:batten|button)\s+down|fort\s+knox|make\s+it\s+secure|protect\s+yourself)\b|^\W*lock\W*$|\block\W*$/i;
+function lockReq(t){t=String(t||'').trim();var w=t.split(/\s+/).length;return w<=9&&!/\?\s*$/.test(t)&&!/\b(?:unlock|don'?t|do\s+not|block|clock|flock)\b/i.test(t)&&LOCK_PH.test(t);}
+var LOCK_LINES=['Locked down, Ali.','Vault sealed.','Shields up. Locked.','Secured. Nobody gets in but you.','Locked. Dark mode, engaged.'];
+function doLock(){try{stopSpeak();closeDrawer();wxBackdropStop();standby=false;}catch(e){}if(app.getAttribute('data-state')!=='asleep'){try{sfx('sleep');setUi('asleep');setMode('idle');}catch(e){}}$('hint').textContent='';LOCKED=true;lkBusy=false;try{speak(LOCK_LINES[Math.floor(Math.random()*LOCK_LINES.length)]);}catch(e){}setTimeout(function(){showLock();},900);}
 function byeSleep(t){var k=sleepKind(t)||'goodnight';if(k==='standby'){if(standby)return;standby=true;wxBackdropStop();stopSpeak();closeDrawer();setUi('awake');setMode('listening');$('hint').textContent='Standing by. Say “Hey, Mint” and then talk as long as you like. Say “Stand by, Mint” to pause again.';try{speak('Standing by, Ali.');}catch(e){}return;}standby=false;sleepUi(LOCK_RE.test(t));var n=etHour();var m=k==='standby'?'Standing by':k==='thatsall'?(n>=17?'See you later':'Okay'):(n>=17||n<5?'Goodnight':'Goodbye');$('hint').textContent='';try{speak(m+', Ali.');}catch(e){}}
 function sleepUi(lk){sfx('sleep');if(TV.on){try{TV.lastUser=0;stopSpeak();setUi('awake');setMode('idle');dashShow(true);}catch(e){}return;}if(LOCKON&&lk){LOCKED=true;lkBusy=false;setTimeout(function(){showLock();},700);}wxBackdropStop();stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
 var idleT=0;
