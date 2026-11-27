@@ -716,7 +716,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v58-2026-11-27';
+var BUILD='v59-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -2830,7 +2830,7 @@ function tvMove(dir){
 }
 function tvFitBox(){
   var b=document.getElementById('tvfit');
-  if(!TV.on){if(b)b.style.display='none';return;}
+  if(true){if(b)b.style.display='none';return;}
   if(!b){b=document.createElement('div');b.id='tvfit';b.style.cssText='position:fixed;right:10px;bottom:8px;z-index:400;display:flex;opacity:.75';
     [['\u2212 Smaller',1],['+ Bigger',-1]].forEach(function(x){var t=document.createElement('button');t.type='button';t.textContent=x[0];t.style.cssText='margin-left:6px;padding:6px 10px;border-radius:999px;border:1px solid rgba(92,255,200,.5);background:rgba(2,19,15,.8);color:#5cffc8;font:600 12px monospace';t.addEventListener('click',function(){TV.inset=Math.max(0,Math.min(14,TV.inset+x[1]));store('tvInset2',TV.inset);tvApply();});b.appendChild(t);});
     document.body.appendChild(b);}
