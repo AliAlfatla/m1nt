@@ -716,7 +716,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v61-2026-11-27';
+var BUILD='v62-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1334,7 +1334,15 @@ var RT_RE=new RegExp('^\\W*(?:(?:no|sorry|oh|um|uh|hey|wait|oops)\\W+)*(?:(?:(?:
 function stripRetract(t){t=String(t||'');var o=t,n=0;while(n++<3){var r=t.replace(RT_RE,'');if(r===t)break;t=r;}return t===o?o:t.trim();}
 function retractOnly(t){var r=stripRetract(t);return r!==String(t||'').trim()&&!r.replace(/\W/g,'').length;}
 function dropHeard(t){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;wake.ignoreUntil=Date.now()+1200;wake.pausedForSpeech=false;logMic('ignored','retraction: '+String(t).slice(0,40));if(isAwake()){setMode('listening');$('hint').textContent='Okay, ignoring that.';}}
-function sleepKind(t){t=stripRetract(String(t||'').trim());if(t.split(/\s+/).length>7)return null;
+var SOFT_LEAD=/^\W*(?:(?:no|nah|nope|naw|yeah|yes|yep|okay|ok|alright|all right|well|so|um|uh|hey|thanks|thank you|nothing|nothing else|that's|thats|that is|it's|its|it is|i'm|im|i am|we're|were|all|just|you can|it|is|fine|good|okay|ok|alright|great|cool|perfect|for now|right now|mint|please)\W+){0,6}/i;
+var SOFT_SLEEP=/\b(stand\s?by|standby|good\s?night|goodnight|night night|talk\s+to\s+you\s+(?:later|soon|tomorrow)|talk\s+later|(?:see|catch)\s+(?:you|ya)(?:\s+(?:later|soon|tomorrow))?|go\s+to\s+sleep|go\s+(?:to\s+)?(?:sleep|rest)|that(?:'s|s|\s+is)\s+(?:all|it|everything)|(?:i'm|im|i\s+am|we're|we\s+are)\s+(?:done|good|all\s+set)|all\s+set|(?:nothing|that)\s+(?:else|will\s+be\s+all)|no\s+more\s+(?:questions|for\s+now))\b/i;
+var SOFT_NOT=/\b(what|when|where|why|how|who|which|can you|could you|will you|would you|do you|did you|show|tell|text|call|send|open|check|pull|give|read|remind|schedule|book|cancel|weather|calendar|leads?)\b/i;
+function softSleep(t){t=String(t||'').trim();var w=t.split(/\s+/).length;if(w<2||w>16||/\?\s*$/.test(t))return null;var m=SOFT_SLEEP.exec(t);if(!m)return null;
+  var pre=t.slice(0,m.index);if(pre.split(/\s+/).filter(Boolean).length>9)return null;
+  var rest=t.slice(m.index+m[0].length);if(SOFT_NOT.test(pre)||SOFT_NOT.test(rest))return null;
+  if(!/^\W*(?:(?:for\s+(?:now|today|tonight|the\s+(?:night|day)))|(?:mint|man|bro|buddy|friend|habibi|dude|thanks|thank\s+you|ali|okay|ok|now|please|then|too|really|tonight|today|for|the|night|day|and|i'll|ill|i\s+will|you|we|me|my|ya|buddy|pal|brother|sir|boss)|\W)*$/i.test(rest))return null;
+  var k=/stand\s?by|standby/i.test(m[0])?'standby':/good\s?night|night night|go\s+(?:to\s+)?(?:sleep|rest)/i.test(m[0])?'goodnight':'thatsall';return k;}
+function sleepKind(t){t=stripRetract(String(t||'').trim());var sf=softSleep(t);if(sf)return sf;if(t.split(/\s+/).length>7)return null;
   var k=/\bstand\s?by\b/i.test(t)?'standby':/\bgood\s?night\b/i.test(t)?'goodnight':'thatsall';
   if(!k)return null;
   if(SLEEP_RE.test(t))return k;
@@ -1685,22 +1693,43 @@ async function cmdCustomers(q,opt){
 var leadsCache=null;
 var LEADS_Q='[LEADS REQUEST] Using only the Leads snapshot from Notion in the business data, list every OPEN lead. Output ONLY lines in the form NAME|VEHICLE|STATUS|STAGE|RECEIVED|NEXT FOLLOW-UP|NOTE, copied from the snapshot. NOTE must be under 14 words. If the snapshot is missing or empty output only the word NONE. No other words.';
 function leadGroup(p){var t=(p[2]+' '+p[3]).toLowerCase();if(/future|interested|thinking/.test(t))return 'future';if(/quote sent/.test(t))return 'quoted';if(/awaiting|follow-up|follow up/.test(t))return 'waiting';if(/new lead|first contact|second contact|third contact|contacted|call attempted/.test(t))return 'new';return 'other';}
+async function leadsFetch(live){
+  if(!live&&leadsCache&&Date.now()-leadsCache.at<120000)return leadsCache;
+  var c=new AbortController(),tm=setTimeout(function(){c.abort();},15000);
+  try{var r=await fetch(SEND_URL,{method:'POST',body:new URLSearchParams({code:BR.code,action:'boards'}),signal:c.signal});var t=await r.text();
+    var m=/===LEADS===([\s\S]*?)(?:===[A-Z]+===|$)/.exec(t);if(!m)throw new Error('no leads section');
+    var lines=m[1].split('\n').map(function(x){return x.trim();}).filter(Boolean);
+    var rows=lines.filter(function(l){return l.split('|').length>=6;}).map(function(l){return l.split('|').map(function(x){return x.trim();});}).filter(function(p){return /^(?:none|-|[A-Z][a-z]{2}\s\d)/.test(p[5]||'')&&!/^(?:SNAPSHOT|RECENTLY)/.test(p[0]);});
+    var asof=((lines[0]||'').match(/taken (.*?)\. OPEN/i)||[])[1]||'';
+    leadsCache={at:Date.now(),rows:rows,asof:asof};return leadsCache;
+  }finally{clearTimeout(tm);}
+}
+function leadTab(p){var t=((p[2]||'')+' '+(p[3]||'')).toLowerCase();
+  if(/\b(?:booked|won|lost|dead|closed)\b/.test(t))return 'closed';
+  if(/second contact|2nd contact|third contact/.test(t))return 'second';
+  if(/follow.?up\s*2|second follow/.test(t))return 'fu2';
+  if(/follow.?up\s*1|first follow|follow.?up\b/.test(t))return 'fu1';
+  if(/interested|future|thinking/.test(t))return 'interested';
+  if(/quote/.test(t))return 'quoted';
+  if(/first contact|contacted|call attempted/.test(t))return 'first';
+  if(/new lead|new\b/.test(t))return 'new';
+  return 'new';}
 async function cmdLeads(q,opt){
-  beginAsk(q);doing('reading your leads from Notion through Make');var my=cur;
+  beginAsk(q);doing('reading your leads');var my=cur;
   if(!BR){finish({headline:'Leads need the Claude link.',small:true,spoken:'Leads need the Claude link in Setup.',tags:[srcTag('na','Unavailable')]});return;}
-  try{var t;if(!(opt&&opt.live)&&leadsCache&&Date.now()-leadsCache.at<300000)t=leadsCache.t;else{t=await bridgePost(LEADS_Q,'NOTE: machine-readable request from the screen. Output exactly the lines requested.',50000);leadsCache={at:Date.now(),t:t};addUse('claude',1);usageChip();}
-    if(cur!==my)return;var rows=String(t).split(/\n+/).map(function(l){return l.split('|').map(function(x){return x.trim();});}).filter(function(p){return p.length>=6&&p[0];});
-    if(!rows.length){finish({headline:'I cannot see your leads yet.',small:true,spoken:'The leads snapshot is not connected to this screen yet, so I have nothing real to show. I will not make anything up.',node:boardNode('bd-leads',[[0,'Leads']],[{type:'WARN',icon:'?',k:'NOT CONNECTED',who:'Leads snapshot not readable',detail:'The data is saved in Make, but the screen bridge has not been allowed to read it yet.',pill:'NEEDS YES',pillk:'warn'}]),tags:[srcTag('na','Not connected')]});return;}
-    var G={new:'New',quoted:'Quoted',waiting:'Waiting',future:'Later'};
-    var recs=rows.map(function(p){var g=leadGroup(p);var nd0=parseNext(p[5]);var due=!!(nd0&&nd0<=addDays(etDay(0),1));return {g:g,due:due,type:due?'WARN':'CUSTOMER',icon:p[0].split(/\s+/).map(function(w){return w.charAt(0);}).join('').slice(0,2).toUpperCase(),k:(p[2]||'').toUpperCase(),who:p[0],detail:p[1]+(p[6]?' · '+p[6]:''),pill:(p[5]&&!/none/i.test(p[5]))?'NEXT '+p[5].toUpperCase():'NO DATE',pillk:due?'warn':''};});
+  try{var D=await leadsFetch(opt&&opt.live);if(cur!==my)return;var rows=D.rows.filter(function(p){return p[0]&&leadTab(p)!=='closed';});
+    if(!rows.length){finish({headline:'No open leads in the snapshot.',small:true,spoken:'I do not see any open leads in the snapshot.',tags:[srcTag('na','Snapshot')]});return;}
+    var td=etDay(0),tm=addDays(td,1);
+    var recs=rows.map(function(p){var g=leadTab(p);var nd0=parseNext(p[5]);var today=!!(nd0&&nd0<=td);var due=!!(nd0&&nd0<=tm);
+      return {g:g,today:today,due:due,type:today?'WARN':'CUSTOMER',icon:p[0].split(/\s+/).map(function(w){return w.charAt(0);}).join('').slice(0,2).toUpperCase(),k:((p[3]||p[2]||'')).toUpperCase(),who:p[0],detail:(p[1]||'')+(p[6]?' · '+p[6]:''),pill:(p[5]&&!/none|^-$/i.test(p[5]))?'NEXT '+p[5].toUpperCase():'NO DATE',pillk:today?'warn':''};});
     var cnt=function(k){return recs.filter(function(r){return r.g===k;}).length;};
     var w=el('div','needs bd-leads');var tabs=el('div','ltabs');var holder=el('div','lhold');
-    var defs=[['all','All',recs.length],['new','New',cnt('new')],['quoted','Quoted',cnt('quoted')],['waiting','Waiting',cnt('waiting')],['future','Later',cnt('future')],['due','Due now',recs.filter(function(r){return r.due;}).length]];
-    function show(k,anim){clear(holder);var list=recs.filter(function(r){return k==='all'||(k==='due'?r.due:r.g===k);});var inner=boardNode('bd-leads',[],list).querySelector('.needs-grid');if(!list.length){inner=el('div','nc-empty','Nothing in this tab.');}holder.appendChild(inner);if(anim&&holder.animate)holder.animate([{opacity:0,transform:'translateY(10px) scale(.98)'},{opacity:1,transform:'none'}],{duration:320,easing:'ease-out'});[].forEach.call(tabs.children,function(b){b.classList.toggle('on',b.getAttribute('data-k')===k);});sfx('tick');}
+    var defs=[['all','All',recs.length],['today','Follow up today',recs.filter(function(r){return r.today;}).length],['notdue','Not due',recs.filter(function(r){return !r.today;}).length],['new','New lead',cnt('new')],['first','First contact',cnt('first')],['second','Second contact',cnt('second')],['interested','Interested',cnt('interested')],['quoted','Quoted',cnt('quoted')],['fu1','Follow-up 1',cnt('fu1')],['fu2','Follow-up 2',cnt('fu2')]].filter(function(d,i){return i<3||d[2]>0;});
+    function show(k,anim){clear(holder);var list=recs.filter(function(r){return k==='all'||(k==='today'?r.today:k==='notdue'?!r.today:r.g===k);});var inner=boardNode('bd-leads',[],list).querySelector('.needs-grid');if(!list.length){inner=el('div','nc-empty','Nothing in this tab.');}holder.appendChild(inner);if(anim&&holder.animate)holder.animate([{opacity:0,transform:'translateY(10px) scale(.98)'},{opacity:1,transform:'none'}],{duration:320,easing:'ease-out'});[].forEach.call(tabs.children,function(b){b.classList.toggle('on',b.getAttribute('data-k')===k);});sfx('tick');}
     defs.forEach(function(d){var b=el('button','ltab');b.type='button';b.setAttribute('data-k',d[0]);b.appendChild(el('b',null,String(d[2])));b.appendChild(el('span',null,d[1]));b.addEventListener('click',function(){show(d[0],true);});tabs.appendChild(b);});
     w.appendChild(tabs);w.appendChild(holder);show('all',false);
-    var due=recs.filter(function(r){return r.due;}).length;
-    finish({headline:recs.length+' open leads',small:true,spoken:'You have '+recs.length+' open leads. '+cnt('quoted')+' have a quote out, '+cnt('waiting')+' are waiting on a reply, '+cnt('new')+' are new or in first contact, and '+cnt('future')+' are for later.'+(due?' '+due+' '+(due===1?'is':'are')+' due for follow-up by tomorrow.':'')+' Tap a tab to filter.',node:w,tags:[srcTag('live','Notion via Make'),srcTag('live','Snapshot, not live')],srcNote:'From your Leads CRM snapshot. Read-only. Say refresh leads to re-read.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}}]});
+    var dn=recs.filter(function(r){return r.today;}).length;
+    finish({headline:recs.length+' open leads',small:true,spoken:'You have '+recs.length+' open leads. '+cnt('quoted')+' have a quote out, '+(cnt('new')+cnt('first')+cnt('second'))+' are new or in contact, and '+cnt('interested')+' are interested.'+(dn?' '+dn+' '+(dn===1?'is':'are')+' due for follow-up today or overdue.':' None are due today.')+' Tap a tab to filter.',node:w,tags:[srcTag('live','Notion snapshot via Make')],srcNote:'Every open lead from your Leads CRM snapshot'+(D.asof?' ('+D.asof+')':'')+'. Booked, lost and dead are kept out of the board but I still know them for stats.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}}]});
   }catch(e){if(cur!==my)return;bridgeFail(q,failCopy(e));}
 }
 var ELITE=[];
