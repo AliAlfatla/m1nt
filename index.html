@@ -716,7 +716,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v70-2026-11-27';
+var BUILD='v71-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1720,6 +1720,44 @@ function leadTab(p){var t=((p[2]||'')+' '+(p[3]||'')).toLowerCase();
   if(/first contact|contacted|call attempted/.test(t))return 'first';
   if(/new lead|new\b/.test(t))return 'new';
   return 'new';}
+var invCache=null;
+async function invFetch(live){
+  if(!live&&invCache&&Date.now()-invCache.at<120000)return invCache;
+  var c=new AbortController(),tm=setTimeout(function(){c.abort();},15000);
+  try{var r=await fetch(SEND_URL,{method:'POST',body:new URLSearchParams({code:BR.code,action:'boards'}),signal:c.signal});var t=await r.text();
+    var m=/===INVENTORY===([\s\S]*?)(?:===[A-Z]+===|$)/.exec(t);if(!m)throw new Error('no inventory section');
+    var lines=m[1].split('\n').map(function(x){return x.trim();}).filter(Boolean);
+    var rows=lines.filter(function(l){return l.split('|').length>=6&&!/^SNAPSHOT/.test(l);}).map(function(l){return l.split('|').map(function(x){return x.trim();});});
+    var asof=((lines[0]||'').match(/taken (.*?)\. \d+ ITEMS/i)||[])[1]||'';
+    invCache={at:Date.now(),rows:rows,asof:asof};return invCache;
+  }finally{clearTimeout(tm);}
+}
+async function cmdInventory(q,opt){
+  beginAsk(q);doing('reading your inventory');var my=cur;
+  if(!BR){finish({headline:'Inventory needs the Claude link.',small:true,spoken:'Inventory needs the Claude link in Setup.',tags:[srcTag('na','Unavailable')]});return;}
+  try{var D=await invFetch(opt&&opt.live);if(cur!==my)return;var rows=D.rows.filter(function(p){return p[0];});
+    if(!rows.length){finish({headline:'No inventory in the snapshot.',small:true,spoken:'I do not see any inventory items yet.',tags:[srcTag('na','Snapshot')]});return;}
+    var BAD={'Out':1,'Low':1,'Broken / Needs Repair':1,'Replace Soon':1,'Backup Needed':1};
+    var recs=rows.map(function(p){var st=p[1]||'';var bad=!!BAD[st];var ord=st==='Ordered';
+      return {st:st,cat:p[2]||'',bad:bad,ord:ord,type:bad?'WARN':'CUSTOMER',icon:(p[0].match(/[A-Za-z0-9]/)||['?'])[0].toUpperCase()+((p[0].split(/\s+/)[1]||'').charAt(0).toUpperCase()),k:(p[2]||'').toUpperCase()+(p[3]?' · '+p[3].toUpperCase():''),who:p[0],detail:[p[5],p[4]?'Reorder: '+p[4]:'',p[6]].filter(Boolean).join(' · '),pill:st.toUpperCase(),pillk:bad?'warn':''};});
+    var rank={'Out':0,'Broken / Needs Repair':1,'Low':2,'Replace Soon':3,'Backup Needed':4,'Ordered':5,'Fair':6,'Good':7};
+    recs.sort(function(a,b){return (rank[a.st]==null?8:rank[a.st])-(rank[b.st]==null?8:rank[b.st]);});
+    var cnt=function(fn){return recs.filter(fn).length;};
+    var cats=['Chemicals','Towels','Brushes / Tools','Equipment','Consumables','Safety','Van / Setup','Electrical','Water System'];
+    var w=el('div','needs bd-leads');var tabs=el('div','ltabs');var holder=el('div','lhold');
+    var defs=[['all','All',recs.length,function(r){return true;}],['bad','Needs attention',cnt(function(r){return r.bad;}),function(r){return r.bad;}],['ord','On order',cnt(function(r){return r.ord;}),function(r){return r.ord;}],['fair','Fair',cnt(function(r){return r.st==='Fair';}),function(r){return r.st==='Fair';}]];
+    cats.forEach(function(c){defs.push([c,c,cnt(function(r){return r.cat===c;}),function(r){return r.cat===c;}]);});
+    defs=defs.filter(function(d,i){return i<2||d[2]>0;});
+    var start=(opt&&opt.inv&&/\b(broken|repair)\b/.test(opt.inv))?'brk':(opt&&opt.inv&&/\b(order|ordered|on order)\b/.test(opt.inv))?'ord':(opt&&opt.inv&&/\b(low|out|running|needs?|restock|reorder|buy)/.test(opt.inv))?'bad':'all';
+    var cur0=start==='brk'?'bad':start;
+    function show(k,anim){clear(holder);var d=defs.filter(function(x){return x[0]===k;})[0]||defs[0];var list=recs.filter(d[3]);var inner=boardNode('bd-leads',[],list).querySelector('.needs-grid');if(!list.length){inner=el('div','nc-empty','Nothing in this tab.');}holder.appendChild(inner);if(anim&&holder.animate)holder.animate([{opacity:0,transform:'translateY(10px) scale(.98)'},{opacity:1,transform:'none'}],{duration:320,easing:'ease-out'});[].forEach.call(tabs.children,function(b){b.classList.toggle('on',b.getAttribute('data-k')===k);});sfx('tick');}
+    defs.forEach(function(d){var b=el('button','ltab');b.type='button';b.setAttribute('data-k',d[0]);b.appendChild(el('b',null,String(d[2])));b.appendChild(el('span',null,d[1]));b.addEventListener('click',function(){show(d[0],true);});tabs.appendChild(b);});
+    w.appendChild(tabs);w.appendChild(holder);show(cur0,false);
+    var bad=recs.filter(function(r){return r.bad;}),ord=recs.filter(function(r){return r.ord;});
+    var names=function(a){return a.slice(0,5).map(function(r){return r.who;}).join(', ');};
+    finish({headline:recs.length+' items · '+bad.length+' need attention',small:true,spoken:'You have '+recs.length+' inventory items. '+(bad.length?bad.length+' need attention: '+names(bad)+'. ':'Nothing is low or out. ')+(ord.length?ord.length+' are on order: '+names(ord)+'.':'Nothing is on order.')+' Tap a tab to filter.',node:w,tags:[srcTag('live','Notion inventory via Make'),srcTag('live','Snapshot, not live')],srcNote:'From your Notion Inventory'+(D.asof?' ('+D.asof+')':'')+'. Read-only. Counts are not tracked, only status.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}}]});
+  }catch(e){if(cur!==my)return;bridgeFail(q,failCopy(e));}
+}
 async function cmdLeads(q,opt){
   beginAsk(q);doing('reading your leads');var my=cur;
   if(!BR){finish({headline:'Leads need the Claude link.',small:true,spoken:'Leads need the Claude link in Setup.',tags:[srcTag('na','Unavailable')]});return;}
@@ -2660,6 +2698,7 @@ function routeKnown(q,opt,dry){
   var _sysSubj=/\b(systems?|connections?|the bridge|the setup|everything|all systems|the screen|the app)\b/.test(s),_sysQ=/\b(how|what|is|are|check|status|health|running|looking|look|doing|working|ok|okay|fine|good|diagnos|pull up|show|run|up|online|connected|healthy|alive|go)\b/.test(s);
   if((/\b(system health|health check|health report|diagnostics?|system status|status check|status report|all systems|anything (?:broken|wrong|down|failing)|any (?:problems|issues|errors|bugs)|what.s (?:broken|down|wrong|not working)|is anything (?:broken|down|wrong))\b/.test(s)||(_sysSubj&&_sysQ&&wcq<=10&&!/\b(you|your|i|my day|schedule|business)\b.*\b(doing|going)\b/.test(s.replace(/\b(the system|system)\b/g,''))))&&!/\b(weather|timer|calendar|text|message|send|book|cancel)\b/.test(s)){if(dry)return true;logMic('route','health');cmdHealth(q);return true;}
   if(/\b(?:my|our|the) (?:upcoming )?(?:customers|clients)\b|\b(?:customer|client) list\b|\bwho(?:'?s| is| are) (?:coming|booked|on (?:the )?books)\b|\bshow (?:me )?(?:all )?(?:customers|clients)\b|\bpull up (?:the |my )?(?:customers|clients)\b/.test(s)&&!/\b(text|message|call|email|send|tell|remind)\b/.test(s)&&wcq<=12){if(dry)return true;logMic('route','customers');cmdCustomers(q,opt);return true;}
+  if(/\b(inventory|stock|supplies|restock(?:ing)?|reorder(?:ing)?|running (?:low|out)|out of (?:stock|chemicals|towels|supplies)|low on|what (?:do )?(?:i|we) need to (?:order|buy|reorder|restock)|what needs (?:to be )?(?:reorder|order|restock|buy)\w*|what(?:'s| is) (?:low|out|broken|on order)|(?:chemicals?|towels?|equipment|tools?) (?:list|status|check))\b/.test(s)&&!/\b(text|message|send|add|create|delete|remove|how do i|lead|leads|customer)\b/.test(s)&&wcq<=13){if(dry)return true;logMic('route','inventory');cmdInventory(q,/refresh|reload|update/.test(s)?{live:true}:{inv:s});return true;}
   if(/\b(leads?|lead list|lead pipeline|sales pipeline|pipeline|prospects?|inquiries|enquiries)\b/.test(s)&&!/\b(text|message|call|email|send|add|create|delete|remove|book|cancel|how do i|generate|get more|google ads|ads)\b/.test(s)&&wcq<=13&&!/\bwhat (?:is|does) (?:a )?lead\b/.test(s)){if(dry)return true;logMic('route','leads');cmdLeads(q,/refresh|reload|update/.test(s)?{live:true}:undefined);return true;}
   if(/\b(elite|vips?|v i p|v\.i\.p|evermint elite|top (?:tier )?clients|best clients|premium clients|members?|membership)\b/.test(s)&&/\b(clients?|customers?|members?|people|list|board|status|looking|look|going|doing|how|what|show|pull up|check|any|who|see|tell|update|up with)\b/.test(s)&&!/\b(text|message|call|email|send|book|cancel|reschedule|price|cost|how much|sign up|join|what is (?:the )?(?:elite|vip)|package)\b/.test(s)&&wcq<=13){if(dry)return true;logMic('route','elite');cmdElite(q,opt);return true;}
   var sfm=/\b(?:turn|switch|set)?\s*(?:the )?(?:sounds?|sound effects|chimes?|sfx)\s+(on|off)\b|\b(mute|unmute)\s+(?:the )?(?:sounds?|sound effects|chimes?|sfx)\b|\bturn (on|off) (?:the )?(?:sounds?|sound effects|chimes?)\b/.exec(s);
