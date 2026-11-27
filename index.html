@@ -329,6 +329,22 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 .app[data-viz="center"] .calc{border:0;background:none;max-width:none;width:100%}.app[data-viz="center"] .calc-b{font-size:clamp(70px,14vw,210px)}.app[data-viz="center"] .calc-t{font-size:clamp(16px,2vw,28px)}
 .app[data-viz="center"] .toss{background:none}
 @media (max-width:760px){.app[data-state="answer"][data-viz="center"] .resp{top:70px;bottom:190px}}
+
+/* ===== mint HUD weather ===== */
+.hudb{position:relative}
+.hudb:before,.hudb:after,.hud-c1,.hud-c2{content:"";position:absolute;width:30px;height:30px;border:2px solid var(--mint);filter:drop-shadow(0 0 6px var(--mint));pointer-events:none;z-index:2}
+.hudb:before{left:-10px;top:-10px;border-right:0;border-bottom:0}.hudb:after{right:-10px;bottom:-10px;border-left:0;border-top:0}
+.hud-c1{right:-10px;top:-10px;border-left:0;border-bottom:0}.hud-c2{left:-10px;bottom:-10px;border-right:0;border-top:0}
+.app[data-state="answer"][data-viz="wx"] .center{padding:10px 24px 4px;place-items:center}
+.app[data-state="answer"][data-viz="wx"] .resp{width:min(1040px,100%);text-align:center;max-height:none;overflow:visible}
+.app[data-state="answer"][data-viz="wx"] .asked,.app[data-state="answer"][data-viz="wx"] .ans{text-align:center}
+.app[data-state="answer"][data-viz="wx"] .src,.app[data-state="answer"][data-viz="wx"] .acts{justify-content:center}
+@media (max-width:760px){.app[data-state="answer"][data-viz="wx"] .center{padding:104px 6px 4px}}
+.wx{border:1px solid rgba(92,255,200,.5)!important;border-radius:6px!important;box-shadow:0 0 34px rgba(92,255,200,.16),inset 0 0 50px rgba(92,255,200,.05)!important;margin-top:6px!important}
+.wx-ov{align-items:center;text-align:center}.wx-l{display:flex;flex-direction:column;align-items:center}
+.wx-place,.wx-day{color:var(--mint)!important}.wx-temp{font-weight:200!important;color:rgba(92,255,200,.06)!important;-webkit-text-stroke:2px var(--mint);text-shadow:0 0 22px rgba(92,255,200,.65)!important}
+.wx-stats{justify-content:center}.wx-st span{color:var(--mint)!important}.wx-cond{letter-spacing:.06em}
+.wx-fc{width:100%;border-color:rgba(92,255,200,.5)!important;border-radius:6px!important;box-shadow:0 0 22px rgba(92,255,200,.14)!important}.wx-d{border-radius:4px!important}.wx-d.on{background:rgba(92,255,200,.14)!important;box-shadow:inset 0 0 0 1px var(--mint)!important}.wx-dn{color:var(--mint)!important}
 </style>
 <script type="application/json" id="claude-artifacts-manifest">{"permissions": []}</script>
 
@@ -407,7 +423,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v27-2026-11-26';
+var BUILD='v28-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -978,7 +994,13 @@ var WAKE_ANY=new RegExp('(?:'+HEY_RE.source+')|(?:wake\\s?up[,.!\\s]+'+NM+')|(?:
 var SNM='(?:mint|mints|mince|minty|mynt|m1nt|mind|min|mid|man|men|amen|moment|mitt|meant|mean|mine|mm+|minute|me|my|may|mate|mud|mod)';
 var SLC='(?:stand\\s?by|good\\s?night|that(?:\'s|\\s+is|\\s+will\\s+be)\\s+all)';
 var SLEEP_RE=new RegExp('^\\W*(?:(?:hey|ok|okay)[,.!\\s]+)?(?:(?:'+SLC+'\\W+(?:for\\s+now\\W+)?'+SNM+')|(?:'+SNM+'\\W+'+SLC+'(?:\\W+for\\s+now)?))\\W*$','i');
-function sleepKind(t){t=String(t||'').trim();if(t.split(/\s+/).length>7)return null;
+
+/* ---------- retractions: "I didn't say anything", "never mind", "wasn't talking to you" are dropped locally, free ---------- */
+var RT_RE=new RegExp('^\\W*(?:(?:no|sorry|oh|um|uh|hey|wait|oops)\\W+)*(?:(?:(?:i|we)\\s+)?(?:did\\s?n.?t|did\\s+not|do\\s?n.?t|do\\s+not|was\\s?n.?t|was\\s+not|am\\s+not|were\\s?n.?t)\\s+(?:saying|asking|talking|speaking|say|mean|ask|talk|speak)(?:\\s+(?:to|for|anything|nothing|something|that|it|you|mint|a|thing|say|talking|speaking|talk|at\\s+all))*|(?:that|this|it)\\s+was\\s?n.?t\\s+(?:for|to|meant\\s+for)\\s+you|never\\s?mind|forget\\s+(?:it|that|i\\s+said\\s+anything)|ignore\\s+(?:that|me|it|this)|disregard(?:\\s+that)?|scratch\\s+that|false\\s+alarm|not\\s+you|(?:i\\s+)?(?:was|am)\\s+talking\\s+to\\s+(?:someone|somebody|myself|him|her|them))\\W*','i');
+function stripRetract(t){t=String(t||'');var o=t,n=0;while(n++<3){var r=t.replace(RT_RE,'');if(r===t)break;t=r;}return t===o?o:t.trim();}
+function retractOnly(t){var r=stripRetract(t);return r!==String(t||'').trim()&&!r.replace(/\W/g,'').length;}
+function dropHeard(t){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;wake.ignoreUntil=Date.now()+1200;wake.pausedForSpeech=false;logMic('ignored','retraction: '+String(t).slice(0,40));if(isAwake()){setMode('listening');$('hint').textContent='Okay, ignoring that.';}}
+function sleepKind(t){t=stripRetract(String(t||'').trim());if(t.split(/\s+/).length>7)return null;
   var k=/\bstand\s?by\b/i.test(t)?'standby':/\bthat(?:'s|\s+is|\s+will\s+be)\s+all\b/i.test(t)?'thatsall':/\bgood\s?night\b/i.test(t)?'goodnight':null;
   if(!k)return null;
   if(SLEEP_RE.test(t))return k;
@@ -1066,6 +1088,7 @@ function submitHeard(text){
   run(text,{voice:true,wake:true,reply:reply});
 }
 function handleWake(t,isFinal){
+  if(isAwake()&&retractOnly(cleanQ(t)||t)){if(isFinal)dropHeard(t);return;}
   if(MICOFF_RE.test(t)){logMic('voice','mic off by voice');micOff();$('hint').textContent='Mic off. Press Voice to turn listening back on.';return;}
   if(isGoodnight(t)){if(isAwake()){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;byeSleep(t);}return;}
   if(S.mode==='speaking'&&STOP_RE.test(t)&&t.trim().split(/\s+/).length<=4){stopSpeak();setMode('idle');logMic('barge','stopped by voice: '+t.slice(0,30));return;}
@@ -1075,7 +1098,7 @@ function handleWake(t,isFinal){
   var wm=WAKEUP_RE.exec(t);
   if(wm){
     var wasAsleep=!isAwake();
-    if(!isAwake()){wakeUi();try{window.focus();}catch(e){}$('hint').textContent='Awake and listening. Ask me anything. Say “Goodnight, Mint” to fold.';setMode('listening');}
+    if(!isAwake()){preloadData();wakeUi();try{window.focus();}catch(e){}$('hint').textContent='Awake and listening. Ask me anything. Say “Goodnight, Mint” to fold.';setMode('listening');}
     var rest=cleanQ(t.slice(wm.index+wm[0].length));
     if(!rest){clearTimeout(silTimer);wakePend=null;if(wasAsleep){try{speak(greetWord()+', Ali.');}catch(e){}}return;}
     t=rest;
@@ -1358,7 +1381,7 @@ async function freeClaude(q){
   if(rr.error){doneDoing('Claude did not answer');var b=el('div','banner na');b.appendChild(el('b',null,'CLAUDE. '));b.appendChild(document.createTextNode(rr.error));$('extra').insertBefore(b,$('extra').firstChild);setMode('idle');return;}
   doneDoing('Claude answered · '+usageLine());$('ans').textContent=rr.text;$('ans').className='ans small';pushHist({q:q,a:rr.text,tags:['Claude'],use:usageLine(),at:Date.now()});speak(rr.text,false);
 }
-function histText(){return 'NOTE: Ali speaks to you through automatic speech-to-text, so words and names can be misheard (business words: Evermint, Urable, Quo, Square, detailing, ceramic coating). Interpret sensibly and ask only if truly unclear.\nSTYLE: Answer only what Ali just asked, in short spoken sentences. Never repeat or re-mention anything already said earlier in this conversation (appointments, weather, reminders, schedule items). Never volunteer appointments, bookings, schedule items, weather or reminders unless the question directly asks for them. If Ali is only saying thanks, goodnight or goodbye, reply with one short friendly line and nothing else.\n'+capsNote()+convo.hist.slice(-8).map(function(h){return 'Ali: '+h.q+'\nM1NT: '+String(h.a).slice(0,500);}).join('\n');}
+function histText(){return 'NOTE: Ali speaks to you through automatic speech-to-text, so words and names can be misheard (business words: Evermint, Urable, Quo, Square, detailing, ceramic coating). Interpret sensibly and ask only if truly unclear.\nSTYLE: Answer only what Ali just asked, in short spoken sentences. Never repeat or re-mention anything already said earlier in this conversation (appointments, weather, reminders, schedule items). Never volunteer appointments, bookings, schedule items, weather or reminders unless the question directly asks for them. Never say you are standing by or going to sleep; the screen handles standby itself. If Ali says he did not say anything or it was not meant for you, reply with nothing but the single word Okay. If Ali is only saying thanks, goodnight or goodbye, reply with one short friendly line and nothing else.\nSEARCH RULE: do NOT use web search for stable knowledge (history, how things work, vehicle specs, colors, parts, definitions, typical business hours patterns). Answer those directly and fast from what you know. Use web search only for things that change or must be current: live scores, news, prices, whether a place is open right now, or one specific location\'s current hours when it matters. If you give typical hours without searching, say they may differ on holidays.\n'+capsNote()+convo.hist.slice(-8).map(function(h){return 'Ali: '+h.q+'\nM1NT: '+String(h.a).slice(0,500);}).join('\n');}
 async function wxBlurb(){
   var w=await jget('https://api.open-meteo.com/v1/forecast?latitude=38.2527&longitude=-85.7585&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=3');
   var d=w.daily;return [0,1,2].map(function(i){return wxDayName(i)+': '+(WXC[d.weather_code[i]]||'mixed')+', high '+Math.round(d.temperature_2m_max[i])+', low '+Math.round(d.temperature_2m_min[i])+', '+d.precipitation_probability_max[i]+'% precipitation';}).join('; ');
@@ -1368,6 +1391,8 @@ async function cmdBridge(q,opt){
   beginAsk(q);doing('thinking it through with Claude (live web and your data)');setMode('thinking');
   var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},45000);bridgeAbort=ctl;var my=cur;
   try{
+    var hit=(opt&&opt.nocache)?null:acacheGet(q);
+    if(hit){clearTimeout(tm);var ag=ageText(Date.now()-hit.e.at);finish({headline:hit.e.a,small:true,spoken:hit.e.a,tags:[srcTag('live','Remembered · '+ag)],srcNote:'Stable answer remembered on this device. Say "ask fresh" or tap the button to look it up again.',acts:[{label:'Ask fresh',fn:function(){run(q,{nocache:true});}}]});return;}
     var qq=q;
     if(/\b(brief me|briefing|catch me up|what do i need to know|how does my day look|start my day|rundown)\b/i.test(q)){try{qq+='\n\n[Live weather from Open-Meteo for Louisville: '+await wxBlurb()+']';}catch(e){}}
     var r=await fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,q:qq,history:histText()}),signal:ctl.signal});
@@ -1375,7 +1400,7 @@ async function cmdBridge(q,opt){
     if(!r.ok)throw new Error('The bridge answered HTTP '+r.status+'.');
     if(/^Accepted$/i.test(t)){bridgeFail(q,'The bridge did not accept the access code. Paste your link again in Setup.');return;}
     if(!t||/^M1NT_BRIDGE_ERROR/.test(t)){bridgeFail(q,'Claude did not answer.');return;}
-    addUse('claude',1);usageChip();
+    addUse('claude',1);usageChip();acachePut(q,t);
     finish({headline:t,small:true,spoken:t,tags:[srcTag('live','Claude via Make'),srcTag('live','Answered '+clockET(Date.now())+' ET')],srcNote:'Live web search plus your saved calendar, bookings and deposit snapshots. Read-only.',acts:[{label:'Ask again',fn:function(){run(q,{});}}]});
   }catch(e){clearTimeout(tm);if(cur!==my)return;bridgeFail(q,e&&e.name==='AbortError'?'The lookup took longer than 45 seconds.':failCopy(e));}
 }
@@ -1416,12 +1441,13 @@ function parseCalLines(t){
   out.sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:0;});return out;
 }
 async function calBridgeFetch(from,to,force){
-  var key=from+'|'+to,c=calCache[key];if(c&&!force&&Date.now()-c.at<300000)return c;
+  var key=from+'|'+to,c=calCache[key];if(c&&!force&&Date.now()-c.at<600000)return c;
+  if(!force){var hit=null;Object.keys(calCache).forEach(function(k){var e=calCache[k];if(e.from<=from&&e.to>=to&&Date.now()-e.at<600000)hit=e;});if(hit)return {at:hit.at,events:hit.events.filter(function(e){var d=e.start.slice(0,10);return e.start.length<=10?(e.start<=to&&e.end>from):(d>=from&&d<=to);})};}
   var q='[CALENDAR DATA REQUEST] Using only the calendar snapshot (do not search the web), list every event that starts on a date from '+from+' to '+to+' inclusive, including all-day events. Output ONLY lines, one per event, in exactly this form: START|END|TITLE. Use the snapshot text for start and end with the timezone offset removed, for example 2026-11-27T11:00:00|2026-11-27T12:45:00|Shane Fromme: 2023 Chevrolet Tahoe RST. All-day events use plain dates. If there are none, output only the word NONE. No other words.';
   var t=await bridgePost(q,'NOTE: this is a machine-readable request from the screen. Follow the output format exactly and add nothing else.',50000);
   var ev=/^\W*none\W*$/i.test(t)?[]:parseCalLines(t);
   if(!ev.length&&!/^\W*none\W*$/i.test(t))throw new Error('The calendar answer was not in a readable form.');
-  c={at:Date.now(),events:ev};calCache[key]=c;return c;
+  c={at:Date.now(),from:from,to:to,events:ev};calCache[key]=c;return c;
 }
 function evName(t){var i=t.indexOf(':');return i>0?t.slice(0,i).trim():t.trim();}
 function evSub(t){var i=t.indexOf(':');return i>0?t.slice(i+1).trim():'';}
@@ -1594,7 +1620,7 @@ function wxBackdropStop(){
 window.addEventListener('resize',function(){if(wxBgS.stop&&wxBgS.kind){var k=wxBgS.kind,cv=document.getElementById('wxBg');try{wxBgS.stop();}catch(e){}wxBgS.stop=wxScene(cv,k);}});
 function weekWxNode(loc,c,d,isNight){
   var kind=wxKind(c.weather_code,isNight);wxBackdrop(kind);
-  var wrap=el('div','wx wxw wx-'+kind);var ov=el('div','wx-ov');
+  var wrap=el('div','wx wxw wx-'+kind);hudify(wrap);var ov=el('div','wx-ov');
   var top=el('div','wx-l');top.appendChild(el('div','wx-place',loc.name));top.appendChild(el('div','wx-day','Next 7 days · now '+Math.round(c.temperature_2m)+'° and '+(WXC[c.weather_code]||'mixed')));ov.appendChild(top);
   var fc=el('div','wx-fc wx-fcw');
   for(var k=0;k<Math.min(7,d.time.length);k++){var it=el('div','wx-d wx-dw');it.style.setProperty('--d',(0.08*k)+'s');
@@ -1606,9 +1632,10 @@ function weekWxNode(loc,c,d,isNight){
     it.appendChild(el('span','wx-dc',(WXC[d.weather_code[k]]||'').replace(/^./,function(x){return x.toUpperCase();})));fc.appendChild(it);}
   ov.appendChild(fc);wrap.appendChild(ov);return wrap;
 }
+function hudify(w){w.classList.add('hudb');['c1','c2'].forEach(function(k){w.appendChild(el('span','hud-'+k));});return w;}
 function wxNode(loc,c,d,off,cond,isNight){
   var i=off;var code=off>0?d.weather_code[i]:c.weather_code;var kind=wxKind(code,off===0&&isNight);
-  var wrap=el('div','wx wx-'+kind);wxBackdrop(kind);
+  var wrap=el('div','wx wx-'+kind);hudify(wrap);wxBackdrop(kind);
   var ov=el('div','wx-ov');
   var l=el('div','wx-l');l.appendChild(el('div','wx-place',loc.name));
   l.appendChild(el('div','wx-day',off===0?'Right now':wxDayName(off)));
@@ -1733,6 +1760,29 @@ function helpNode(){
   var cats=[['⏱','Timers & clock',['set a timer for 10 minutes','half hour timer','cancel the timer','start a stopwatch','what time is it']],['☁','Weather',['what\'s the weather','weather for the week','will it rain tomorrow']],['▦','Calendar',['what do I have the next 3 days','pull up my calendar','am I booked this week']],['$','What needs me',['what needs me','who owes me a deposit']],['✉','Texts (simulated)',['text Rebecca that we have to move her detail','tell Shane I\'m running late']],['✎','Notes',['add a note: call the tint shop','show my notes','clear my notes']],['∑','Math & fun',['what\'s 18% tip on 85','convert 50 miles to km','flip a coin','roll a die']],['🏈','Scores',['how are the Lions doing']]];
   var w=el('div','help');cats.forEach(function(c,i){var d=el('div','hc');d.style.setProperty('--d',(0.06*i)+'s');var h=el('div','hc-h');h.appendChild(el('span','hc-i',c[0]));h.appendChild(el('b',null,c[1]));d.appendChild(h);c[2].forEach(function(x){var b=el('button','hc-x','“'+x+'”');b.type='button';b.addEventListener('click',function(){run(x,{});});d.appendChild(b);});w.appendChild(d);});return w;
 }
+
+/* ---------- answer memory: stable facts are remembered on this device ---------- */
+var ACACHE=store('acache')||{};
+function acacheKey(q){return normQ(q).replace(/^(?:(?:hey|ok|okay|please)\s+)+/,'');}
+function acacheClass(q){
+  var l=normQ(q),n=l.split(' ').length;if(n<4||n>25)return null;
+  if(/^(and|what about|how about|also|then|so|but)\b/.test(l))return null;
+  if(/\b(my|our|i|i'm|i've|me|we|us|it|that|this|they|them|those|these|he|she|his|her|him|their)\b/.test(l))return null;
+  if(/\b(today|tonight|tomorrow|yesterday|now|current|currently|latest|recent|recently|this week|this weekend|this month|this year|next|last|score|scores|price|prices|stock|stocks|news|weather|forecast|schedule|calendar|booked|booking|customer|customers|deposit|deposits|job|jobs|lead|leads|text|message|reminder|appointment|availability|traffic|open now|closed now)\b/.test(l))return null;
+  if(/\b(open|opens|close|closes|closing|opening|hours)\b/.test(l))return 'hours';
+  return 'stable';
+}
+function acacheGet(q){var c=acacheClass(q);if(!c)return null;var e=ACACHE[acacheKey(q)];if(!e)return null;if(c==='hours'&&Date.now()-e.at>12*3600000)return null;return {e:e,c:c};}
+function acachePut(q,a){var c=acacheClass(q);if(!c||!a||a.length>900||/\?\s*$/.test(a))return;ACACHE[acacheKey(q)]={a:a,at:Date.now(),c:c};var ks=Object.keys(ACACHE);if(ks.length>150){ks.sort(function(x,y){return ACACHE[x].at-ACACHE[y].at;}).slice(0,ks.length-150).forEach(function(k){delete ACACHE[k];});}store('acache',ACACHE);}
+function ageText(ms){var m=Math.round(ms/60000);if(m<2)return 'just now';if(m<90)return m+' minutes ago';var h=Math.round(m/60);if(h<36)return h+' hours ago';return Math.round(h/24)+' days ago';}
+/* ---------- preload on wake ---------- */
+var lastPre=0,needsCache=null;
+var NEEDS_Q='[NEEDS REQUEST] Using only the business data (calendar snapshot, booked jobs with their payment status, deposit waivers recorded by Ali, and sync flags), list what needs Ali\'s attention. Output ONLY lines in the form TYPE|WHO|DETAIL|WHEN. TYPE is one of: DEPOSIT (a job in the next 14 days where payment is none received and NO waiver is recorded; DETAIL like "needs deposit"), BALANCE (partial payment with a balance due; put the amount in DETAIL), FLAG (anything in the sync flags that needs a human), WAIVER (a deposit Ali waived for an upcoming job; DETAIL like "deposit waived by you"), JOB (a job in the next 2 days). WHO is the customer name. WHEN is the day and time such as "Fri 11:00 AM". Never invent anything. If nothing needs attention output only the word NONE. No other words.';
+function preloadData(){
+  if(!BR||Date.now()-lastPre<600000)return;lastPre=Date.now();
+  calBridgeFetch(etDay(0),addDays(etDay(0),45)).catch(function(){});
+  bridgePost(NEEDS_Q,'NOTE: machine-readable request from the screen. Output exactly the lines requested.',50000).then(function(t){needsCache={at:Date.now(),t:t};}).catch(function(){});
+}
 function routeKnown(q,opt,dry){
   var l=normQ(q);var s=stripFill(l);var wcq=q.split(/\s+/).length;
   if(simCtl&&simCtl.node.isConnected&&wcq<=14&&!WX_RE.test(s)&&!/\b(calendar|schedule|timer|time is it|score|brief|needs me)\b/.test(s)){
@@ -1756,6 +1806,7 @@ function routeKnown(q,opt,dry){
     if(swm==='start'){sw={on:false,start:0,acc:0,laps:[],made:true};swToggle();}else if(swm==='stop'){if(sw.on)swToggle();}else if(swm==='reset'){sw={on:false,start:0,acc:0,laps:[],made:true};}else if(swm==='lap'){if(sw.on)sw.laps.push(swElapsed());}
     showStopwatch(q);var spw=swm==='start'?'Stopwatch started.':(swm==='stop'?'Stopped at '+swFmt(swElapsed())+'.':(swm==='reset'?'Stopwatch reset.':''));if(spw){try{speak(spw,false);}catch(e){}}return true;}
   if(timeIntent(l)){if(dry)return true;logMic('route','clock');beginAsk(q);var wantsDate=/\b(date|day)\b/.test(s)&&!/\btime\b/.test(s);finish({headline:wantsDate?prettyDay(etDay(0)):clockET(Date.now())+' ET',small:true,spoken:wantsDate?'Today is '+prettyDay(etDay(0))+'.':'It is '+clockET(Date.now())+'.',node:clockNode(),tags:[srcTag('live','This device clock')]});return true;}
+  if(/\b(clear|forget|wipe|reset|erase)\b.*\b(memory|cache|remembered|what you remember)\b/.test(s)){if(dry)return true;logMic('route','clear memory');ACACHE={};store('acache',ACACHE);calCache={};needsCache=null;beginAsk(q);finish({headline:'Memory cleared.',small:true,spoken:'Okay, I cleared what I remembered.',tags:[srcTag('live','On this screen')]});return true;}
   var nt=noteIntent(s);
   if(nt){if(dry)return true;logMic('route','notes');
     if(nt.clear){NOTES=[];saveNotes();showNotes(q,'Okay, I cleared your notes.');return true;}
@@ -1896,7 +1947,7 @@ async function cmdNeedsBoard(q,force){
   beginAsk(q);var my=cur;doing('checking what needs you');setMode('thinking');
   var t;
   try{
-    t=await bridgePost('[NEEDS REQUEST] Using only the business data (calendar snapshot, booked jobs with their payment status, deposit waivers recorded by Ali, and sync flags), list what needs Ali\'s attention. Output ONLY lines in the form TYPE|WHO|DETAIL|WHEN. TYPE is one of: DEPOSIT (a job in the next 14 days where payment is none received and NO waiver is recorded; DETAIL like "needs deposit"), BALANCE (partial payment with a balance due; put the amount in DETAIL), FLAG (anything in the sync flags that needs a human), WAIVER (a deposit Ali waived for an upcoming job; DETAIL like "deposit waived by you"), JOB (a job in the next 2 days). WHO is the customer name. WHEN is the day and time such as "Fri 11:00 AM". Never invent anything. If nothing needs attention output only the word NONE. No other words.','NOTE: machine-readable request from the screen. Output exactly the lines requested.',50000);
+    if(!force&&needsCache&&Date.now()-needsCache.at<300000){t=needsCache.t;}else{t=await bridgePost(NEEDS_Q,'NOTE: machine-readable request from the screen. Output exactly the lines requested.',50000);needsCache={at:Date.now(),t:t};}
   }catch(e){if(cur!==my)return;bridgeFail(q,failCopy(e));return;}
   if(cur!==my)return;
   var items=/^\W*none\W*$/i.test(t)?[]:parseNeeds(t);
@@ -1917,6 +1968,7 @@ function run(raw,opt){
   var l=q.toLowerCase();
   if(!BR&&/\b(cancel|delete|refund|charge|transfer|send money|reschedule|resume|pause|book (a|an|me|him|her|them)|take (a )?payment|waive)\b/.test(l)){cmdLocked(q);return;}
   var wcq=q.split(/\s+/).length;
+  if(retractOnly(q)){dropHeard(q);return;}
   if(MICOFF_RE.test(q)){micOff();return;}
   if(isGoodnight(q)){byeSleep(q);return;}
   if(routeKnown(q,opt))return;
