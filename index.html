@@ -709,7 +709,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v43-2026-11-26';
+var BUILD='v44-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -831,7 +831,7 @@ function etHour(){try{return parseInt(new Intl.DateTimeFormat('en-US',{hour:'num
 function greetWord(){var h=etHour();return h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
 var standby=false;
 function byeSleep(t){var k=sleepKind(t)||'goodnight';if(k==='standby'){if(standby)return;standby=true;wxBackdropStop();stopSpeak();closeDrawer();setUi('awake');setMode('listening');$('hint').textContent='Standing by. Say “Hey, Mint” and then talk as long as you like. Say “Stand by, Mint” to pause again.';try{speak('Standing by, Ali.');}catch(e){}return;}standby=false;sleepUi();var n=etHour();var m=k==='standby'?'Standing by':k==='thatsall'?(n>=17?'See you later':'Okay'):(n>=17||n<5?'Goodnight':'Goodbye');$('hint').textContent='';try{speak(m+', Ali.');}catch(e){}}
-function sleepUi(){sfx('sleep');LOCKED=true;lkBusy=false;setTimeout(function(){showLock();},700);wxBackdropStop();stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
+function sleepUi(){sfx('sleep');if(LOCKON){LOCKED=true;lkBusy=false;setTimeout(function(){showLock();},700);}wxBackdropStop();stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
 var idleT=0;
 function armIdle(){clearTimeout(idleT);if(S.mode!=='idle'||app.getAttribute('data-state')!=='answer')return;var dl=document.querySelector('#extra .cv,#extra .wx,#extra .sb,#extra .sim,#extra .needs,#extra .notes')?45000:20000;idleT=setTimeout(function(){if(S.mode==='idle'&&app.getAttribute('data-state')==='answer'&&!drawer.classList.contains('show')&&!ptt.on){wxBackdropStop();setUi('awake');$('hint').textContent=standby?'Standing by. Say “Hey, Mint” to talk.':'Ready. Ask me anything.';renderDock();}},dl);}
 ['pointerdown','keydown'].forEach(function(n){document.addEventListener(n,function(){armIdle();},true);});
@@ -1291,7 +1291,7 @@ function pttStart(){
   if(micBackend==='none'){$('hint').textContent='This window has no speech input. Press Enable microphone for the reason, or type.';return;}
   if(wake.on){wake.wasOn=true;wakeOff('Voice listening paused while you talk.');}
   stopSpeak();ptt.on=true;ptt.buf='';setMode('listening');micUi();levelStart();
-  var sink={partial:function(t){$('cmd').value=(ptt.buf+' '+t).trim();},final:function(t){ptt.buf=(ptt.buf+' '+t).trim();$('cmd').value=ptt.buf;},end:function(why){pttEnd(why);}};
+  var sink={partial:function(t){$('cmd').value=(ptt.buf+' '+t).trim();if(LOCKED)lkVoice(ptt.buf+' '+t,false);},final:function(t){ptt.buf=(ptt.buf+' '+t).trim();$('cmd').value=ptt.buf;if(LOCKED)lkVoice(ptt.buf,false);},end:function(why){pttEnd(why);}};
   micStart(sink,false).then(function(ok){if(!ok&&ptt.on)pttEnd('failed');});
 }
 function pttEnd(why){
@@ -2529,7 +2529,8 @@ function tossNode(kind,result){
 }
 
 /* ---------- wake code (fixed 6-digit; salted hash only, never the code itself) ---------- */
-var LOCKED=true,lkBuf='',lkFails=0,lkUntil=0,lkBusy=false,LK_H='4421357f4fa6e328e0a3db6b62648947e00d817750e4a0a8b8c6558a81efa5c1',LK_H2='x-1234357654',LKN=6;
+var LOCKON=(function(){try{var q=/[?&]lock=(on|off)\b/.exec(location.search);if(q){if(q[1]==='on')localStorage.setItem('m1nt.lock','1');else localStorage.removeItem('m1nt.lock');}return localStorage.getItem('m1nt.lock')==='1';}catch(e){return false;}})();
+var LOCKED=LOCKON,lkBuf='',lkFails=0,lkUntil=0,lkBusy=false,LK_H='4421357f4fa6e328e0a3db6b62648947e00d817750e4a0a8b8c6558a81efa5c1',LK_H2='x-1234357654',LKN=6;
 function pinSet(){return true;}
 function h32(t){var n=5381;for(var i=0;i<t.length;i++)n=((n*33)^t.charCodeAt(i))|0;return 'x'+n;}
 async function lkCheck(code){var t='m1nt.wake:'+code;try{if(window.crypto&&crypto.subtle){var h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return Array.from(new Uint8Array(h)).map(function(b){return ('0'+b.toString(16)).slice(-2);}).join('')===LK_H;}}catch(e){}return h32(t)===LK_H2;}
@@ -2566,10 +2567,10 @@ function lkVoice(t,isFinal){
   if(d.length===5&&d[0]!=='0')d='0'+d;
   if(d.length>=LKN)d=d.slice(-LKN);
   lkBuf=d;lkDraw(false);
-  if(d.length===LKN)lkTry();else if(isFinal){lkFail();}
+  if(d.length===LKN)lkTry();else if(isFinal&&d.length){$('lkS').textContent='Heard '+d.length+' of 6 digits. Say all six again.';setTimeout(function(){if(LOCKED&&!lkBusy){lkBuf='';lkDraw();}},1800);}
   return true;}
 $('lkMic').addEventListener('click',function(){try{if(ptt.on)pttStop();else pttStart();}catch(e){}});
-LOCKED=true;showLock();
+if(LOCKON)showLock();else LOCKED=false;
 /* ---------- reminders (fire while this screen is open) ---------- */
 var REMS=store('rems')||[];var remAdvised=false;
 function saveRems(){store('rems',REMS);}
