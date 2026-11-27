@@ -429,7 +429,7 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 .help{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:10px}
 .hc{padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(160deg,rgba(8,44,39,.7),rgba(2,14,12,.85));animation:evIn .5s var(--d,0s) both;text-align:left}
 .hc-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}.hc-i{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--mint);color:var(--mint);font:700 14px var(--font-d)}.hc-h b{font:600 15px var(--font-d);color:#fff}
-.hc-x{display:block;width:100%;text-align:left;background:none;border:0;padding:3px 2px;font:400 12px var(--font-m);color:var(--muted);cursor:pointer}.hc-x:hover{color:var(--mint)}
+.hc-d{font:400 12px/1.45 var(--font-m);color:var(--muted);margin:2px 2px 8px}.hc-x{display:block;width:100%;text-align:left;background:none;border:0;padding:3px 2px;font:400 12px var(--font-m);color:var(--muted);cursor:pointer}.hc-x:hover{color:var(--mint)}
 
 /* centered full-screen mode: clock, timer, stopwatch, calculator, dice (no glass card) */
 .app[data-state="answer"][data-viz="center"] .center{padding:0}
@@ -716,7 +716,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v69-2026-11-27';
+var BUILD='v70-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -2542,11 +2542,73 @@ function capsNote(){
   var tl=tmrs.length?tmrs.map(function(t){return t.label+(t.alarm?' alarm':' timer')+' ('+(t.done?'finished':hms(t.end-Date.now())+' left')+')';}).join(', '):'none';
   return 'WHAT THIS SCREEN CAN DO BY ITSELF (built in, handled on the screen without you, and these are REAL and WORKING): a system health board, an upcoming customers board, full-screen animated calendar and weather, hour by hour weather and day lookups, soft sounds that can be turned off by saying sounds off, timers and alarms (several at once, they keep running in the bottom-left corner and beep and speak when done), a stopwatch, a big clock, animated full-screen weather (now, a day, or the week), calendar views (a day, 3 days, a week, a month), a what-needs-me board of deposits, balances and flags, text-message SIMULATIONS (visual only, nothing is actually sent), notes and a to-do list saved on this device, a calculator, unit conversions, tip math, coin flip, dice, football scores. If Ali asks about any of these, they exist and work; never say they do not. What it truly cannot do yet: send real texts, book, cancel, reschedule, take payments or change anything in his systems. CURRENT STATE: timers: '+tl+'; stopwatch: '+(sw.made?(sw.on?'running '+swFmt(swElapsed()):'stopped at '+swFmt(swElapsed())):'not started')+'; saved notes: '+NOTES.length+'.\n';
 }
-var HELP_RE=/\b(what can you do|what do you do|what are you capable of|what are your (?:commands|capabilities|features|tools|abilities)|your (?:commands|capabilities|features|tools|abilities)|list (?:the )?(?:commands|tools|features)|show (?:me )?(?:the )?(?:commands|tools|features)|what (?:commands|tools|features) (?:do you have|can i use|are there)|how do i use (?:you|this|mint)|what can i (?:ask|say)|help me with mint|^help$)\b/;
+var HELP_RE=/\b(what can you do|what do you do|what are you capable of|what are your (?:commands|capabilities|features|tools|abilities)|(?:the |a )?(?:commands?|command) list|list of (?:all )?(?:the )?(?:commands|things)|(?:summary|rundown|overview) of (?:everything|what|all)|what all can (?:you|mint|m1nt) do|what can (?:mint|m1nt) do|everything you can do|show me everything|your (?:commands|capabilities|features|tools|abilities)|list (?:the )?(?:commands|tools|features)|show (?:me )?(?:the )?(?:commands|tools|features)|what (?:commands|tools|features) (?:do you have|can i use|are there)|how do i use (?:you|this|mint)|what can i (?:ask|say)|help me with mint|^help$)\b/;
 var TSTAT_RE=/\b(did you (?:set|start|make)(?: (?:the|a|my|that))? (?:timer|alarm|countdown)|is (?:the|my|a|that) (?:timer|alarm|countdown) (?:running|going|set|on|working|active)|(?:are there|do i have|have i got|got) (?:any|a) (?:timers?|alarms?|countdowns?)|(?:what|which) (?:timers?|alarms?) (?:do i have|are (?:running|set|going))|any (?:timers?|alarms?)|(?:timers?|alarms?) (?:running|going|status)|did (?:it|that|the (?:timer|alarm)) (?:start|go|set)|is it (?:running|going|counting)|is (?:there )?a (?:timer|alarm))\b/;
 function helpNode(){
-  var cats=[['⏱','Timers & clock',['set a timer for 10 minutes','half hour timer','cancel the timer','start a stopwatch','what time is it']],['☁','Weather',['what\'s the weather','weather for the week','will it rain tomorrow']],['▦','Calendar',['what do I have the next 3 days','pull up my calendar','am I booked this week']],['$','What needs me',['what needs me','who owes me a deposit']],['✉','Texts (simulated)',['text Alex that we have to move the detail','tell Shane I\'m running late']],['✎','Notes',['add a note: call the tint shop','show my notes','clear my notes']],['∑','Math & fun',['what\'s 18% tip on 85','convert 50 miles to km','flip a coin','roll a die']],['🏈','Scores',['how are the Lions doing']]];
-  var w=el('div','help');cats.forEach(function(c,i){var d=el('div','hc');d.style.setProperty('--d',(0.06*i)+'s');var h=el('div','hc-h');h.appendChild(el('span','hc-i',c[0]));h.appendChild(el('b',null,c[1]));d.appendChild(h);c[2].forEach(function(x){var b=el('button','hc-x','“'+x+'”');b.type='button';b.addEventListener('click',function(){run(x,{});});d.appendChild(b);});w.appendChild(d);});return w;
+  var T=[
+   ['Overview','◎',[
+     ['What I am','Your hands-free business assistant. Say Hey Mint, then talk normally. I read your real calendar, leads, deposits and systems, text you or your customers, and keep time, notes and reminders.'],
+     ['Live data','Calendar, booked jobs, open leads (all of them), Elite clients, deposits, system health, weather for Louisville.'],
+     ['Texting','I can text you anything, and text customers on your customer list (you confirm first). 20 texts a day max.'],
+     ['Always with you','Works by voice or typing on desktop, phone and the TV. Chat in English, Spanish, Arabic and French.'],
+     ['Private','Locked behind your code and Cloudflare. Go dark locks it again.']
+   ]],
+   ['Business','▦',[
+     ['what do I have tomorrow','Shows your calendar for tomorrow. Also: today, this week, the next 3 days, am I booked Saturday.'],
+     ['pull up my calendar','Opens the animated calendar board with every job and time.'],
+     ['show my leads','All open leads in animated tabs: follow up today, first contact, second contact, interested, quoted, follow-up 1 and 2.'],
+     ['who should I follow up with','Leads due for a follow-up today or overdue.'],
+     ['what needs me','Deposits not paid, unanswered texts and anything waiting on you.'],
+     ['who owes me a deposit','Booked jobs with no $50 deposit yet. Waived deposits are left out.'],
+     ['show my elite clients','Evermint Elite members, their vehicles and monthly day.'],
+     ['my customers','Upcoming booked customers and what is booked.'],
+     ['give me the briefing','The morning or evening rundown.'],
+     ['how many leads did we win this month','Win and loss stats from your full lead history.']
+   ]],
+   ['Texting','✉',[
+     ['text me the calendar','Texts you the answer to your own phone. Say text me this after any answer.'],
+     ['text Shane I am running late','Drafts a customer text, shows it, and sends only after you say send. Customer list only.'],
+     ['remind me at 3 to call the tint shop','A reminder that speaks and pings on this screen. Also: remind me in 20 minutes.'],
+     ['show my reminders','Lists upcoming reminders. Say clear my reminders to wipe them.']
+   ]],
+   ['Systems','⚙',[
+     ['how is the system doing','Green or yellow on every automation: follow-ups, deposit reminder, customer texts, briefings, backups and more.'],
+     ['is the deposit reminder running','Ask about one thing by name: watchdog, follow-up manager, calendar sync, credits.'],
+     ['is anything broken','Only the items that need a look.'],
+     ['ask Claude','If I do not know something I ask if you want me to hand it to Claude. Say yes or no.']
+   ]],
+   ['Weather & time','☁',[
+     ['what is the weather','Louisville now, with the animated backdrop. Also: the week, will it rain tomorrow.'],
+     ['set a timer for 10 minutes','Timers and alarms, any number at once. Cancel the timer. Add 5 minutes.'],
+     ['start a stopwatch','Start, stop, lap and reset.'],
+     ['what time is it','Time and date in Eastern.']
+   ]],
+   ['Tools','∑',[
+     ['add a note call the tint shop','Quick notes on this device. Show my notes. Clear my notes.'],
+     ['what is 18 percent tip on 85','Math, tips and splits.'],
+     ['convert 50 miles to kilometers','Unit conversions.'],
+     ['flip a coin','Coin, dice, random picks.'],
+     ['how are the Lions doing','Live sports scores.']
+   ]],
+   ['Screen & voice','◐',[
+     ['hey mint / wake up mint','Wakes me. Also: rise and shine mint, get up mint.'],
+     ['stand by','Pauses me until you say Hey Mint. Also: no that is okay just stand by, talk to you later.'],
+     ['good night mint','Puts me to sleep. The screen stays unlocked.'],
+     ['go dark','Locks the screen. Only works while I am awake and listening.'],
+     ['tv mode on','Big-screen layout with remote arrows, plus the wall display when idle. Off: tv mode off.'],
+     ['sounds off','Mutes or restores the chimes. Also: listen in Spanish, Arabic, French or English.']
+   ]],
+   ['Coming next','◇',[
+     ['Inventory','Your Notion inventory as an animated board: low stock, out, broken, on order.'],
+     ['Call records','Pull up call notes for any customer.'],
+     ['Pause and resume','Pause follow-ups or the deposit reminder by voice.'],
+     ['Bank and income','Money in and out once the business account is connected.']
+   ]]
+  ];
+  var w=el('div','helpw');var tabs=el('div','ltabs');var holder=el('div','help');
+  function show(i,anim){clear(holder);var t=T[i];t[2].forEach(function(c,k){var d=el('div','hc');d.style.setProperty('--d',(0.05*k)+'s');var h=el('div','hc-h');h.appendChild(el('span','hc-i',t[1]));h.appendChild(el('b',null,c[0]));d.appendChild(h);d.appendChild(el('div','hc-d',c[1]));if(i>0&&i<T.length-1){var b=el('button','hc-x','Try: “'+c[0]+'”');b.type='button';b.addEventListener('click',function(){run(c[0],{});});d.appendChild(b);}holder.appendChild(d);});[].forEach.call(tabs.children,function(b,j){b.classList.toggle('on',j===i);});if(anim)sfx('tick');}
+  T.forEach(function(t,i){var b=el('button','ltab');b.type='button';b.appendChild(el('b',null,t[1]));b.appendChild(el('span',null,t[0]));b.addEventListener('click',function(){show(i,true);});tabs.appendChild(b);});
+  w.appendChild(tabs);w.appendChild(holder);show(0,false);return w;
 }
 
 /* ---------- answer memory: stable facts are remembered on this device ---------- */
