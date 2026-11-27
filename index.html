@@ -3259,6 +3259,7 @@ function tvRotate(){
   tvQuiet=true;try{run(qs[TV.i],{tvAuto:true});}catch(e){}setTimeout(function(){if(Date.now()-(TV.lastUser||0)>=1000)tvQuiet=false;},25000);
 }
 function tvSet(on){
+  on=false;/* TV mode retired */
   TV.on=!!on;store('tv',TV.on);tvApply();clearInterval(TV.t);
   if(TV.on){setTimeout(function(){try{dashStart();}catch(e){}},400);setTimeout(function(){try{var f=tvFocusables().filter(function(e){return e.tagName!=='INPUT';})[0];if(f)f.focus();}catch(e){}},1200);
     try{if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(function(){});}catch(e){}}
@@ -3304,7 +3305,7 @@ document.addEventListener('keydown',function(e){
   if(e.key==='+'||e.key==='='||e.key==='-'){TV.inset=Math.max(0,Math.min(14,TV.inset+(e.key==='-'?1:-1)));store('tvInset2',TV.inset);tvApply();}
 });
 try{fitAuto();}catch(e){}
-(function(){var ua=navigator.userAgent||'';var u=/[?&]tv(=1|=on|&|$)/.test(location.search)||(/SMART-?TV|SmartTV|Tizen|Web0S|webOS|NetCast|BRAVIA|AFT[A-Z]|Android ?TV|GoogleTV|CrKey|HbbTV|Roku|VIDAA|\bTV\b/i.test(ua)&&!/[?&]tv=(0|off)/.test(location.search));if(/[?&]tv=(0|off)/.test(location.search)){store('tv',false);}if(u||store('tv')===true){TV.on=true;tvApply();setTimeout(function(){tvSet(true);},600);}})();
+(function(){var ua=navigator.userAgent||'';var u=/[?&]tv(=1|=on|&|$)/.test(location.search)||(/SMART-?TV|SmartTV|Tizen|Web0S|webOS|NetCast|BRAVIA|AFT[A-Z]|Android ?TV|GoogleTV|CrKey|HbbTV|Roku|VIDAA|\bTV\b/i.test(ua)&&!/[?&]tv=(0|off)/.test(location.search));if(/[?&]tv=(0|off)/.test(location.search)){store('tv',false);}store('tv',false);/* TV mode retired Nov 27: never auto-starts */})();
 
 /* ---------- TV corner mic + menu ---------- */
 (function(){
@@ -3799,7 +3800,7 @@ function run(raw,opt){
   if(MICOFF_RE.test(q)){micOff();return;}
   if(isAwake()&&!standby&&lockReq(q)){doLock(q);return;}
   if(isGoodnight(q)){byeSleep(q);return;}
-  if(/\b(?:tv|television) mode\b|\b(?:turn|switch|put) (?:this )?(?:on|into|to) (?:the )?(?:tv|television)\b|\bwall ?mode\b/.test(l)&&wcq<=8){var off=/\b(off|exit|stop|leave|normal)\b/.test(l);beginAsk(q);tvSet(!off);finish({headline:off?'TV mode off.':'TV mode on. Use the up and down arrows on the remote to fit the edges of your screen.',small:true,spoken:off?'TV mode off.':'TV mode on.',tags:[srcTag('live','TV mode')]});return;}
+  if(/\b(?:tv|television) mode\b|\b(?:turn|switch|put) (?:this )?(?:on|into|to) (?:the )?(?:tv|television)\b|\bwall ?mode\b/.test(l)&&wcq<=8){var off=/\b(off|exit|stop|leave|normal)\b/.test(l);beginAsk(q);tvSet(false);finish({headline:'TV mode has been removed.',small:true,spoken:'TV mode has been removed.',tags:[srcTag('live','TV mode')]});return;}
   if(/^(?:(?:hey |ok |okay |so |and |can you |could you |would you |will you |please |mint )*)(?:text|send|message|txt|shoot|email)\s+(?:me|my (?:phone|cell|number))\b/.test(l)&&wcq>=3){logMic('route','text me');cmdTextMe(q);return;}
   if(wcq<=22&&ALERT_RE.test(l)&&!/\b(?:set|create|add|remind me to)\b.*\b(?:timer|alarm)\b/.test(l)&&!/^remind me\b/.test(l)){logMic('route','calendar alerts');cmdAlerts(q);return;}
   if(wcq<=24&&EXPLAIN_RE.test(l)&&(SYS_RE.test(l)||(Date.now()-lastHealthAt<900000&&wcq<=16)||/\b(?:fix (?:it|that|this|them|everything|all)|figure (?:it|that|this) out|go through (?:it|that|everything|all))\b/.test(l))&&!/\b(?:weather|forecast|score|calendar|schedule)\b/.test(l)){logMic('route','explain systems');cmdExplain(q,/\bfix\b/.test(l));return;}
