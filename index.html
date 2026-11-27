@@ -233,7 +233,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v15-2026-11-26';
+var BUILD='v16-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -796,10 +796,10 @@ var WAKEUP_RE=new RegExp('\\b(?:wake\\s?up|wakeup)[,.!\\s]+'+NM+'\\b','i');
 var HEY_RE=new RegExp('\\b(?:(?:hey|hay|hi|ok|okay|a)[,.!\\s]*'+NM+'|a\\s?men)\\b[,.!\\s]*','i');
 var WAKE_ANY=new RegExp('(?:'+HEY_RE.source+')|(?:wake\\s?up[,.!\\s]+'+NM+')|(?:good\\s?night[,.!\\s]+'+NM+')','i');
 var SNM='(?:mint|mints|mince|minty|mynt|m1nt|mind|min|mid)';
-var SLC='(?:go\\s+to\\s+sleep|sleep|close|stand\\s?by|stand\\s+down|dismissed|good\\s?night|good\\s?bye|bye|see\\s+you(?:\\s+later)?|that(?:\'s|\\s+is|\\s+will\\s+be)\\s+all)';
+var SLC='(?:stand\\s?by|good\\s?night|that(?:\'s|\\s+is|\\s+will\\s+be)\\s+all)';
 var SLEEP_RE=new RegExp('(?:\\b'+SLC+'\\b[,.!\\s]*(?:for\\s+now[,.!\\s]*)?\\b'+SNM+'\\b)|(?:\\b'+SNM+'\\b[,.!\\s]+'+SLC+'\\b)','i');
 function isGoodnight(t){return SLEEP_RE.test(t)&&String(t).trim().split(/\s+/).length<=7;}
-var MICOFF_RE=new RegExp('^\\s*(?:(?:hey|ok|okay)[,.!\\s]*)?(?:'+SNM+'[,.!\\s]*)?(?:please\\s+)?(?:(?:turn|switch|shut)\\s+(?:my\\s+|the\\s+)?(?:mic|microphone)\\s+off|(?:turn|shut)\\s+off\\s+(?:my\\s+|the\\s+)?(?:mic|microphone)|(?:mic|microphone)\\s+off|stop\\s+listening)[,.!\\s]*(?:'+SNM+')?[.!\\s]*$','i');
+var MICOFF_RE=new RegExp('^\\s*(?:(?:hey|ok|okay)[,.!\\s]*)?(?:(?:'+SNM+'[,.!\\s]+)?(?:please\\s+)?turn\\s+(?:my\\s+|the\\s+)?(?:mic|microphone)\\s+off[,.!\\s]*'+SNM+'|(?:please\\s+)?turn\\s+(?:my\\s+|the\\s+)?(?:mic|microphone)\\s+off[,.!\\s]*(?:please)?)[.!\\s]*$','i');
 var LEAD_RE=new RegExp('^(?:(?:hey|hay|hi|ok|okay|wake\\s?up)[,.!\\s]*)?(?:'+NM+')?[,.!\\s]*','i');
 var JUNK=/^(mint|min|mid|mind|man|men|amen|mean|hey|hay|hi|ok|okay|uh|um|a|the|and|so|well|up)$/i;
 var SIL=store('sil')||1300, silTimer=0, wakePend=null;
