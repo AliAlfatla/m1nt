@@ -220,7 +220,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v9-2026-11-26';
+var BUILD='v10-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -952,7 +952,7 @@ function evSpoken(list,label){
   return (list.length===1?'You have one thing '+label+': ':'You have '+list.length+' things '+label+': ')+parts.join('. ')+'.';
 }
 async function cmdSchedule(q,off,label,opt){
-  var ds=etDay(off);beginAsk(q);doing('reading your calendar through Make');
+  var ds=etDay(off);beginAsk(q);convo.wxOff=off;doing('reading your calendar through Make');
   var m=await getMcp();
   if(!m&&STANDALONE){finish({headline:'Calendar is not connected in this version.',small:true,spoken:'The calendar is not connected in the standalone version. Use the Claude version for your schedule.',tags:[srcTag('na','Unavailable')],banners:[{kind:'na',bold:'NOT CONNECTED.',text:errCopy({code:'capability_disabled'})}]});return;}
   if(!m){finish({headline:'Demo schedule shown. This is placeholder data.',small:true,spoken:'This is demo data, not your calendar.',rows:DEMO_EVENTS.map(function(d){return {t:t12(d.start.slice(1,6))+' – '+t12(d.end.slice(1,6)),n:d.title};}),tags:[srcTag('demo','Demo data')],banners:[{kind:'',bold:'DEMO.',text:errCopy({code:'capability_disabled'})}]});return;}
@@ -960,7 +960,7 @@ async function cmdSchedule(q,off,label,opt){
   if(!r.rec){finish({headline:'I could not read your calendar.',small:true,spoken:'I could not read your calendar. Nothing was checked.',tags:[srcTag('na','Unavailable')],banners:[{kind:'na',bold:'UNAVAILABLE.',text:errCopy(r.err,'Make')+' This is not an empty day; the lookup did not run.'}],acts:[{label:'Try again',pri:true,fn:function(){run(q,{live:true});}}]});return;}
   var list=eventsOn(r.rec.data,ds).sort(function(a,b){return a.start<b.start?-1:1;});
   var banners=[];if(r.err&&r.rec.saved)banners.push({kind:'warn',bold:'SAVED COPY.',text:'Live lookup failed ('+errCopy(r.err,'Make')+') so this is the saved copy from '+stampET(r.rec.at)+'.'});
-  finish({headline:list.length?prettyDay(ds)+': '+list.length+plural(list.length,' item',' items'):'Nothing on your calendar '+label+'.',spoken:(prettyDay(ds)+'. ')+evSpoken(list,label),rows:evRows(list),banners:banners,tags:[tagFor(r.rec),srcTag('live','Google Calendar via Make')],srcNote:list.length?'':'Verified empty: the lookup worked and found no events.',acts:[{label:'Refresh live',fn:function(){run(q,{live:true});}}]});
+  finish({follow:'schedule',headline:list.length?prettyDay(ds)+': '+list.length+plural(list.length,' item',' items'):'Nothing on your calendar '+label+'.',spoken:(prettyDay(ds)+'. ')+evSpoken(list,label),rows:evRows(list),banners:banners,tags:[tagFor(r.rec),srcTag('live','Google Calendar via Make')],srcNote:list.length?'':'Verified empty: the lookup worked and found no events.',acts:[{label:'Refresh live',fn:function(){run(q,{live:true});}}]});
 }
 async function cmdWeek(q,opt){
   beginAsk(q);doing('reading your calendar through Make');
@@ -980,6 +980,7 @@ function wxOffset(q){
   if(/day after (tomorrow|next)/.test(l))return 2;
   if(/(day after (that|then)|the next day|following day|day after\b|and then the day|next day)/.test(l))return (convo.wxOff!=null?convo.wxOff:1)+1;
   if(/day before/.test(l))return Math.max(0,(convo.wxOff!=null?convo.wxOff:1)-1);
+  if(/\b(that day|same day|that morning|that afternoon|that evening|that night)\b/.test(l))return convo.wxOff!=null?convo.wxOff:null;
   if(/\btomorrow\b/.test(l))return 1;
   if(/\b(today|tonight|right now|this morning|this afternoon|this evening)\b/.test(l))return 0;
   var tdw=new Date(etDay(0)+'T12:00:00').getDay();
@@ -1133,7 +1134,9 @@ async function freeClaude(q){
 }
 function followUp(q,opt){
   var L=convo.last,l=q.toLowerCase();
+  if(/\b(weather|forecast|rain|snow|temperature)\b/.test(l)&&L.kind!=='weather'){convo.wxFollow=true;run('weather '+q,{voice:true,wake:true,reply:'x'});return true;}
   if(/\b(schedule|calendar|deposit|lead|customer|jobs?|brief|needs me)\b/.test(l))return false;
+  if(L.kind==='schedule'){if(wxOffset(q)==null&&!/\b(evening|morning|afternoon)\b/.test(l))return false;run('schedule '+q,{voice:true,wake:true,reply:'x'});return true;}
   if(L.kind==='weather'){convo.wxFollow=true;run('weather '+q,{voice:true,wake:true,reply:'x'});return true;}
   if(L.kind==='football'){run(q+' football score',{voice:true,wake:true,reply:'x'});return true;}
   if(L.kind==='web'){if(/\b(weather|forecast|football|score)\b/.test(l))return false;cmdWebFollow(q,L,opt);return true;}
@@ -1161,9 +1164,8 @@ function run(raw,opt){
   if((/^(search|look up|google|find out|news)\b|latest news|what('?s| is) the news|\b(what time|when) (does|do|is) .+ (close|open|closes|opens)\b|\bhours\b|\bis .+ open\b|\bphone number\b|\baddress (for|of)\b|\bhow (much|many|old|tall|far)\b|^who (is|was)\b|^what (is|are|was) (a|an|the)\b/.test(l))&&!/deposit|payment|\bjobs?\b|customer|credit|usage|schedule|calendar|appointment|lead/.test(l)){var ch=!opt.clarified&&needsPlace(q);if(ch){askPlace(q,ch);return;}cmdWeb(q,opt);return;}
   if(/what('?s| is)? ?(needs|need) me|needs me|need my attention|waiting on me|what should i (do|handle)/.test(l)){cmdNeeds(q,opt);return;}
   var sched=/(schedule|calendar|agenda|what'?s on|what is on|appointments?|jobs? (today|tomorrow)|what do i have)/.test(l);
-  if(sched&&/tomorrow/.test(l)){cmdSchedule(q,1,'tomorrow',opt);return;}
-  if(sched&&/today|tonight/.test(l)){cmdSchedule(q,0,'today',opt);return;}
-  if(sched&&/(week|next few|upcoming)/.test(l)){cmdWeek(q,opt);return;}
+  if(sched&&/(this week\b|next week|next few|upcoming|the week)/.test(l)&&!/weekend/.test(l)){cmdWeek(q,opt);return;}
+  if(sched){var so=wxOffset(q);if(so!=null){cmdSchedule(q,so,so===0?'today':(so===1?'tomorrow':wxDayName(so)),opt);return;}}
   if(/\bleads?\b/.test(l)){cmdOpen(q,'leads','leads');return;}
   if(/(customers?|texts?|messages?|inbox|threads?|handoffs?)/.test(l)){cmdOpen(q,'customers','customers');return;}
   if(/(deposits?|square|payments?)/.test(l)){cmdOpen(q,'deposits','deposits');return;}
