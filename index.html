@@ -233,7 +233,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v20-2026-11-26';
+var BUILD='v21-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -337,7 +337,7 @@ function setUi(state){
 function wakeUi(){if(app.getAttribute('data-state')==='asleep'){setUi('awake');}}
 function etHour(){try{return parseInt(new Intl.DateTimeFormat('en-US',{hour:'numeric',hour12:false,timeZone:'America/New_York'}).format(new Date()),10)%24;}catch(e){return new Date().getHours();}}
 function greetWord(){var h=etHour();return h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
-function byeSleep(){sleepUi();var m=etHour()>=17||etHour()<5?'Goodnight':'Goodbye';var t=m+', Ali.';$('hint').textContent='';try{speak(m+', Ali.');}catch(e){}}
+function byeSleep(t){var k=sleepKind(t)||'goodnight';sleepUi();var n=etHour();var m=k==='standby'?'Standing by':k==='thatsall'?(n>=17?'See you later':'Okay'):(n>=17||n<5?'Goodnight':'Goodbye');$('hint').textContent='';try{speak(m+', Ali.');}catch(e){}}
 function sleepUi(){stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
 var idleT=0;
 function armIdle(){clearTimeout(idleT);if(S.mode!=='idle'||app.getAttribute('data-state')!=='answer')return;idleT=setTimeout(function(){if(S.mode==='idle'&&app.getAttribute('data-state')==='answer'&&!drawer.classList.contains('show')&&!ptt.on){setUi('awake');$('hint').textContent='Ready. Ask me anything.';}},20000);}
@@ -798,10 +798,16 @@ var NM='(?:mint|mints|mince|minty|mynt|mind|m1nt|min|mid|man|men|mean|meant|ment
 var WAKEUP_RE=new RegExp('\\b(?:wake\\s?up|wakeup)[,.!\\s]+'+NM+'\\b','i');
 var HEY_RE=new RegExp('\\b(?:(?:hey|hay|hi|ok|okay|a)[,.!\\s]*'+NM+'|a\\s?men)\\b[,.!\\s]*','i');
 var WAKE_ANY=new RegExp('(?:'+HEY_RE.source+')|(?:wake\\s?up[,.!\\s]+'+NM+')|(?:good\\s?night[,.!\\s]+'+NM+')','i');
-var SNM='(?:mint|mints|mince|minty|mynt|m1nt|mind|min|mid|man|men|amen|moment|mitt|meant|mean|mine|mm+|minute)';
+var SNM='(?:mint|mints|mince|minty|mynt|m1nt|mind|min|mid|man|men|amen|moment|mitt|meant|mean|mine|mm+|minute|me|my|may|mate|mud|mod)';
 var SLC='(?:stand\\s?by|good\\s?night|that(?:\'s|\\s+is|\\s+will\\s+be)\\s+all)';
 var SLEEP_RE=new RegExp('(?:\\b'+SLC+'\\b[,.!\\s]*(?:for\\s+now[,.!\\s]*)?\\b'+SNM+'\\b)|(?:\\b'+SNM+'\\b[,.!\\s]+'+SLC+'\\b)','i');
-function isGoodnight(t){return SLEEP_RE.test(t)&&String(t).trim().split(/\s+/).length<=7;}
+function sleepKind(t){t=String(t||'').trim();if(t.split(/\s+/).length>7)return null;
+  var k=/\bstand\s?by\b/i.test(t)?'standby':/\bthat(?:'s|\s+is|\s+will\s+be)\s+all\b/i.test(t)?'thatsall':/\bgood\s?night\b/i.test(t)?'goodnight':null;
+  if(!k)return null;
+  if(SLEEP_RE.test(t))return k;
+  if(k!=='goodnight'&&/^\W*(?:stand\s?by|that(?:'s|\s+is|\s+will\s+be)\s+all)(?:\W+\w+)?\W*$/i.test(t))return k;   /* loose: standby / that's all + one misheard word */
+  return null;}
+function isGoodnight(t){return !!sleepKind(t);}
 var MICOFF_RE=new RegExp('^\\s*(?:(?:hey|ok|okay)[,.!\\s]*)?(?:(?:'+SNM+'[,.!\\s]+)?(?:please\\s+)?turn\\s+(?:my\\s+|the\\s+)?(?:mic|microphone)\\s+off[,.!\\s]*'+SNM+'|(?:please\\s+)?turn\\s+(?:my\\s+|the\\s+)?(?:mic|microphone)\\s+off[,.!\\s]*(?:please)?)[.!\\s]*$','i');
 var LEAD_RE=new RegExp('^(?:(?:hey|hay|hi|ok|okay|wake\\s?up)[,.!\\s]*)?(?:'+NM+')?[,.!\\s]*','i');
 var JUNK=/^(mint|min|mid|mind|man|men|amen|mean|hey|hay|hi|ok|okay|uh|um|a|the|and|so|well|up)$/i;
@@ -882,7 +888,7 @@ function submitHeard(text){
 }
 function handleWake(t,isFinal){
   if(MICOFF_RE.test(t)){logMic('voice','mic off by voice');micOff();$('hint').textContent='Mic off. Press Voice to turn listening back on.';return;}
-  if(isGoodnight(t)){if(isAwake()){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;byeSleep();}return;}
+  if(isGoodnight(t)){if(isAwake()){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;byeSleep(t);}return;}
   if(S.mode==='speaking'&&STOP_RE.test(t)&&t.trim().split(/\s+/).length<=4){stopSpeak();setMode('idle');logMic('barge','stopped by voice: '+t.slice(0,30));return;}
   if(/\bgood\s?night\b/i.test(t)&&t.trim().split(/\s+/).length<=3)return;   /* bare goodnight is never a question */
   if(busyNow())return;
@@ -1215,7 +1221,7 @@ function run(raw,opt){
   if(!BR&&/\b(cancel|delete|refund|charge|transfer|send money|reschedule|resume|pause|book (a|an|me|him|her|them)|take (a )?payment|waive)\b/.test(l)){cmdLocked(q);return;}
   var wcq=q.split(/\s+/).length;
   if(MICOFF_RE.test(q)){micOff();return;}
-  if(isGoodnight(q)){byeSleep();return;}
+  if(isGoodnight(q)){byeSleep(q);return;}
   if(/\b(weather|forecast|temperature|umbrella|how (hot|cold)|will it (rain|snow))\b/.test(l)&&(!BR||wcq<=8)){cmdWeather(q);return;}
   if((/\b(football|nfl|score|scores|who won|touchdown|playing|game|halftime|quarter|kickoff)\b/.test(l)||/how (is|are) (the )?[a-z .]+ (doing|playing)|did (the )?[a-z .]+ (win|lose)/.test(l))&&!/schedule|calendar/.test(l)&&(!BR||wcq<=8)){cmdFootball(q);return;}
   if(BR){cmdBridge(q,opt);return;}
