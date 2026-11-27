@@ -709,7 +709,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v45-2026-11-26';
+var BUILD='v46-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -734,11 +734,11 @@ function tick(){try{$('clock').textContent=clockET(Date.now())+' ET';}catch(e){}
 tick();setInterval(tick,30000);
 
 /* ---------- usage (measured where possible) ---------- */
-function blank(){return {cmds:0,runs:0,ops:0,cc:0,measured:0,unmeasured:0,reads:0,claude:0,web:0};}
+function blank(){return {cmds:0,runs:0,ops:0,cc:0,measured:0,unmeasured:0,reads:0,claude:0,web:0,quo:0};}
 var use={session:blank(),last:blank(),lastQ:''};
 function addUse(k,n){use.session[k]+=n;use.last[k]+=n;}
 function newCommandUse(q){use.last=blank();use.last.cmds=1;use.session.cmds++;use.lastQ=q;}
-function usageChip(){var c=use.session.claude;$('useBtn').textContent='Usage: '+use.session.runs+' run'+(use.session.runs===1?'':'s')+' · Claude '+c+' · Make ~'+(c*6)+' cr · Quo 0';$('useBtn').title='Claude calls this session · Make credits (estimated, about 6 per Claude call) · Quo texts sent (0, texting is simulated only)';}
+function usageChip(){var c=use.session.claude;$('useBtn').textContent='Usage: '+use.session.runs+' run'+(use.session.runs===1?'':'s')+' · Claude '+c+' · Make ~'+(c*6)+' cr · Quo '+use.session.quo;$('useBtn').title='Claude calls this session · Make credits (estimated, about 6 per Claude call) · Quo texts sent from this screen';}
 usageChip();
 
 /* ---------- core animation ---------- */
@@ -1965,14 +1965,34 @@ async function cmdCalendar(q,spec,force){
 }
 /* ---------- text simulation (visual only; nothing is sent) ---------- */
 function fallbackDraft(name,body){var first=name.split(' ')[0];var b=body.replace(/\bher\b/gi,'your').replace(/\bhis\b/gi,'your').replace(/^we\b/i,'we').replace(/[.!]+$/,'');return 'Hi '+first+', it\'s Ali with Evermint Detailing. '+b.charAt(0).toUpperCase()+b.slice(1)+'. Let me know what works for you. Thanks!';}
+var SEND_URL='https://hook.us2.make.com/qa9mogabqtsnj4pb7t1id169kkcxpmej',dirCache={at:0,lines:null};
+async function getDirectory(){
+  if(dirCache.lines&&Date.now()-dirCache.at<600000)return dirCache.lines;
+  if(!BR||!BR.code)return null;
+  var c=new AbortController(),tm=setTimeout(function(){c.abort();},12000);
+  try{var r=await fetch(SEND_URL,{method:'POST',body:new URLSearchParams({code:BR.code,action:'directory'}),signal:c.signal});var t=await r.text();if(!/^CUSTOMER_DIRECTORY/.test(t))return null;
+    dirCache={at:Date.now(),lines:t.split('\n').slice(1).map(function(l){var a=l.split('|');return {digits:a[0],name:(a[2]||'').trim(),tags:a[3]||''};}).filter(function(x){return /^1\d{10}$/.test(x.digits)&&x.name;})};return dirCache.lines;
+  }catch(e){return null;}finally{clearTimeout(tm);}
+}
+async function findContact(name){
+  var L=await getDirectory();if(!L)return {why:'nodir'};
+  var n=String(name||'').toLowerCase().replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();if(!n)return {why:'none'};
+  var m=L.filter(function(x){return x.name.toLowerCase().replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim()===n;});
+  if(!m.length&&n.indexOf(' ')<0)m=L.filter(function(x){return x.name.toLowerCase().split(' ')[0]===n;});
+  if(!m.length)return {why:'none'};
+  var u={};m.forEach(function(x){u[x.digits]=x;});var k=Object.keys(u);
+  if(k.length>1)return {why:'many',names:m.map(function(x){return x.name;})};
+  var c=u[k[0]];if(/blacklist/i.test(c.tags))return {why:'blocked'};
+  return {to:'+'+c.digits,name:c.name};
+}
 var simTimers=[],simCtl=null;
 function simClear(){simTimers.forEach(clearTimeout);simTimers=[];}
-function phoneNode(name,msg){
+function phoneNode(name,msg,live){
   simClear();
   var wrap=el('div','sim');
   var ph=el('div','sim-phone');ph.style.position='relative';
   var hd=el('div','sim-hd');var av=el('div','sim-av',name.split(' ').map(function(w){return w.charAt(0);}).join('').slice(0,2).toUpperCase());hd.appendChild(av);
-  var who=el('div','sim-who');who.appendChild(el('b',null,name));who.appendChild(el('span',null,'Text message · Evermint line'));hd.appendChild(who);hd.appendChild(el('div','sim-badge','SIMULATION'));ph.appendChild(hd);
+  var who=el('div','sim-who');who.appendChild(el('b',null,name));who.appendChild(el('span',null,'Text message · Evermint line'));hd.appendChild(who);hd.appendChild(el('div','sim-badge',live?'LIVE · QUO':'SIMULATION'));ph.appendChild(hd);
   var bd=el('div','sim-body');var day=el('div','sim-day','Today '+clockET(Date.now()));bd.appendChild(day);
   var typing=el('div','sim-typing');typing.appendChild(el('i'));typing.appendChild(el('i'));typing.appendChild(el('i'));
   var bub=el('div','sim-bub out');bub.style.display='none';var bt=el('span');bub.appendChild(bt);var st=el('div','sim-st','');bub.appendChild(st);
@@ -1980,12 +2000,25 @@ function phoneNode(name,msg){
   var bar=el('div','sim-bar');var inp=el('div','sim-in','iMessage / text');var snd=el('button','sim-send','↑');snd.type='button';snd.disabled=true;bar.appendChild(inp);bar.appendChild(snd);ph.appendChild(bar);
   wrap.appendChild(ph);
   var side=el('div','sim-side');side.appendChild(el('div','sim-lbl','DRAFT TO '+name.toUpperCase()));var dr=el('div','sim-draft',msg);side.appendChild(dr);
-  var note=el('div','sim-note','This is a visual simulation only. M1NT is not connected to your texting line yet, so nothing leaves the screen.');side.appendChild(note);
-  var go=el('button','btn pri','Play the send (simulated)');go.type='button';go.disabled=true;side.appendChild(go);wrap.appendChild(side);
+  var note=el('div','sim-note',live?'LIVE. This goes to '+live.name+' ('+live.to.replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'($1) $2-$3')+') from the Evermint line when you send it.':(live===false?'Visual simulation only. This person could not be matched to exactly one customer, so nothing can be sent.':'This is a visual simulation only.'));side.appendChild(note);
+  var go=el('button','btn pri',live?'Send for real':'Play the send (simulated)');go.type='button';go.disabled=true;side.appendChild(go);wrap.appendChild(side);
   function typeIt(){typing.style.display='none';bub.style.display='';var i=0;(function step(){if(!bub.isConnected)return;bt.textContent=msg.slice(0,i);bd.scrollTop=bd.scrollHeight;if(i<msg.length){i++;simTimers.push(setTimeout(step,msg.length>140?9:16));}else{inp.textContent='';go.disabled=false;snd.disabled=false;}})();}
-  function deliver(){go.disabled=true;snd.disabled=true;inp.textContent='iMessage / text';st.textContent='Sending…';st.className='sim-st';bub.classList.remove('fly');void bub.offsetWidth;bub.classList.add('fly');ph.appendChild(el('div','sim-ripple'));sfx('open');simTimers.push(setTimeout(function(){st.textContent='Delivered (simulated) · '+clockET(Date.now());st.className='sim-st ok';bub.classList.add('sent');var sp=el('div','sim-stamp','DELIVERED\nSIMULATED');sp.style.whiteSpace='pre';ph.appendChild(sp);sfx('pick');setTimeout(function(){if(sp.parentNode)sp.remove();},1800);},1100));}
+  function anim(ok,label,stampTxt){st.textContent=label+' · '+clockET(Date.now());st.className=ok?'sim-st ok':'sim-st';if(ok)bub.classList.add('sent');var sp=el('div','sim-stamp',stampTxt);sp.style.whiteSpace='pre';ph.appendChild(sp);sfx(ok?'pick':'sleep');setTimeout(function(){if(sp.parentNode)sp.remove();},1800);}
+  function deliver(){go.disabled=true;snd.disabled=true;inp.textContent='iMessage / text';st.textContent='Sending…';st.className='sim-st';bub.classList.remove('fly');void bub.offsetWidth;bub.classList.add('fly');ph.appendChild(el('div','sim-ripple'));sfx('open');
+    if(live){
+      var t0=Date.now();
+      fetch(SEND_URL,{method:'POST',body:new URLSearchParams({code:BR.code,action:'send',to:live.to,text:msg})}).then(function(r){return r.text();}).catch(function(){return 'NETERR';}).then(function(t){
+        var wait=Math.max(0,1100-(Date.now()-t0));
+        simTimers.push(setTimeout(function(){
+          if(/^M1NT_SENT/.test(t)){anim(true,'Delivered','SENT\nVIA QUO');try{addUse('quo',1);usageChip();}catch(e){}try{speak('Sent to '+live.name.split(' ')[0]+'.',false);}catch(e){}}
+          else{anim(false,'Not sent','NOT SENT');var why=/daily/.test(t)||/REFUSED/.test(t)?'The line refused it. Nothing went out.':'That did not go through. Nothing went out.';$('hint').textContent=why;try{speak(why,false);}catch(e){}}
+        },wait));
+      });
+      return;
+    }
+    simTimers.push(setTimeout(function(){anim(true,'Delivered (simulated)','DELIVERED\nSIMULATED');},1100));}
   go.addEventListener('click',deliver);snd.addEventListener('click',deliver);
-  simCtl={node:wrap,name:name,body:msg,done:false,deliver:function(){if(simCtl&&simCtl.done)return;simCtl.done=true;deliver();}};
+  simCtl={node:wrap,name:name,body:msg,live:!!live,done:false,deliver:function(){if(simCtl&&simCtl.done)return;simCtl.done=true;deliver();}};
   inp.textContent='';simTimers.push(setTimeout(function(){inp.textContent=msg.slice(0,34)+'…';typeIt();},1400));
   return wrap;
 }
@@ -1999,7 +2032,11 @@ async function cmdTextSim(q,p){
   }catch(e){msg=null;}
   if(cur!==my)return;
   if(!msg)msg=fallbackDraft(p.name,p.body);
-  finish({headline:'Draft text to '+p.name,small:true,spoken:'Here is how that text to '+p.name.split(' ')[0]+' would look. This is only a simulation, so nothing is sent.',node:phoneNode(p.name,msg),tags:[srcTag('demo','Simulation'),srcTag('snap','Draft by Claude')],srcNote:'Nothing was sent.',acts:[{label:'Redraft',fn:function(){cmdTextSim(q,p);}}]});
+  var ct=await findContact(p.name);if(cur!==my)return;
+  var live=ct&&ct.to?ct:(ct&&ct.why==='nodir'?null:false);
+  var f1=p.name.split(' ')[0];
+  var spoken=live?'Here is the text to '+f1+'. Say send it when you are ready, or tell me what to change.':(ct&&ct.why==='blocked'?'Heads up, '+f1+' is blacklisted, so I will not send anything. Here is only a draft.':(ct&&ct.why==='many'?'I found more than one '+f1+', so I will only show a draft. Give me the full name to send.':(ct&&ct.why==='none'?'I do not see '+p.name+' in your customer list, so this is only a draft.':'Here is how that text to '+f1+' would look. This is only a simulation.')));
+  finish({headline:(live?'Text to ':'Draft text to ')+(live?live.name:p.name),small:true,spoken:spoken,node:phoneNode(live?live.name:p.name,msg,live),tags:[live?srcTag('live','Live · sends via Quo'):srcTag('demo','Draft only'),srcTag('snap','Draft by Claude')],srcNote:live?'Not sent yet. Say send it.':'Nothing was sent.',acts:[{label:'Redraft',fn:function(){cmdTextSim(q,p);}}]});
 }
 /* ---------- weather scene ---------- */
 function wxKind(code,isNight){
@@ -2379,7 +2416,7 @@ function routeKnown(q,opt,dry){
     var si=simIntentWords(s);
     if(si==='cancel'){if(dry)return true;logMic('route','sim cancel');simClear();simCtl.done=true;$('hint').textContent='Draft dropped.';try{speak('Okay, dropped it.',false);}catch(e){}return true;}
     if(si==='redo'){if(dry)return true;logMic('route','sim redraft');cmdTextSim(q,{name:simCtl.name,body:simCtl.body+' (Adjust the message like this: '+q+')'});return true;}
-    if(si==='send'){if(dry)return true;logMic('route','sim send');if(!simCtl.done){simCtl.deliver();$('hint').textContent='Simulated send. Nothing was actually sent.';try{speak('Sent. That was a simulation, so nothing actually went out.',false);}catch(e){}}return true;}
+    if(si==='send'){if(dry)return true;logMic('route','sim send');if(!simCtl.done){var lv=simCtl.live;simCtl.deliver();if(!lv){$('hint').textContent='Simulated send. Nothing was actually sent.';try{speak('Sent. That was a simulation, so nothing actually went out.',false);}catch(e){}}}return true;}
   }
   if(TSTAT_RE.test(s)&&!WX_RE.test(s)&&!/\b(set|start|make|create)\b.*\b\d/.test(s)){if(dry)return true;logMic('route','timer status');
     if(tmrs.length){var t1=tmrs.slice().sort(function(a,b){return a.end-b.end;})[0];showTimerView(t1,q);var sp1='Yes. '+(tmrs.length>1?'You have '+tmrs.length+' timers. The next one is ':'You have ')+'a '+t1.label+(t1.alarm?' alarm':' timer')+' with '+hms(Math.max(0,t1.end-Date.now())).replace(':',' minutes ')+' seconds left.';try{speak(sp1,false);}catch(e){}return true;}
