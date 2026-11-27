@@ -46,12 +46,12 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 .resp{position:relative;z-index:2;width:min(680px,100%);max-height:100%;overflow:auto;text-align:center;padding:10px 12px;opacity:0;transform:scale(.94);pointer-events:none;transition:opacity .45s .12s,transform .6s cubic-bezier(.2,.8,.2,1)}
 .app[data-state="answer"] .resp{opacity:1;transform:none;pointer-events:auto}
 .app[data-state="answer"] .panel{opacity:0!important;pointer-events:none!important;visibility:hidden}
-.app[data-state="answer"] .center{grid-column:1 / -1;place-items:start center;padding:10px 0 4px}
-.app[data-state="answer"] .resp{width:min(780px,calc(100% - 330px));margin-top:4px;text-align:left;padding:20px 26px 18px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(160deg,var(--glass),rgba(4,24,21,.74));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.app[data-state="answer"] .center{grid-column:1 / -1;place-items:start center;padding:10px 230px 4px}
+.app[data-state="answer"] .resp{width:min(780px,100%);margin-top:4px;text-align:left;padding:20px 26px 18px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(160deg,var(--glass),rgba(4,24,21,.74));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .app[data-state="answer"] .ans{text-align:left;margin-top:8px}
 .app[data-state="answer"] .rows,.app[data-state="answer"] .cards,.app[data-state="answer"] .banner{margin-left:0;margin-right:0;max-width:none}
 .app[data-state="answer"] .src,.app[data-state="answer"] .acts{justify-content:flex-start}
-.ctag{position:absolute;left:14px;top:150px;width:124px;text-align:center;font-family:var(--font-m);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mint);opacity:0;transition:opacity .4s;pointer-events:none;z-index:3}
+.ctag{position:absolute;left:54px;top:214px;width:124px;text-align:center;font-family:var(--font-m);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mint);opacity:0;transition:opacity .4s;pointer-events:none;z-index:3}
 .app[data-state="answer"] .ctag{opacity:.9}
 .app[data-mode="idle"] .ctag,.app[data-mode="listening"] .ctag{color:var(--muted)}
 .asked{font-family:var(--font-m);font-size:12px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;overflow-wrap:anywhere}
@@ -150,9 +150,9 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
   .chip{font-size:10px;padding:3px 8px}
   .row{grid-template-columns:1fr;gap:2px}
   .app[data-state="answer"] .panel{display:none}
-  .app[data-state="answer"] .center{padding-top:104px}
+  .app[data-state="answer"] .center{padding:122px 0 4px}
   .app[data-state="answer"] .resp{width:100%;padding:16px 16px 14px}
-  .ctag{left:96px;width:auto;text-align:left;top:44px;font-size:10px}
+  .ctag{left:118px;width:auto;text-align:left;top:62px;font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -233,7 +233,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v13-2026-11-26';
+var BUILD='v14-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -280,7 +280,7 @@ function draw(now){
   S.energy+=((S.mode==='speaking'?1:0)-S.energy)*(S.mode==='speaking'?0.12:0.04);
   cx.setTransform(S.dpr,0,0,S.dpr,0,0);cx.clearRect(0,0,S.w,S.h);
   var aw=S.aw,an=S.an,mode=S.mode;
-  var small=S.w<700,cxC=small?52:78,cyC=small?52:78;
+  var small=S.w<700,cxC=small?64:116,cyC=small?72:122;
   var Rb=S.R+(((small?36:44)+(small?22:36)*S.be)-S.R)*an;
   var ecx=S.cx+(cxC-S.cx)*an,ecy=S.cy+(cyC-S.cy)*an;S.ex=ecx;S.ey=ecy;
   var coreR=Math.min(30,Rb*0.2)*(1+aw*0.5);
@@ -792,7 +792,8 @@ var NM='(?:mint|mints|mince|minty|mynt|mind|m1nt|min|mid|man|men|mean|meant|ment
 var WAKEUP_RE=new RegExp('\\b(?:wake\\s?up|wakeup)[,.!\\s]+'+NM+'\\b','i');
 var HEY_RE=new RegExp('\\b(?:(?:hey|hay|hi|ok|okay|a)[,.!\\s]*'+NM+'|a\\s?men)\\b[,.!\\s]*','i');
 var WAKE_ANY=new RegExp('(?:'+HEY_RE.source+')|(?:wake\\s?up[,.!\\s]+'+NM+')|(?:good\\s?night[,.!\\s]+'+NM+')','i');
-var SLEEP_RE=new RegExp('\\bgood\\s?night[,.!\\s]+'+NM+'\\b','i');
+var SLEEP_RE=/\bgood\s?night\b/i;
+function isGoodnight(t){return SLEEP_RE.test(t)&&String(t).trim().split(/\s+/).length<=6;}
 var LEAD_RE=new RegExp('^(?:(?:hey|hay|hi|ok|okay|wake\\s?up)[,.!\\s]*)?(?:'+NM+')?[,.!\\s]*','i');
 var JUNK=/^(mint|min|mid|mind|man|men|amen|mean|hey|hay|hi|ok|okay|uh|um|a|the|and|so|well|up)$/i;
 var SIL=store('sil')||1300, silTimer=0, wakePend=null;
@@ -871,7 +872,7 @@ function submitHeard(text){
   run(text,{voice:true,wake:true,reply:reply});
 }
 function handleWake(t,isFinal){
-  if(SLEEP_RE.test(t)){if(isFinal||isAwake()){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;if(isFinal)sleepUi();}return;}
+  if(isGoodnight(t)){if(isAwake()){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;sleepUi();}return;}
   if(S.mode==='speaking'&&STOP_RE.test(t)&&t.trim().split(/\s+/).length<=4){stopSpeak();setMode('idle');logMic('barge','stopped by voice: '+t.slice(0,30));return;}
   if(busyNow())return;
   var wm=WAKEUP_RE.exec(t);
@@ -1201,7 +1202,7 @@ function run(raw,opt){
   var l=q.toLowerCase();
   if(!BR&&/\b(cancel|delete|refund|charge|transfer|send money|reschedule|resume|pause|book (a|an|me|him|her|them)|take (a )?payment|waive)\b/.test(l)){cmdLocked(q);return;}
   var wcq=q.split(/\s+/).length;
-  if(SLEEP_RE.test(q)||/^\s*good\s?night\b/i.test(q)){sleepUi();return;}
+  if(isGoodnight(q)){sleepUi();return;}
   if(/\b(weather|forecast|temperature|umbrella|how (hot|cold)|will it (rain|snow))\b/.test(l)&&(!BR||wcq<=8)){cmdWeather(q);return;}
   if((/\b(football|nfl|score|scores|who won|touchdown|playing|game|halftime|quarter|kickoff)\b/.test(l)||/how (is|are) (the )?[a-z .]+ (doing|playing)|did (the )?[a-z .]+ (win|lose)/.test(l))&&!/schedule|calendar/.test(l)&&(!BR||wcq<=8)){cmdFootball(q);return;}
   if(BR){cmdBridge(q,opt);return;}
