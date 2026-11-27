@@ -1280,7 +1280,7 @@ var mic={perm:'unknown',diag:null,off:false};
 var stream=null,actx=null,meterTimer=0;
 function micUi(){
   var dot=$('micDot'),txt=$('micTxt');
-  var listening=ptt.on||wake.cap||!!wake.reply&&wake.armed||(wake.on&&wake.armed);var reconn=wake.on&&wake.retrying&&!listening;
+  var listening=ptt.on||wake.cap||!!wake.reply&&wake.armed||(wake.on&&(wake.armed||(wake.retrying&&wake.fails<3)));var reconn=wake.on&&wake.retrying&&wake.fails>=3&&!listening;
   if(listening){dot.className='dot live';txt.textContent=ptt.on?'Mic live · push to talk':(wake.reply?'Mic live · listening for your reply':wake.cap?'Mic live · listening for your question':'Mic live · waiting for wake phrase');}
   else if(reconn){dot.className='dot warn';txt.textContent='Mic: reconnecting…';}
   else if(mic.off){dot.className='dot';txt.textContent='Mic: off';}
@@ -1373,10 +1373,11 @@ function micStart(sink,continuous,be){
   }
   if(be==='webspeech'){
     try{
-      webRec=new SR();webRec.lang=(store('reclang')||'en-US');webRec.interimResults=true;webRec.continuous=!!continuous;webRec.maxAlternatives=5;
-      webRec.onresult=function(ev){var fin='',par='';for(var i=ev.resultIndex;i<ev.results.length;i++){var r=ev.results[i];var tx=r[0].transcript;for(var k=0;k<r.length;k++){if(WAKE_ANY.test(r[k].transcript)){tx=r[k].transcript;break;}}if(r.isFinal)fin+=tx+' ';else par+=tx;}if(par&&sink.partial)sink.partial(par);if(fin&&sink.final)sink.final(fin.trim());};
-      webRec.onerror=function(ev){logMic('error',ev.error+(ev.message?' · '+ev.message:''));var e=sink.end;sink.end=null;if(e)e(ev.error==='not-allowed'||ev.error==='service-not-allowed'?'not_granted':(ev.error==='network'?'network':(ev.error||'upstream_error')));};
-      webRec.onend=function(){logMic('end','session closed');var e=sink.end;sink.end=null;if(e)e('stopped');};
+      if(webRec){var o=webRec;webRec=null;o.onend=o.onerror=o.onresult=o.onstart=o.onaudiostart=o.onnomatch=null;try{o.abort();}catch(e){}logMic('single','old session retired before new start');}
+      var rec=new SR();webRec=rec;webRec.lang=(store('reclang')||'en-US');webRec.interimResults=true;webRec.continuous=!!continuous;webRec.maxAlternatives=5;
+      webRec.onresult=function(ev){if(webRec!==rec)return;var fin='',par='';for(var i=ev.resultIndex;i<ev.results.length;i++){var r=ev.results[i];var tx=r[0].transcript;for(var k=0;k<r.length;k++){if(WAKE_ANY.test(r[k].transcript)){tx=r[k].transcript;break;}}if(r.isFinal)fin+=tx+' ';else par+=tx;}if(par&&sink.partial)sink.partial(par);if(fin&&sink.final)sink.final(fin.trim());};
+      webRec.onerror=function(ev){if(webRec!==rec)return;logMic('error',ev.error+(ev.message?' · '+ev.message:''));var e=sink.end;sink.end=null;if(e)e(ev.error==='not-allowed'||ev.error==='service-not-allowed'?'not_granted':(ev.error==='network'?'network':(ev.error||'upstream_error')));};
+      webRec.onend=function(){if(webRec!==rec)return;logMic('end','session closed');var e=sink.end;sink.end=null;if(e)e('stopped');};
       webRec.onstart=function(){logMic('start',continuous?'continuous':'single');};
       webRec.onaudiostart=function(){logMic('audio','microphone capturing');};
       webRec.onnomatch=function(){logMic('nomatch','speech not recognised');};
@@ -1385,7 +1386,7 @@ function micStart(sink,continuous,be){
   }
   var g=sink.end;sink.end=null;if(g)g('unavailable');return Promise.resolve(false);
 }
-async function micStop(){try{if(lastBE==='dictation'&&dict)await dict.stop();else if(webRec)webRec.stop();}catch(e){}}
+async function micStop(){try{if(lastBE==='dictation'&&dict)await dict.stop();else if(webRec){var r=webRec;r.stop();}}catch(e){}}
 function micWhy(why){
   if(why==='not_granted')return 'Speech recognition was refused. Press Enable microphone to see why.';
   if(why==='network'||why==='speech_service_unreachable')return 'The browser could not reach its speech-to-text service (a temporary network error).';
@@ -1584,13 +1585,14 @@ function wakeSink(be){
         $('hint').textContent=(why==='not_granted'&&be==='webspeech'?'This window refused the browser’s speech recognition (“not-allowed”). Hands-free needs another window; typing and the mic button still work. ':'Hands-free stopped. '+micWhy(why)+' ')+(wasTemp?'Press the mic button to answer.':'Turn it on again with the button.');
         logMic('stopped',why+' ('+be+')');return;}
       if(ordinary&&lived>=1500)wake.fails=0;else if(lived>8000)wake.fails=0;else wake.fails++;
-      var delay=(ordinary&&lived>=1500)?300:Math.min(30000,wake.fails<2?500:500*Math.pow(2,wake.fails-1));
+      if(wake.fails>=6){var wt=wake.temp;wake.on=false;wake.temp=false;wake.reply=null;wake.retrying=false;levelStop();micUi();$('hint').textContent='Hands-free keeps dropping ('+why+'). I stopped retrying so it does not flicker. The mic button and typing still work. Press Voice to try again.';logMic('gave-up',why+' after '+wake.fails+' short sessions');return;}
+      var delay=(ordinary&&lived>=1500)?80:Math.min(30000,wake.fails<2?500:500*Math.pow(2,wake.fails-1));
       wake.retrying=true;micUi();logMic('retry','in '+delay+' ms after '+why+' (session '+Math.round(lived/1000)+'s, fails '+wake.fails+')');
       clearTimeout(wake.retryT);wake.retryT=setTimeout(function(){wake.retrying=false;if(wake.on&&!wake.pausedForSpeech)wakeStart();},delay);
     }
   };
 }
-function wakeStart(){var be=wakeBE();wake.needTap=false;wake.starts++;wake.armed=true;micUi();levelStart();micStart(wakeSink(be),true,be).then(function(ok){if(!ok&&wake.on&&!wake.pausedForSpeech){wake.armed=false;micUi();}});}
+function wakeStart(){if(wake.armed&&webRec&&wakeBE()==='webspeech'&&wake.startedAt&&Date.now()-wake.startedAt<400){logMic('single','duplicate start ignored');return;}wake.startedAt=Date.now();var be=wakeBE();wake.needTap=false;wake.starts++;wake.armed=true;micUi();levelStart();micStart(wakeSink(be),true,be).then(function(ok){if(!ok&&wake.on&&!wake.pausedForSpeech){wake.armed=false;micUi();}});}
 function runFromWake(text){wake.pausedForSpeech=false;wake.cap=false;clearTimeout(wake.capTimer);if(wakeBE()!=='dictation')micStop();stopSpeak();$('cmd').value='';run(text,{voice:true,wake:true,fresh:true});}
 function wakeOff(msg){wake.reply=null;wake.temp=false;clearTimeout(wake.replyT);wake.on=false;wake.armed=false;wake.cap=false;wake.retrying=false;clearTimeout(wake.retryT);clearTimeout(wake.capTimer);clearTimeout(silTimer);micStop();levelStop();micUi();if(msg)$('hint').textContent=msg;}
 function wakeOn(quiet){
