@@ -155,6 +155,105 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
   .ctag{left:118px;width:auto;text-align:left;top:62px;font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ===== visual screens ===== */
+.app[data-state="answer"][data-viz="1"] .center{padding:10px 24px 4px 230px}
+.app[data-state="answer"][data-viz="1"] .resp{width:min(1120px,100%);max-height:calc(100vh - 176px);overflow-y:auto}
+@media (max-width:760px){.app[data-state="answer"][data-viz="1"] .center{padding:122px 0 4px}}
+.cv{position:relative;margin-top:10px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,rgba(6,34,30,.72),rgba(3,18,16,.82));overflow:hidden;box-shadow:inset 0 0 40px rgba(92,255,200,.06),0 0 24px rgba(92,255,200,.08)}
+.cv-scan{position:absolute;left:0;right:0;top:0;height:60px;background:linear-gradient(180deg,rgba(92,255,200,0),rgba(92,255,200,.16),rgba(92,255,200,0));animation:cvscan 1.6s ease-out 1 both;pointer-events:none}
+@keyframes cvscan{from{transform:translateY(-70px);opacity:1}to{transform:translateY(560px);opacity:0}}
+.cv-head,.cv-allday,.cv-body{display:grid;grid-template-columns:54px 1fr}
+.cv-head{border-bottom:1px solid var(--line)}
+.cv-head .cv-gut{border-right:1px solid rgba(92,255,200,.12)}
+.cv-head>.cv-dh{}
+.cv-days .cv-head{display:flex}.cv-days .cv-head .cv-gut{flex:0 0 54px}.cv-days .cv-head .cv-dh{flex:1 1 0;min-width:0}
+.cv-dh{padding:10px 8px 8px;text-align:center;border-left:1px solid rgba(92,255,200,.12);position:relative;display:flex;flex-direction:column;align-items:center;gap:1px}
+.cv-dow{font:600 11px var(--font-m);letter-spacing:.16em;color:var(--muted)}
+.cv-dn{font:600 26px var(--font-d);color:var(--text);line-height:1.05}
+.cv-mo{font:500 10px var(--font-m);letter-spacing:.14em;color:var(--muted)}
+.cv-dh.today .cv-dn{color:var(--mint);text-shadow:0 0 14px rgba(92,255,200,.7)}
+.cv-dh.today{background:rgba(92,255,200,.07)}
+.cv-today{position:absolute;top:6px;right:8px;font:600 9px var(--font-m);letter-spacing:.12em;color:var(--ink);background:var(--mint);border-radius:4px;padding:1px 5px}
+.cv-allday{border-bottom:1px solid var(--line);display:flex}.cv-allday .cv-gut{flex:0 0 54px;font:500 9px var(--font-m);color:var(--muted);padding:8px 4px;text-align:center}
+.cv-adc{flex:1 1 0;min-width:0;border-left:1px solid rgba(92,255,200,.12);padding:4px;display:flex;flex-direction:column;gap:3px}
+.cv-chip{font:500 11px var(--font-m);color:#2a1d00;background:var(--warn);border-radius:5px;padding:2px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cv-body{position:relative;max-height:46vh;overflow-y:auto;display:flex}
+.cv-hours{position:relative;flex:0 0 54px;border-right:1px solid rgba(92,255,200,.12)}
+.cv-hl{position:absolute;right:6px;transform:translateY(-6px);font:500 10px var(--font-m);color:var(--muted)}
+.cv-grid{flex:1 1 auto;display:grid;position:relative}
+.cv-col{position:relative;border-left:1px solid rgba(92,255,200,.12)}.cv-col.today{background:rgba(92,255,200,.04)}
+.cv-gl{position:absolute;left:0;right:0;border-top:1px solid rgba(92,255,200,.08)}
+.cv-now{position:absolute;left:0;right:0;border-top:2px solid var(--bad);z-index:3;box-shadow:0 0 10px var(--bad)}
+.cv-now:before{content:"";position:absolute;left:-4px;top:-5px;width:8px;height:8px;border-radius:50%;background:var(--bad)}
+.cv-ev{position:absolute;border-radius:8px;padding:5px 7px;overflow:hidden;font-family:var(--font-m);border:1px solid rgba(92,255,200,.55);background:linear-gradient(160deg,rgba(47,174,138,.55),rgba(8,60,50,.7));box-shadow:0 0 14px rgba(92,255,200,.22);animation:evIn .55s cubic-bezier(.2,.8,.2,1) var(--d,0s) both;z-index:2}
+.cv-ev.other{border-color:rgba(157,183,255,.6);background:linear-gradient(160deg,rgba(157,183,255,.38),rgba(26,40,90,.7));box-shadow:0 0 14px rgba(157,183,255,.2)}
+.cv-et{font:600 12px var(--font-d);color:#eafff7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cv-es{font:400 10.5px var(--font-m);color:#bfeede;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cv-etm{font:500 10px var(--font-m);color:var(--mint);margin-top:1px;white-space:nowrap}
+.cv-ev.other .cv-etm{color:var(--demo)}
+@keyframes evIn{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+.cv-empty{padding:34px 10px;text-align:center;font:500 13px var(--font-m);color:var(--muted)}
+.cv-mhead{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line)}.cv-mhead div{padding:8px 4px;text-align:center;font:600 10px var(--font-m);letter-spacing:.16em;color:var(--muted)}
+.cv-mgrid{display:grid;grid-template-columns:repeat(7,1fr)}
+.cv-mc{min-height:66px;border-left:1px solid rgba(92,255,200,.1);border-top:1px solid rgba(92,255,200,.1);padding:4px 5px;overflow:hidden}.cv-mc.blank{background:rgba(0,0,0,.18)}
+.cv-mc.past{opacity:.55}.cv-mc.today{background:rgba(92,255,200,.1);box-shadow:inset 0 0 0 1px var(--mint)}
+.cv-mn{font:600 13px var(--font-d);color:var(--text);margin-bottom:3px}.cv-mc.today .cv-mn{color:var(--mint)}
+.cv-mev{font:500 10.5px var(--font-m);border-radius:4px;padding:2px 5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(47,174,138,.35);border-left:2px solid var(--mint);animation:evIn .5s var(--d,0s) both}
+.cv-mev.other{background:rgba(157,183,255,.25);border-left-color:var(--demo)}.cv-mev.allday{background:rgba(255,200,87,.25);border-left-color:var(--warn)}
+.cv-more{font:500 10px var(--font-m);color:var(--muted);margin-top:2px}
+@media (max-width:760px){.cv-mc{min-height:62px}.cv-mev{font-size:9px;padding:1px 3px}.cv-dn{font-size:20px}.cv-gut,.cv-hours{flex-basis:38px!important}.cv-days .cv-head .cv-gut,.cv-allday .cv-gut{flex-basis:38px!important}}
+/* weather */
+.wx{position:relative;margin-top:10px;border:1px solid var(--line);border-radius:16px;overflow:hidden;min-height:330px;box-shadow:0 0 28px rgba(92,255,200,.1)}
+.wx-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.wx-ov{position:relative;z-index:1;padding:20px 24px 14px;display:flex;flex-direction:column;justify-content:space-between;min-height:330px;text-shadow:0 2px 12px rgba(0,0,0,.45)}
+.wx-place{font:500 12px var(--font-m);letter-spacing:.16em;text-transform:uppercase;color:#d7f2ea}.wx-day{font:500 13px var(--font-m);color:#bfe3d8;margin-top:2px}
+.wx-temp{font:300 92px/1 var(--font-d);color:#fff;margin-top:6px;letter-spacing:-.03em}.wx-cond{font:500 20px var(--font-d);color:#eafff7}
+.wx-stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}.wx-st b{display:block;font:600 17px var(--font-d);color:#fff}.wx-st span{font:500 10px var(--font-m);letter-spacing:.14em;color:#bfe3d8}
+.wx-fc{display:flex;gap:6px;margin-top:16px;background:rgba(0,10,12,.38);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px}
+.wx-d{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 2px;border-radius:8px;min-width:0}.wx-d.on{background:rgba(92,255,200,.16);box-shadow:inset 0 0 0 1px rgba(92,255,200,.5)}
+.wx-dn{font:600 10px var(--font-m);letter-spacing:.1em;color:#cdeee4}.wx-dg{font-size:22px;line-height:1.2}.wx-dh{font:600 14px var(--font-d);color:#fff}.wx-dl{font:500 12px var(--font-d);color:#a9cfc4}
+@media (max-width:760px){.wx-temp{font-size:68px}}
+/* scoreboard */
+.sb{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:10px}
+.sb-card{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:linear-gradient(160deg,rgba(8,44,39,.7),rgba(2,14,12,.85));animation:evIn .55s var(--d,0s) both;position:relative;overflow:hidden}
+.sb-card.in{border-color:var(--mint);box-shadow:0 0 20px rgba(92,255,200,.25)}
+.sb-lg{font:600 10px var(--font-m);letter-spacing:.16em;color:var(--muted);margin-bottom:8px}.sb-card.in .sb-lg{color:var(--mint)}
+.sb-t{display:flex;align-items:center;gap:10px;padding:5px 0}.sb-t img{width:30px;height:30px;object-fit:contain}.sb-n{flex:1;font:500 16px var(--font-d);color:#cfe9e1}.sb-s{font:700 30px var(--font-d);color:#cfe9e1;min-width:38px;text-align:right}
+.sb-t.lead .sb-n,.sb-t.lead .sb-s{color:#fff}.sb-t.lead .sb-s{text-shadow:0 0 14px rgba(92,255,200,.6)}
+.sb-st{margin-top:6px;padding-top:8px;border-top:1px solid rgba(92,255,200,.14);font:500 12px var(--font-m);color:var(--muted)}
+/* clock + timer */
+.clk{position:relative;margin-top:10px;text-align:center;padding:30px 10px 26px;border:1px solid var(--line);border-radius:16px;background:radial-gradient(ellipse at 50% 0,rgba(92,255,200,.12),rgba(2,14,12,.85) 70%)}
+.clk-t{font:300 76px/1 var(--font-m);color:var(--mint);text-shadow:0 0 24px rgba(92,255,200,.55);letter-spacing:.02em}.clk-d{font:500 16px var(--font-d);color:var(--text);margin-top:10px}.clk-z{font:500 11px var(--font-m);letter-spacing:.16em;color:var(--muted);margin-top:4px;text-transform:uppercase}
+.clk-ring{position:absolute;left:0;bottom:0;height:3px;width:calc(var(--s,0)/60*100%);background:var(--mint);box-shadow:0 0 10px var(--mint);transition:width .5s linear}
+@media (max-width:760px){.clk-t{font-size:44px}}
+.tm{position:relative;margin:10px auto 0;width:min(300px,80vw);aspect-ratio:1}.tm-svg{width:100%;height:100%}.tm-bg{fill:none;stroke:rgba(92,255,200,.14);stroke-width:8}.tm-fg{fill:none;stroke:var(--mint);stroke-width:8;stroke-linecap:round;filter:drop-shadow(0 0 8px rgba(92,255,200,.8));transition:stroke-dashoffset .25s linear}
+.tm-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}.tm-big{font:300 54px var(--font-m);color:#fff}.tm-lb{font:500 11px var(--font-m);letter-spacing:.16em;color:var(--muted);margin-top:4px}
+.tm.done .tm-fg{stroke:var(--warn);filter:drop-shadow(0 0 10px var(--warn))}.tm.done .tm-big{color:var(--warn);animation:tmblink .8s infinite}@keyframes tmblink{50%{opacity:.35}}
+/* text simulation */
+.sim{display:flex;gap:22px;align-items:flex-start;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.sim-phone{width:310px;max-width:100%;border:2px solid rgba(92,255,200,.45);border-radius:34px;background:#07110f;box-shadow:0 0 34px rgba(92,255,200,.2),inset 0 0 24px rgba(0,0,0,.6);overflow:hidden;display:flex;flex-direction:column;height:400px}
+.sim-hd{display:flex;align-items:center;gap:10px;padding:16px 14px 10px;border-bottom:1px solid rgba(92,255,200,.16);background:rgba(8,44,39,.5)}
+.sim-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(160deg,#2fae8a,#0a5d4a);display:grid;place-items:center;font:700 14px var(--font-d);color:#eafff7}
+.sim-who{flex:1;min-width:0}.sim-who b{display:block;font:600 14px var(--font-d);color:#fff}.sim-who span{font:500 10px var(--font-m);color:var(--muted)}
+.sim-badge{font:700 9px var(--font-m);letter-spacing:.12em;color:var(--ink);background:var(--warn);border-radius:5px;padding:2px 6px}
+.sim-body{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:8px}.sim-day{align-self:center;font:500 10px var(--font-m);color:var(--muted)}
+.sim-bub{max-width:82%;padding:9px 12px;border-radius:18px;font:400 14px/1.35 var(--font-d);color:#fff;word-break:break-word}
+.sim-bub.out{align-self:flex-end;background:linear-gradient(160deg,#1fa37d,#0b6e55);border-bottom-right-radius:5px;box-shadow:0 0 14px rgba(47,174,138,.35)}
+.sim-st{font:500 10px var(--font-m);color:#bfeede;margin-top:4px;text-align:right}.sim-st.ok{color:var(--mint)}
+.sim-typing{align-self:flex-end;background:rgba(255,255,255,.1);border-radius:16px;padding:10px 14px;display:flex;gap:4px}.sim-typing i{width:7px;height:7px;border-radius:50%;background:#9fcfc0;animation:typ 1s infinite}.sim-typing i:nth-child(2){animation-delay:.15s}.sim-typing i:nth-child(3){animation-delay:.3s}@keyframes typ{50%{transform:translateY(-4px);opacity:.4}}
+.sim-bar{display:flex;gap:8px;align-items:center;padding:10px 12px 16px;border-top:1px solid rgba(92,255,200,.16)}
+.sim-in{flex:1;min-height:32px;border:1px solid rgba(92,255,200,.3);border-radius:18px;padding:7px 12px;font:400 13px var(--font-d);color:#cfe9e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sim-send{width:32px;height:32px;border-radius:50%;border:0;background:var(--mint);color:var(--ink);font:700 16px var(--font-d);cursor:pointer}.sim-send:disabled{opacity:.35;cursor:default}
+.sim-side{flex:1 1 260px;max-width:420px;text-align:left}.sim-lbl{font:600 10px var(--font-m);letter-spacing:.16em;color:var(--muted)}.sim-draft{margin:8px 0 12px;font:400 17px/1.45 var(--font-d);color:#fff}.sim-note{font:400 12px/1.5 var(--font-m);color:var(--warn);margin-bottom:14px}
+/* apple music */
+.mus{display:flex;gap:20px;align-items:center;margin-top:12px;padding:16px;border:1px solid rgba(255,90,120,.45);border-radius:18px;background:linear-gradient(135deg,rgba(255,60,100,.2),rgba(8,20,24,.85));box-shadow:0 0 28px rgba(255,70,110,.18);flex-wrap:wrap}
+.mus-art{width:150px;height:150px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#ff3b6b,#ff8a5c);display:grid;place-items:center;font-size:56px;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:evIn .6s both}.mus-art img{width:100%;height:100%;object-fit:cover}
+.mus-info{flex:1 1 260px;text-align:left;min-width:0}.mus-lbl{font:700 10px var(--font-m);letter-spacing:.2em;color:#ff7a9a}.mus-t{font:600 26px/1.15 var(--font-d);color:#fff;margin-top:4px}.mus-a{font:400 14px var(--font-d);color:#ffd0da;margin-top:3px}
+.mus-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.mus-alt{margin-top:14px;display:flex;flex-direction:column;gap:3px;font:400 12px var(--font-m)}.mus-alt span{color:var(--muted);letter-spacing:.12em;font-size:10px}.mus-alt a{color:#ffc0cf;text-decoration:none}.mus-alt a:hover{text-decoration:underline}
+.mus a.btn{text-decoration:none;display:inline-flex;align-items:center}
+.musdock{position:fixed;left:14px;bottom:92px;z-index:30;width:46px;height:46px;border-radius:12px;border:0;cursor:pointer;background:linear-gradient(145deg,#ff5f86,#fa233b);box-shadow:0 6px 18px rgba(250,35,59,.4);display:grid;place-items:center;transition:transform .15s}.musdock:hover{transform:scale(1.07)}
+.app[data-state="asleep"] ~ .musdock{display:none}
+
 </style>
 <script type="application/json" id="claude-artifacts-manifest">{"permissions": []}</script>
 
@@ -233,7 +332,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v22-2026-11-26';
+var BUILD='v23-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -331,6 +430,7 @@ size();if(reduce)draw(performance.now());else requestAnimationFrame(draw);
 /* ---------- states: asleep -> awake -> answer ---------- */
 function setUi(state){
   app.setAttribute('data-state',state);
+  var md=document.getElementById('musDock');if(md)md.style.display=state==='asleep'?'none':'';
   S.awT=state==='asleep'?0:1;S.anT=state==='answer'?1:0;
   setTimeout(size,60);setTimeout(size,700);redraw();
 }
@@ -549,7 +649,7 @@ function tagFor(rec){
 }
 function beginAsk(q){
   newCommandUse(q);wakeUi();setUi('answer');
-  cur={q:q};
+  cur={q:q};app.removeAttribute('data-viz');simClear();
   $('asked').textContent='';$('asked').appendChild(el('b',null,'You asked  '));$('asked').appendChild(document.createTextNode(q));
   $('doing').className='doing';$('doing').textContent='';$('ans').textContent='';clear($('extra'));clear($('srcRow'));clear($('acts'));
   setMode('thinking');
@@ -561,6 +661,7 @@ function finish(o){
   doneDoing('Done · '+clockET(Date.now())+' ET · '+usageLine());
   var a=$('ans');a.textContent=o.headline;a.className='ans'+(o.small?' small':'');
   var ex=$('extra');clear(ex);
+  if(o.node){app.setAttribute('data-viz','1');ex.appendChild(o.node);}
   if(o.rows&&o.rows.length){var rs=el('div','rows');o.rows.forEach(function(r){var row=el('div','row');row.appendChild(el('div','t',r.t));var n=el('div','n');if(r.link){var al=el('a',null,r.n);al.href=r.link;al.target='_blank';al.rel='noopener noreferrer';al.style.color='var(--mint)';n.appendChild(al);}else n.appendChild(document.createTextNode(r.n));if(r.note)n.appendChild(el('div','note',r.note));row.appendChild(n);rs.appendChild(row);});ex.appendChild(rs);}
   if(o.cards){var cs=el('div','cards');o.cards.forEach(function(c){var b=el('button','card');b.type='button';var h=el('h3');h.appendChild(el('span',null,c.title));h.appendChild(c.tag);b.appendChild(h);b.appendChild(el('div','big',c.big));b.appendChild(el('div','l1',c.line));b.addEventListener('click',function(){openView(c.view);});cs.appendChild(b);});ex.appendChild(cs);}
   (o.banners||[]).forEach(function(b){var d=el('div','banner '+(b.kind||''));d.appendChild(el('b',null,b.bold+' '));d.appendChild(document.createTextNode(b.text));ex.appendChild(d);});
@@ -830,6 +931,7 @@ function completePending(q){
   var p=convo.pending;convo.pending=null;if(!p||Date.now()>p.until)return null;
   var r=q.replace(/^(?:(?:um|uh|it'?s|it is|that'?s|that is|the one|the|one)\s+)+/i,'').replace(/[.!?]+$/,'').trim();if(!r)return null;
   if(p.kind==='football')return p.orig+' '+r;
+  if(p.kind==='music')return 'play '+r;
   var base=p.orig.replace(/[?.!]+$/,'');
   var pre=/^(on|at|in|near|off|by|across|next to)\b/i.test(r)?'':(/\b(road|rd|street|st|avenue|ave|highway|hwy|boulevard|blvd|pike|parkway|pkwy|lane|ln|drive|dr)\b/i.test(r)?'on ':'in ');
   return base+' '+pre+r;
@@ -1045,7 +1147,7 @@ async function cmdWeather(q){
     var spoken=tom?dl+' in '+short+': '+cond+', a high of '+hi+' and a low of '+lo+', with a '+pp+' percent chance of precipitation.':'In '+short+' it is '+Math.round(c.temperature_2m)+' degrees and '+cond+', feels like '+Math.round(c.apparent_temperature)+'. Today\'s high is '+hi+', the low is '+lo+', with a '+pp+' percent chance of precipitation.';
     var rows=[];if(!tom)rows.push({t:'Now',n:Math.round(c.temperature_2m)+'° · feels '+Math.round(c.apparent_temperature)+'° · wind '+Math.round(c.wind_speed_10m)+' mph'});
     rows.push({t:tom?dl:'Today',n:'High '+hi+'° · low '+lo+'° · '+cond});rows.push({t:'Precipitation',n:pp+'% chance'});
-    finish({headline:head,follow:'weather',small:true,spoken:spoken,rows:rows,tags:[srcTag('live','Open-Meteo'),srcTag('live','Updated '+(upd?t12(upd):'just now')+' local')],srcNote:loc.def?'Default location: Louisville, Kentucky. Say “weather in <city>” for another.':'',acts:[{label:'Refresh',fn:function(){run(q,{});}}]});
+    var hh=+String(c.time||'').slice(11,13);finish({headline:head,follow:'weather',small:true,spoken:spoken,node:wxNode(loc,c,d,off,cond,(hh<6||hh>=19)),tags:[srcTag('live','Open-Meteo'),srcTag('live','Updated '+(upd?t12(upd):'just now')+' local')],srcNote:loc.def?'Default location: Louisville, Kentucky. Say “weather in <city>” for another.':'',acts:[{label:'Refresh',fn:function(){run(q,{});}}]});
   }catch(e){lookupFail(q,'weather',e);}
 }
 function gameLine(ev){
@@ -1056,7 +1158,7 @@ function gameLine(ev){
   else{var as=+a.score,hs=+h.score;line=an+' '+as+', '+hn+' '+hs+' · '+(st.shortDetail||st.detail||'');
     if(st.state==='post')say='Final: '+(hs>as?hn+' beat '+an+' '+hs+' to '+as:(as>hs?an+' beat '+hn+' '+as+' to '+hs:'tied '+as+' to '+hs))+'.';
     else say=(hs>as?hn+' leads '+an+' '+hs+' to '+as:(as>hs?an+' leads '+hn+' '+as+' to '+hs:'tied '+as+' to '+hs))+', '+(st.detail||'in progress')+'.';}
-  return {id:ev.id,line:line,say:say,names:[h.team.displayName,h.team.shortDisplayName,h.team.name,h.team.location,h.team.abbreviation,a.team.displayName,a.team.shortDisplayName,a.team.name,a.team.location,a.team.abbreviation].filter(Boolean).map(function(x){return String(x).toLowerCase();}),state:st.state};
+  return {an:an,hn:hn,as:+a.score||0,hs:+h.score||0,aLogo:a.team.logo,hLogo:h.team.logo,detail:st.shortDetail||st.detail||'',when:new Date(ev.date).toLocaleString('en-US',{timeZone:ET,weekday:'short',hour:'numeric',minute:'2-digit'}),id:ev.id,line:line,say:say,names:[h.team.displayName,h.team.shortDisplayName,h.team.name,h.team.location,h.team.abbreviation,a.team.displayName,a.team.shortDisplayName,a.team.name,a.team.location,a.team.abbreviation].filter(Boolean).map(function(x){return String(x).toLowerCase();}),state:st.state};
 }
 async function cmdFootball(q,pickId){
   beginAsk(q);doing('checking live football scores');
@@ -1066,7 +1168,7 @@ async function cmdFootball(q,pickId){
     var ql=' '+q.toLowerCase().replace(/[^a-z0-9 ]/g,' ')+' ';
     var hit=pickId?games.filter(function(g){return g.id===pickId;}):games.filter(function(g){return g.names.some(function(n){return n.length>=3&&ql.indexOf(' '+n.replace(/[^a-z0-9 ]/g,' ')+' ')>=0;});});
     var tags=[srcTag('live','ESPN scoreboard'),srcTag('live','Fetched '+clockET(Date.now())+' ET')];
-    if(hit.length){hit=hit.slice(0,3);finish({headline:hit[0].line,follow:'football',small:true,spoken:hit.map(function(g){return g.say;}).join(' '),rows:hit.map(function(g){return {t:g.lg,n:g.line};}),tags:tags,acts:[{label:'Refresh',fn:function(){cmdFootball(q,pickId);}}]});return;}
+    if(hit.length){hit=hit.slice(0,3);finish({headline:hit[0].line,follow:'football',small:true,spoken:hit.map(function(g){return g.say;}).join(' '),node:scoreNode(hit),tags:tags,acts:[{label:'Refresh',fn:function(){cmdFootball(q,pickId);}}]});return;}
     if(!games.length){finish({headline:'No football games are on the scoreboard right now.',small:true,spoken:'No football games are on the scoreboard right now.',tags:tags,srcNote:'Verified empty: the lookup worked.'});return;}
     var live=games.filter(function(g){return g.state==='in';});var show=(live.length?live:games).slice(0,8);
     convo.pending={kind:'football',orig:q,until:Date.now()+120000};
@@ -1209,6 +1311,298 @@ async function cmdWebFollow(q,L,opt){
   logMic('reply','follow-up as: '+sq.slice(0,80));
   cmdWeb(sq,Object.assign({},opt,{clarified:true}));
 }
+/* ================= VISUAL SCREENS: calendar, text simulation, Apple Music ================= */
+function addDays(ds,n){var d=new Date(ds+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+function dowOf(ds){return new Date(ds+'T12:00:00Z').getUTCDay();}
+function titleCase(s){return String(s||'').replace(/\b\w/g,function(c){return c.toUpperCase();});}
+var calCache={};
+function bridgePost(q,hist,ms){
+  var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},ms||45000);
+  return fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,q:q,history:hist||''}),signal:ctl.signal}).then(function(r){clearTimeout(tm);if(!r.ok)throw new Error('The bridge answered HTTP '+r.status+'.');return r.text();}).then(function(t){t=t.trim();if(/^Accepted$/i.test(t))throw new Error('The bridge did not accept the access code.');if(!t||/^M1NT_BRIDGE_ERROR/.test(t))throw new Error('Claude did not answer.');addUse('claude',1);usageChip();return t;});
+}
+function parseCalLines(t){
+  var out=[];String(t).split(/\n+/).forEach(function(line){
+    line=line.replace(/^[\s\-•*\d.)]+(?=\d{4}-)/,'');
+    var m=/^\s*(\d{4}-\d\d-\d\d(?:T\d\d:\d\d)?)(?::\d\d)?(?:[+-]\d\d:\d\d|Z)?\s*(?:\||->)\s*(\d{4}-\d\d-\d\d(?:T\d\d:\d\d)?)(?::\d\d)?(?:[+-]\d\d:\d\d|Z)?\s*\|\s*(.+?)\s*$/.exec(line);
+    if(m)out.push({start:m[1],end:m[2],title:m[3].replace(/\s+\|\s*(rec|rem|id)=.*$/,'')});
+  });
+  out.sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:0;});return out;
+}
+async function calBridgeFetch(from,to,force){
+  var key=from+'|'+to,c=calCache[key];if(c&&!force&&Date.now()-c.at<300000)return c;
+  var q='[CALENDAR DATA REQUEST] Using only the calendar snapshot (do not search the web), list every event that starts on a date from '+from+' to '+to+' inclusive, including all-day events. Output ONLY lines, one per event, in exactly this form: START|END|TITLE. Use the snapshot text for start and end with the timezone offset removed, for example 2026-11-27T11:00:00|2026-11-27T12:45:00|Shane Fromme: 2023 Chevrolet Tahoe RST. All-day events use plain dates. If there are none, output only the word NONE. No other words.';
+  var t=await bridgePost(q,'NOTE: this is a machine-readable request from the screen. Follow the output format exactly and add nothing else.',50000);
+  var ev=/^\W*none\W*$/i.test(t)?[]:parseCalLines(t);
+  if(!ev.length&&!/^\W*none\W*$/i.test(t))throw new Error('The calendar answer was not in a readable form.');
+  c={at:Date.now(),events:ev};calCache[key]=c;return c;
+}
+function evName(t){var i=t.indexOf(':');return i>0?t.slice(0,i).trim():t.trim();}
+function evSub(t){var i=t.indexOf(':');return i>0?t.slice(i+1).trim():'';}
+function evKind(e){return e.start.length<=10?'allday':(/:\s*\d{4}\s/.test(e.title)||/:\s*(?:19|20)\d\d\b/.test(e.title)?'job':'other');}
+function mins(s){return +s.slice(11,13)*60+ +s.slice(14,16);}
+function layoutLanes(list){
+  var lanes=[],out=[];list.forEach(function(e){var s=mins(e.start),en=Math.max(mins(e.end),s+30);var i=0;while(lanes[i]!==undefined&&lanes[i]>s)i++;lanes[i]=en;out.push({e:e,s:s,en:en,lane:i});});
+  out.forEach(function(o){var n=1;out.forEach(function(p){if(p!==o&&p.s<o.en&&o.s<p.en)n=Math.max(n,p.lane+1,o.lane+1);});o.n=n;});return out;
+}
+function calDaysNode(start,n,events,tag){
+  var wrap=el('div','cv cv-days');var today=etDay(0);
+  var days=[];for(var i=0;i<n;i++)days.push(addDays(start,i));
+  var timed=events.filter(function(e){return e.start.length>10&&days.indexOf(e.start.slice(0,10))>=0;});
+  var allday=events.filter(function(e){return e.start.length<=10&&days.some(function(d){return e.start<=d&&d<e.end;});});
+  var lo=null,hi=null;timed.forEach(function(e){var a=Math.floor(mins(e.start)/60)*60-60,b=Math.ceil(Math.max(mins(e.end),mins(e.start)+30)/60)*60+60;lo=lo==null?a:Math.min(lo,a);hi=hi==null?b:Math.max(hi,b);});
+  if(lo==null){lo=9*60;hi=17*60;}lo=Math.max(lo,5*60);hi=Math.min(Math.max(hi,lo+6*60),23*60);var PX=(n<=3?50:42);
+  var head=el('div','cv-head');head.appendChild(el('div','cv-gut'));
+  days.forEach(function(d){var h=el('div','cv-dh'+(d===today?' today':''));var dt=new Date(d+'T12:00:00Z');h.appendChild(el('span','cv-dow',dt.toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short'}).toUpperCase()));h.appendChild(el('span','cv-dn',String(dt.getUTCDate())));h.appendChild(el('span','cv-mo',dt.toLocaleDateString('en-US',{timeZone:'UTC',month:'short'}).toUpperCase()));if(d===today)h.appendChild(el('span','cv-today','TODAY'));head.appendChild(h);});
+  wrap.appendChild(head);
+  if(allday.length){var ar=el('div','cv-allday');ar.appendChild(el('div','cv-gut','ALL DAY'));days.forEach(function(d){var c=el('div','cv-adc');allday.filter(function(e){return e.start<=d&&d<e.end;}).forEach(function(e){c.appendChild(el('div','cv-chip',e.title));});ar.appendChild(c);});wrap.appendChild(ar);}
+  var body=el('div','cv-body');var H=(hi-lo)/60*PX;body.style.height=H+'px';
+  var gut=el('div','cv-gut cv-hours');for(var h=lo;h<hi;h+=60){var l=el('div','cv-hl',t12(String(Math.floor(h/60)).padStart(2,'0')+':00').replace(':00',''));l.style.top=((h-lo)/60*PX)+'px';gut.appendChild(l);}body.appendChild(gut);
+  var grid=el('div','cv-grid');grid.style.gridTemplateColumns='repeat('+n+',1fr)';
+  var k=0;days.forEach(function(d){
+    var col=el('div','cv-col'+(d===today?' today':''));
+    for(var h2=lo;h2<hi;h2+=60){var gl=el('div','cv-gl');gl.style.top=((h2-lo)/60*PX)+'px';col.appendChild(gl);}
+    layoutLanes(timed.filter(function(e){return e.start.slice(0,10)===d;})).forEach(function(o){
+      var kind=evKind(o.e);var b=el('div','cv-ev '+kind);var top=(o.s-lo)/60*PX,ht=Math.max(24,(o.en-o.s)/60*PX-3);
+      b.style.top=top+'px';b.style.height=ht+'px';b.style.left=(o.lane/o.n*100)+'%';b.style.width='calc('+(100/o.n)+'% - 4px)';b.style.setProperty('--d',(0.15+0.12*k++)+'s');
+      b.appendChild(el('div','cv-et',evName(o.e.title)));
+      if(ht>=44&&evSub(o.e.title))b.appendChild(el('div','cv-es',evSub(o.e.title)));
+      b.appendChild(el('div','cv-etm',t12(o.e.start.slice(11,16))+' – '+t12(o.e.end.slice(11,16))));
+      col.appendChild(b);
+    });
+    if(d===today){var nm=new Date(Date.now());var hm=new Intl.DateTimeFormat('en-GB',{timeZone:ET,hour:'2-digit',minute:'2-digit',hour12:false}).format(nm);var cur=+hm.slice(0,2)*60+ +hm.slice(3,5);if(cur>=lo&&cur<=hi){var nl=el('div','cv-now');nl.style.top=((cur-lo)/60*PX)+'px';col.appendChild(nl);}}
+    grid.appendChild(col);
+  });
+  body.appendChild(grid);wrap.appendChild(body);
+  var scan=el('div','cv-scan');wrap.appendChild(scan);
+  if(!timed.length&&!allday.length){var em=el('div','cv-empty','Nothing booked in this window.');wrap.appendChild(em);}
+  return wrap;
+}
+function calMonthNode(ym,events){
+  var wrap=el('div','cv cv-month');var today=etDay(0);var first=ym+'-01';var dim=new Date(Date.UTC(+ym.slice(0,4),+ym.slice(5,7),0)).getUTCDate();var lead=dowOf(first);
+  var dh=el('div','cv-mhead');['SUN','MON','TUE','WED','THU','FRI','SAT'].forEach(function(x){dh.appendChild(el('div',null,x));});wrap.appendChild(dh);
+  var g=el('div','cv-mgrid');var k=0;
+  for(var i=0;i<lead;i++)g.appendChild(el('div','cv-mc blank'));
+  for(var d=1;d<=dim;d++){
+    var ds=ym+'-'+String(d).padStart(2,'0');var c=el('div','cv-mc'+(ds===today?' today':'')+(ds<today?' past':''));c.appendChild(el('div','cv-mn',String(d)));
+    var evs=events.filter(function(e){return e.start.length<=10?(e.start<=ds&&ds<e.end):e.start.slice(0,10)===ds;});
+    evs.slice(0,3).forEach(function(e){var kind=evKind(e);var ch=el('div','cv-mev '+kind);ch.style.setProperty('--d',(0.1+0.05*k++)+'s');ch.textContent=(e.start.length>10?t12(e.start.slice(11,16)).replace(' ','').toLowerCase()+' ':'')+evName(e.title);c.appendChild(ch);});
+    if(evs.length>3)c.appendChild(el('div','cv-more','+'+(evs.length-3)+' more'));
+    g.appendChild(c);
+  }
+  wrap.appendChild(g);wrap.appendChild(el('div','cv-scan'));return wrap;
+}
+function calSpoken(events,n,label){
+  if(!events.length)return 'Nothing on your calendar '+label+'.';
+  var parts=events.slice(0,5).map(function(e){var d=prettyDay(e.start.slice(0,10)).split(',')[0];return d+(e.start.length>10?' at '+t12(e.start.slice(11,16)):', all day')+', '+evName(e.title);});
+  return 'You have '+events.length+plural(events.length,' thing ',' things ')+label+'. '+parts.join('. ')+(events.length>5?'. And '+(events.length-5)+' more on screen.':'.');
+}
+async function cmdCalendar(q,spec,force){
+  beginAsk(q);doing('pulling your calendar up');setMode('thinking');
+  var from,to,label,node,evs;
+  try{
+    if(spec.mode==='month'){var ym=spec.ym;from=ym+'-01';to=addDays(ym+'-01',new Date(Date.UTC(+ym.slice(0,4),+ym.slice(5,7),0)).getUTCDate()-1);}
+    else{from=spec.start;to=addDays(spec.start,spec.n-1);}
+    var r=await calBridgeFetch(from,to,force);
+    evs=r.events.filter(function(e){var d=e.start.slice(0,10);return e.start.length<=10?(e.start<=to&&e.end>from):(d>=from&&d<=to);});
+    if(spec.mode==='month'){label='in '+new Date(from+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'long'});node=calMonthNode(spec.ym,evs);}
+    else{label=spec.label||('over the next '+spec.n+' days');node=calDaysNode(spec.start,spec.n,evs);}
+  }catch(e){bridgeFail(q,failCopy(e));return;}
+  var title=spec.mode==='month'?new Date(from+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'long',year:'numeric'}):(prettyDay(from).replace(/^[A-Za-z]+, /,'')+(spec.n>1?' → '+prettyDay(to).replace(/^[A-Za-z]+, /,''):''));
+  var acts=[];
+  var shift=spec.mode==='month'?function(dir){var d=new Date(spec.ym+'-01T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+dir);return {mode:'month',ym:d.toISOString().slice(0,7)};}:function(dir){return {mode:'days',start:addDays(spec.start,dir*spec.n),n:spec.n,label:null};};
+  acts.push({label:spec.mode==='month'?'◀ Previous month':'◀ Earlier',fn:function(){cmdCalendar(q,shift(-1));}});
+  acts.push({label:spec.mode==='month'?'Next month ▶':'Later ▶',fn:function(){cmdCalendar(q,shift(1));}});
+  acts.push({label:'Refresh',fn:function(){cmdCalendar(q,spec,true);}});
+  finish({headline:title+' · '+evs.length+plural(evs.length,' item',' items'),small:true,spoken:calSpoken(evs,spec.n,label),node:node,tags:[srcTag('snap','Calendar snapshot'),srcTag('live','Read '+clockET(Date.now())+' ET')],srcNote:'Read-only. The snapshot refreshes on its own schedule.',acts:acts});
+}
+function calIntent(q,l){
+  if(!BR)return null;
+  var sched=/\b(calendar|schedule|agenda|appointments?|bookings?|jobs?|what do i have|what'?s on|what is on|what have i got|week look|days look)\b/.test(l);
+  var W={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,few:3,couple:2};
+  var m=/\b(?:next|following|coming|upcoming|few|following)\s+(\d+|one|two|three|four|five|six|seven|few|couple(?: of)?)\s*(?:more\s+)?days?\b/.exec(l)||/\b(\d+|one|two|three|four|five|six|seven)\s+days?\b/.exec(l);
+  if(sched&&m){var raw=m[1].replace(/ of$/,'');var n=W[raw]||parseInt(raw,10)||3;n=Math.max(1,Math.min(7,n));return {mode:'days',start:etDay(0),n:n,label:'over the next '+n+plural(n,' day',' days')};}
+  if(sched&&/\bnext week\b/.test(l)){var t=etDay(0),dow=dowOf(t),add=((8-dow)%7)||7;return {mode:'days',start:addDays(t,add),n:7,label:'next week'};}
+  if(sched&&/\b(this week|the week|my week|week ahead|next seven days|next 7 days|week look)\b/.test(l)&&!/weekend/.test(l))return {mode:'days',start:etDay(0),n:7,label:'over the next 7 days'};
+  if((sched||/\bmonth\b/.test(l))&&/\b(this month|the month|my month|month look|monthly)\b/.test(l))return {mode:'month',ym:etDay(0).slice(0,7)};
+  if(/\b(pull up|show( me)?|open|bring up|display|see)\b.*\bcalendar\b/.test(l)||/^\W*(?:my )?calendar\W*$/.test(l)){
+    if(/\btomorrow\b/.test(l))return {mode:'days',start:etDay(1),n:1,label:'tomorrow'};
+    if(/\btoday\b/.test(l))return {mode:'days',start:etDay(0),n:1,label:'today'};
+    return {mode:'month',ym:etDay(0).slice(0,7)};
+  }
+  return null;
+}
+/* ---------- text simulation (visual only; nothing is sent) ---------- */
+var TXT_STOP=/^(that|saying|say|says|to|we|i|i'm|im|the|about|can|could|your|her|his|their|if|please|hey|hi|let|and|so|you|it|just|tell|telling|regarding|for|a)$/i;
+function parseTextCmd(q){
+  var m=/^\W*(?:please\s+)?(?:can you\s+|could you\s+)?(?:send\s+(?:a\s+)?(?:text|message)\s+to|send\s+(?:a\s+)?(?:text|message)\s+for|text|message|sms)\s+(.+)$/i.exec(q);
+  if(!m)return null;var words=m[1].replace(/[,]+/g,' ').trim().split(/\s+/);
+  if(/^(me|back|from|messages?|threads?|history|inbox|that|about)$/i.test(words[0]))return null;
+  var name=[];while(words.length&&name.length<2&&!TXT_STOP.test(words[0]))name.push(words.shift());
+  if(!name.length)return null;
+  var body=words.join(' ').replace(/^(?:that|saying|to say|and say|and tell (?:her|him|them)(?: that)?|:)\s+/i,'').trim();
+  if(!body)return null;return {name:titleCase(name.join(' ')),body:body};
+}
+function fallbackDraft(name,body){var first=name.split(' ')[0];var b=body.replace(/\bher\b/gi,'your').replace(/\bhis\b/gi,'your').replace(/^we\b/i,'we').replace(/[.!]+$/,'');return 'Hi '+first+', it\'s Ali with Evermint Detailing. '+b.charAt(0).toUpperCase()+b.slice(1)+'. Let me know what works for you. Thanks!';}
+var simTimers=[];
+function simClear(){simTimers.forEach(clearTimeout);simTimers=[];}
+function phoneNode(name,msg){
+  simClear();
+  var wrap=el('div','sim');
+  var ph=el('div','sim-phone');
+  var hd=el('div','sim-hd');var av=el('div','sim-av',name.split(' ').map(function(w){return w.charAt(0);}).join('').slice(0,2).toUpperCase());hd.appendChild(av);
+  var who=el('div','sim-who');who.appendChild(el('b',null,name));who.appendChild(el('span',null,'Text message · Evermint line'));hd.appendChild(who);hd.appendChild(el('div','sim-badge','SIMULATION'));ph.appendChild(hd);
+  var bd=el('div','sim-body');var day=el('div','sim-day','Today '+clockET(Date.now()));bd.appendChild(day);
+  var typing=el('div','sim-typing');typing.appendChild(el('i'));typing.appendChild(el('i'));typing.appendChild(el('i'));
+  var bub=el('div','sim-bub out');bub.style.display='none';var bt=el('span');bub.appendChild(bt);var st=el('div','sim-st','');bub.appendChild(st);
+  bd.appendChild(bub);bd.appendChild(typing);ph.appendChild(bd);
+  var bar=el('div','sim-bar');var inp=el('div','sim-in','iMessage / text');var snd=el('button','sim-send','↑');snd.type='button';snd.disabled=true;bar.appendChild(inp);bar.appendChild(snd);ph.appendChild(bar);
+  wrap.appendChild(ph);
+  var side=el('div','sim-side');side.appendChild(el('div','sim-lbl','DRAFT TO '+name.toUpperCase()));var dr=el('div','sim-draft',msg);side.appendChild(dr);
+  var note=el('div','sim-note','This is a visual simulation only. M1NT is not connected to your texting line yet, so nothing leaves the screen.');side.appendChild(note);
+  var go=el('button','btn pri','Play the send (simulated)');go.type='button';go.disabled=true;side.appendChild(go);wrap.appendChild(side);
+  function typeIt(){typing.style.display='none';bub.style.display='';var i=0;(function step(){if(!bub.isConnected)return;bt.textContent=msg.slice(0,i);bd.scrollTop=bd.scrollHeight;if(i<msg.length){i++;simTimers.push(setTimeout(step,msg.length>140?9:16));}else{inp.textContent='';go.disabled=false;snd.disabled=false;}})();}
+  function deliver(){go.disabled=true;snd.disabled=true;inp.textContent='iMessage / text';st.textContent='Sending…';st.className='sim-st';simTimers.push(setTimeout(function(){st.textContent='Delivered (simulated) · '+clockET(Date.now());st.className='sim-st ok';bub.classList.add('sent');},1100));}
+  go.addEventListener('click',deliver);snd.addEventListener('click',deliver);
+  inp.textContent='';simTimers.push(setTimeout(function(){inp.textContent=msg.slice(0,34)+'…';typeIt();},1400));
+  return wrap;
+}
+async function cmdTextSim(q,p){
+  beginAsk(q);doing('drafting the message');setMode('thinking');
+  var msg=null;
+  try{
+    var t=await bridgePost('[DRAFT REQUEST] Write the text message Ali, owner of Evermint Detailing Co. (mobile detailing, Louisville), would send to '+p.name+'. What Ali wants it to say: '+p.body+'. Make it warm, short (one to three sentences), written in first person as Ali, plain text only, no emojis, no quotation marks, no markdown. Output ONLY the message text.','NOTE: a draft for the screen. Output only the message.',30000);
+    msg=t.replace(/^["'“]+|["'”]+$/g,'').replace(/\s+/g,' ').trim();if(!msg||msg.length>600)msg=null;
+  }catch(e){msg=null;}
+  if(!msg)msg=fallbackDraft(p.name,p.body);
+  finish({headline:'Draft text to '+p.name,small:true,spoken:'Here is how that text to '+p.name.split(' ')[0]+' would look. This is only a simulation, so nothing is sent.',node:phoneNode(p.name,msg),tags:[srcTag('demo','Simulation'),srcTag('snap','Draft by Claude')],srcNote:'Nothing was sent.',acts:[{label:'Redraft',fn:function(){cmdTextSim(q,p);}}]});
+}
+/* ---------- Apple Music (free: iTunes search + open in Apple Music) ---------- */
+var lastTrack=store('lastTrack')||null;
+function musicNode(res,term){
+  var wrap=el('div','mus');var top=res[0];
+  var art=el('div','mus-art');if(top.artworkUrl100){var im=el('img');im.alt='';im.src=top.artworkUrl100.replace('100x100','400x400');art.appendChild(im);}else art.appendChild(el('span',null,'♪'));wrap.appendChild(art);
+  var info=el('div','mus-info');info.appendChild(el('div','mus-lbl','APPLE MUSIC'));info.appendChild(el('div','mus-t',top.trackName||term));info.appendChild(el('div','mus-a',[top.artistName,top.collectionName].filter(Boolean).join(' · ')));
+  var row=el('div','mus-row');
+  if(top.previewUrl){var au=new Audio();au.src=top.previewUrl;au.preload='none';var pb=el('button','btn pri','▶ 30-second preview');pb.type='button';pb.addEventListener('click',function(){if(au.paused){stopSpeak();au.play().catch(function(){});pb.textContent='❚❚ Pause preview';}else{au.pause();pb.textContent='▶ 30-second preview';}});au.addEventListener('ended',function(){pb.textContent='▶ 30-second preview';});row.appendChild(pb);}
+  var op=el('a','btn','Play full song in Apple Music');op.href=top.trackViewUrl||('https://music.apple.com/us/search?term='+encodeURIComponent(term));op.target='_blank';op.rel='noopener noreferrer';row.appendChild(op);info.appendChild(row);
+  if(res.length>1){var al=el('div','mus-alt');al.appendChild(el('span',null,'Other matches'));res.slice(1,4).forEach(function(r){var a=el('a',null,r.trackName+' — '+r.artistName);a.href=r.trackViewUrl||'#';a.target='_blank';a.rel='noopener noreferrer';al.appendChild(a);});info.appendChild(al);}
+  wrap.appendChild(info);return wrap;
+}
+function askSong(q){beginAsk(q);convo.pending={kind:'music',orig:q,until:Date.now()+120000};finish({headline:'What song?',small:true,spoken:'What song?',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say a song, an artist, or both, like “Blinding Lights by The Weeknd.”'}]});}
+async function cmdMusic(q,term){
+  beginAsk(q);doing('finding it in Apple Music');setMode('thinking');
+  var res=null;
+  try{var j=await jget('https://itunes.apple.com/search?media=music&entity=song&limit=4&country=US&term='+encodeURIComponent(term));res=(j.results||[]).filter(function(x){return x.trackName;});}catch(e){res=null;}
+  var link='https://music.apple.com/us/search?term='+encodeURIComponent(term);
+  if(res&&res.length){lastTrack={term:term,res:res.slice(0,4)};store('lastTrack',lastTrack);
+    finish({headline:res[0].trackName+' — '+res[0].artistName,small:true,spoken:'Here is '+res[0].trackName+' by '+res[0].artistName+'. Tap play for a preview, or open the full song in Apple Music.',node:musicNode(res,term),tags:[srcTag('live','Apple Music search')],srcNote:'Free. Full songs play in your Apple Music app or web player.',acts:[{label:'Different song',fn:function(){askSong('play a song');}}]});
+  }else{
+    var n=el('div','mus');var info=el('div','mus-info');info.appendChild(el('div','mus-lbl','APPLE MUSIC'));info.appendChild(el('div','mus-t',term));var op=el('a','btn pri','Search “'+term+'” in Apple Music');op.href=link;op.target='_blank';op.rel='noopener noreferrer';info.appendChild(op);n.appendChild(info);
+    finish({headline:'Search “'+term+'” in Apple Music',small:true,spoken:'I could not look that song up, but I set up the Apple Music search for you.',node:n,tags:[srcTag('na','Lookup unavailable')]});
+  }
+}
+(function(){
+  var b=el('button','musdock');b.type='button';b.id='musDock';b.setAttribute('aria-label','Apple Music');b.title='Apple Music';
+  b.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#fff" d="M16.5 3.2v11.1a3.1 3.1 0 1 1-1.8-2.8V6.4l-6.2 1.3v8.6a3.1 3.1 0 1 1-1.8-2.8V5.9c0-.5.3-.9.8-1l7.9-1.7c.6-.1 1.1.3 1.1 1z"/></svg>';
+  b.addEventListener('click',function(){wakeUi();if(lastTrack&&lastTrack.res&&lastTrack.res.length){beginAsk('Apple Music');finish({headline:lastTrack.res[0].trackName+' — '+lastTrack.res[0].artistName,small:true,spoken:'',node:musicNode(lastTrack.res,lastTrack.term),tags:[srcTag('live','Apple Music')],acts:[{label:'Different song',fn:function(){askSong('play a song');}}]});stopSpeak();}else askSong('play a song');});
+  document.body.appendChild(b);
+})();
+
+/* ---------- weather scene ---------- */
+function wxKind(code,isNight){
+  if(code===0||code===1)return isNight?'night':'sun';
+  if(code===2)return 'partly';if(code===3)return 'cloud';
+  if(code===45||code===48)return 'fog';
+  if(code>=51&&code<=57)return 'drizzle';
+  if((code>=61&&code<=67)||(code>=80&&code<=82))return 'rain';
+  if((code>=71&&code<=77)||code===85||code===86)return 'snow';
+  if(code>=95)return 'storm';return 'cloud';
+}
+function wxGlyph(code){var k=wxKind(code,false);return {sun:'☀',night:'☾',partly:'⛅',cloud:'☁',fog:'🌫',drizzle:'🌦',rain:'🌧',snow:'❄',storm:'⛈'}[k];}
+function wxScene(cv,kind){
+  var ctx=cv.getContext('2d');var W=0,H=0,P=[],raf=0,t0=Date.now();
+  function fit(){var r=cv.getBoundingClientRect();W=cv.width=Math.max(300,Math.floor(r.width));H=cv.height=Math.max(200,Math.floor(r.height));}
+  fit();
+  var n=kind==='snow'?110:kind==='storm'?190:kind==='rain'?150:kind==='drizzle'?70:0;
+  for(var i=0;i<n;i++)P.push({x:Math.random()*W,y:Math.random()*H,v:kind==='snow'?(0.6+Math.random()*1.2):(kind==='drizzle'?9+Math.random()*3:(15+Math.random()*9)),r:kind==='snow'?(1+Math.random()*2.6):0,l:kind==='snow'?0:(kind==='drizzle'?7+Math.random()*5:13+Math.random()*14),d:Math.random()*Math.PI*2});
+  var clouds=[];var cn=kind==='cloud'||kind==='storm'?6:(kind==='partly'?4:(kind==='rain'||kind==='drizzle'||kind==='snow'?5:(kind==='fog'?7:2)));
+  for(var c=0;c<cn;c++)clouds.push({x:Math.random()*W,y:12+Math.random()*(H*0.45),s:0.8+Math.random()*1.4,v:0.08+Math.random()*0.22});
+  var stars=[];if(kind==='night')for(var s=0;s<70;s++)stars.push({x:Math.random()*W,y:Math.random()*H*0.8,r:Math.random()*1.4+0.2,p:Math.random()*6});
+  var flash=0,nextFlash=Date.now()+2500;
+  function cloud(x,y,s,a,col){ctx.fillStyle='rgba('+col+','+a+')';[[0,0,34],[30,-12,40],[66,0,32],[34,10,36]].forEach(function(b){ctx.beginPath();ctx.arc(x+b[0]*s,y+b[1]*s,b[2]*s,0,6.283);ctx.fill();});}
+  function frame(){
+    if(!cv.isConnected){return;}
+    var t=(Date.now()-t0)/1000;ctx.clearRect(0,0,W,H);
+    var g=ctx.createLinearGradient(0,0,0,H);
+    var sky={sun:['#0b3b5e','#1d6f8f'],night:['#020b1a','#0b2447'],partly:['#12385a','#2b6483'],cloud:['#16252d','#2f4552'],fog:['#2a3a3d','#516569'],drizzle:['#16303a','#2c5362'],rain:['#0e1d2b','#233e52'],snow:['#1d3345','#5c7a90'],storm:['#07101a','#1b2a3c']}[kind];
+    g.addColorStop(0,sky[0]);g.addColorStop(1,sky[1]);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    if(kind==='sun'||kind==='partly'){var sx=W*0.82,sy=H*0.28,rr=44+Math.sin(t*1.2)*3;var rg=ctx.createRadialGradient(sx,sy,4,sx,sy,rr*3.4);rg.addColorStop(0,'rgba(255,230,150,.95)');rg.addColorStop(.25,'rgba(255,200,90,.45)');rg.addColorStop(1,'rgba(255,200,90,0)');ctx.fillStyle=rg;ctx.beginPath();ctx.arc(sx,sy,rr*3.4,0,6.283);ctx.fill();ctx.fillStyle='#ffe29a';ctx.beginPath();ctx.arc(sx,sy,rr*0.62,0,6.283);ctx.fill();
+      ctx.strokeStyle='rgba(255,226,154,.28)';ctx.lineWidth=2;for(var k=0;k<14;k++){var a=k/14*6.283+t*0.18;ctx.beginPath();ctx.moveTo(sx+Math.cos(a)*rr*0.9,sy+Math.sin(a)*rr*0.9);ctx.lineTo(sx+Math.cos(a)*rr*(1.5+0.25*Math.sin(t*2+k)),sy+Math.sin(a)*rr*(1.5+0.25*Math.sin(t*2+k)));ctx.stroke();}}
+    if(kind==='night'){stars.forEach(function(s2){ctx.fillStyle='rgba(255,255,255,'+(0.35+0.55*Math.abs(Math.sin(t*0.9+s2.p)))+')';ctx.beginPath();ctx.arc(s2.x,s2.y,s2.r,0,6.283);ctx.fill();});var mx=W*0.82,my=H*0.26;var mg=ctx.createRadialGradient(mx,my,6,mx,my,90);mg.addColorStop(0,'rgba(220,235,255,.5)');mg.addColorStop(1,'rgba(220,235,255,0)');ctx.fillStyle=mg;ctx.beginPath();ctx.arc(mx,my,90,0,6.283);ctx.fill();ctx.fillStyle='#e8f1ff';ctx.beginPath();ctx.arc(mx,my,26,0,6.283);ctx.fill();ctx.fillStyle=sky[0];ctx.beginPath();ctx.arc(mx+11,my-5,24,0,6.283);ctx.fill();}
+    var cc=(kind==='storm'||kind==='rain'||kind==='drizzle')?'70,86,104':(kind==='fog'?'200,214,216':'225,240,245');var ca=kind==='fog'?0.16:(kind==='storm'?0.8:(kind==='rain'||kind==='drizzle'?0.7:(kind==='cloud'?0.55:(kind==='snow'?0.5:0.4))));
+    clouds.forEach(function(c2){c2.x+=c2.v;if(c2.x>W+120)c2.x=-160;cloud(c2.x,c2.y,c2.s,ca,cc);});
+    if(kind==='fog'){var fg=ctx.createLinearGradient(0,H*0.4,0,H);fg.addColorStop(0,'rgba(210,225,225,0)');fg.addColorStop(1,'rgba(210,225,225,.34)');ctx.fillStyle=fg;ctx.fillRect(0,H*0.4,W,H*0.6);}
+    if(kind==='rain'||kind==='storm'||kind==='drizzle'){ctx.strokeStyle='rgba(170,210,255,'+(kind==='drizzle'?0.35:0.6)+')';ctx.lineWidth=1.2;ctx.beginPath();P.forEach(function(p){p.y+=p.v;p.x-=p.v*0.18;if(p.y>H){p.y=-20;p.x=Math.random()*(W+80);}ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+p.l*0.18,p.y-p.l);});ctx.stroke();
+      ctx.strokeStyle='rgba(170,210,255,.22)';ctx.lineWidth=1;for(var q=0;q<3;q++){var rx=(t*60*(q+1)*7)%W;ctx.beginPath();ctx.ellipse(rx,H-6,10+((t*30+q*13)%14),2.5,0,0,6.283);ctx.stroke();}}
+    if(kind==='snow'){ctx.fillStyle='rgba(255,255,255,.88)';P.forEach(function(p){p.y+=p.v;p.x+=Math.sin(t*0.9+p.d)*0.7;if(p.y>H+6){p.y=-8;p.x=Math.random()*W;}ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);ctx.fill();});var sg=ctx.createLinearGradient(0,H-26,0,H);sg.addColorStop(0,'rgba(255,255,255,0)');sg.addColorStop(1,'rgba(255,255,255,.28)');ctx.fillStyle=sg;ctx.fillRect(0,H-26,W,26);}
+    if(kind==='storm'){if(Date.now()>nextFlash){flash=1;nextFlash=Date.now()+2200+Math.random()*5200;}if(flash>0){ctx.fillStyle='rgba(220,230,255,'+(flash*0.5)+')';ctx.fillRect(0,0,W,H);if(flash>0.6){ctx.strokeStyle='rgba(255,255,255,'+flash+')';ctx.lineWidth=2.2;ctx.beginPath();var bx=W*(0.2+Math.random()*0.5),by=0;ctx.moveTo(bx,by);for(var z=0;z<7;z++){bx+=(Math.random()-0.4)*36;by+=H*0.11;ctx.lineTo(bx,by);}ctx.stroke();}flash-=0.07;}}
+    raf=requestAnimationFrame(frame);
+  }
+  frame();return function(){cancelAnimationFrame(raf);};
+}
+function wxNode(loc,c,d,off,cond,isNight){
+  var i=off;var code=off>0?d.weather_code[i]:c.weather_code;var kind=wxKind(code,off===0&&isNight);
+  var wrap=el('div','wx wx-'+kind);var cv=el('canvas','wx-cv');wrap.appendChild(cv);
+  var ov=el('div','wx-ov');
+  var l=el('div','wx-l');l.appendChild(el('div','wx-place',loc.name));
+  l.appendChild(el('div','wx-day',off===0?'Right now':wxDayName(off)));
+  l.appendChild(el('div','wx-temp',(off===0?Math.round(c.temperature_2m):Math.round(d.temperature_2m_max[i]))+'°'));
+  l.appendChild(el('div','wx-cond',cond.charAt(0).toUpperCase()+cond.slice(1)));
+  var st=el('div','wx-stats');
+  [['HIGH',Math.round(d.temperature_2m_max[i])+'°'],['LOW',Math.round(d.temperature_2m_min[i])+'°'],['RAIN',d.precipitation_probability_max[i]+'%']].concat(off===0?[['FEELS',Math.round(c.apparent_temperature)+'°'],['WIND',Math.round(c.wind_speed_10m)+' mph']]:[]).forEach(function(x){var s=el('div','wx-st');s.appendChild(el('b',null,x[1]));s.appendChild(el('span',null,x[0]));st.appendChild(s);});
+  l.appendChild(st);ov.appendChild(l);
+  var fc=el('div','wx-fc');for(var k=0;k<Math.min(7,d.time.length);k++){(function(k){var it=el('div','wx-d'+(k===off?' on':''));it.appendChild(el('span','wx-dn',k===0?'Today':new Date(d.time[k]+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short'})));it.appendChild(el('span','wx-dg',wxGlyph(d.weather_code[k])));it.appendChild(el('span','wx-dh',Math.round(d.temperature_2m_max[k])+'°'));it.appendChild(el('span','wx-dl',Math.round(d.temperature_2m_min[k])+'°'));fc.appendChild(it);})(k);}
+  ov.appendChild(fc);wrap.appendChild(ov);
+  setTimeout(function(){if(cv.isConnected)wxScene(cv,kind);},30);
+  return wrap;
+}
+/* ---------- scoreboard ---------- */
+function scoreNode(games){
+  var wrap=el('div','sb');
+  games.forEach(function(g,i){
+    var card=el('div','sb-card '+(g.state||''));card.style.setProperty('--d',(0.1*i)+'s');
+    card.appendChild(el('div','sb-lg',g.lg+(g.state==='in'?' · LIVE':'')));
+    [['a',g.an,g.as,g.aLogo],['h',g.hn,g.hs,g.hLogo]].forEach(function(t){var r=el('div','sb-t'+(g.state!=='pre'&&((t[0]==='a'&&g.as>g.hs)||(t[0]==='h'&&g.hs>g.as))?' lead':''));if(t[3]){var im=el('img');im.alt='';im.src=t[3];r.appendChild(im);}r.appendChild(el('span','sb-n',t[1]));r.appendChild(el('span','sb-s',g.state==='pre'?'–':String(t[2])));card.appendChild(r);});
+    card.appendChild(el('div','sb-st',g.state==='pre'?g.when+' ET':(g.detail||'')));wrap.appendChild(card);
+  });return wrap;
+}
+/* ---------- clock and timer ---------- */
+function clockNode(){
+  var w=el('div','clk');var tm=el('div','clk-t');var dt=el('div','clk-d');var z=el('div','clk-z','Louisville · Eastern');w.appendChild(tm);w.appendChild(dt);w.appendChild(z);
+  var ring=el('div','clk-ring');w.appendChild(ring);
+  (function tick(){var n=new Date();tm.textContent=n.toLocaleTimeString('en-US',{timeZone:ET,hour:'numeric',minute:'2-digit',second:'2-digit'});dt.textContent=n.toLocaleDateString('en-US',{timeZone:ET,weekday:'long',month:'long',day:'numeric',year:'numeric'});ring.style.setProperty('--s',String(n.getSeconds()));setTimeout(function(){if(w.isConnected)tick();},500);})();
+  return w;
+}
+var tmr=null;
+function fmtMS(ms){ms=Math.max(0,ms);var s=Math.ceil(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0');}
+function beep(){try{var A=window.AudioContext||window.webkitAudioContext;var a=new A();[0,0.28,0.56,0.9,1.18,1.46].forEach(function(t){var o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=880;g.gain.value=0.0001;o.connect(g);g.connect(a.destination);var s=a.currentTime+t;g.gain.exponentialRampToValueAtTime(0.25,s+0.02);g.gain.exponentialRampToValueAtTime(0.0001,s+0.22);o.start(s);o.stop(s+0.25);});}catch(e){}}
+function startTimer(ms,label){clearInterval(tmr&&tmr.iv);tmr={end:Date.now()+ms,total:ms,label:label,done:false};tmr.iv=setInterval(function(){if(!tmr)return;if(Date.now()>=tmr.end&&!tmr.done){tmr.done=true;clearInterval(tmr.iv);beep();wakeUi();try{speak('Your '+tmr.label+' timer is up.',false);}catch(e){}$('hint').textContent='Timer finished: '+tmr.label;}},250);}
+function timerNode(){
+  var w=el('div','tm');var C=2*Math.PI*86;
+  w.innerHTML='<svg viewBox="0 0 200 200" class="tm-svg"><circle cx="100" cy="100" r="86" class="tm-bg"/><circle cx="100" cy="100" r="86" class="tm-fg" transform="rotate(-90 100 100)" stroke-dasharray="'+C+'" stroke-dashoffset="0"/></svg>';
+  var mid=el('div','tm-mid');var big=el('div','tm-big','');var lb=el('div','tm-lb',tmr?tmr.label.toUpperCase():'');mid.appendChild(big);mid.appendChild(lb);w.appendChild(mid);
+  var fg=w.querySelector('.tm-fg');
+  (function tick(){if(!tmr){big.textContent='0:00';return;}var left=tmr.end-Date.now();big.textContent=tmr.done||left<=0?'Done':fmtMS(left);fg.style.strokeDashoffset=String(C*(1-Math.max(0,left)/tmr.total));w.classList.toggle('done',left<=0);setTimeout(function(){if(w.isConnected)tick();},200);})();
+  return w;
+}
+function parseTimer(l){
+  var m=/\b(?:set|start|begin|run|put)?\s*(?:a|an|the)?\s*(?:(\d+(?:\.\d+)?|a|an|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty five|forty-five|forty|sixty|ninety)\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?))\s*(?:timer|countdown)?/.exec(l);
+  if(!/\b(timer|countdown|remind me in|alarm)\b/.test(l)||!m)return null;
+  var W={a:1,an:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,fifteen:15,twenty:20,thirty:30,'forty five':45,'forty-five':45,forty:40,sixty:60,ninety:90};
+  var v=W[m[1]]!=null?W[m[1]]:parseFloat(m[1]);var u=m[2].charAt(0);var ms=u==='h'?v*3600000:(u==='m'?v*60000:v*1000);
+  return {ms:ms,label:(W[m[1]]!=null||/^\d+$/.test(m[1])?v:m[1])+' '+(u==='h'?'hour':(u==='m'?'minute':'second'))+(v===1?'':'s')};
+}
+
 function run(raw,opt){
   opt=opt||{};var q=String(raw||'').trim();if(!q)return;$('hint').textContent='';
   convo.armAfterSpeech=null;convo.armOk=!!opt.voice||wake.on;
@@ -1221,8 +1615,15 @@ function run(raw,opt){
   var wcq=q.split(/\s+/).length;
   if(MICOFF_RE.test(q)){micOff();return;}
   if(isGoodnight(q)){byeSleep(q);return;}
+  var _tm=parseTimer(l);
+  if(_tm){startTimer(_tm.ms,_tm.label);beginAsk(q);finish({headline:_tm.label+' timer',small:true,spoken:'Timer set for '+_tm.label+'.',node:timerNode(),tags:[srcTag('live','On this screen')],acts:[{label:'Cancel timer',fn:function(){if(tmr){clearInterval(tmr.iv);tmr=null;}run('what time is it',{});}}]});return;}
+  if(/^\W*(?:what(?:'s| is)?\s+)?(?:the\s+)?(?:current\s+)?time(?:\s+is\s+it|\s+is\s+it\s+now|\s+now|\s+right\s+now)?\W*$/.test(l)||/^\W*what time is it\W*$/.test(l)){beginAsk(q);finish({headline:clockET(Date.now())+' ET',small:true,spoken:'It is '+clockET(Date.now())+'.',node:clockNode(),tags:[srcTag('live','This device clock')]});return;}
+  var _tx=parseTextCmd(q);if(_tx){cmdTextSim(q,_tx);return;}
+  var _pm=/^\W*(?:please\s+)?(?:play|put on)\b\s*(.*)$/i.exec(q);
+  if(_pm){var _t=_pm[1].replace(/\s+(?:on|in|using)\s+apple\s+music\W*$/i,'').replace(/^(?:me\s+)?(?:the\s+)?(?:song\s+|track\s+)?/i,'').replace(/[.!?]+$/,'').trim();if(!_t||/^(?:a|some|any|something|a song|some music|music|a track|songs?|tunes?|anything)$/i.test(_t)){askSong(q);}else cmdMusic(q,_t);return;}
   if(/\b(weather|forecast|temperature|umbrella|how (hot|cold)|will it (rain|snow))\b/.test(l)&&(!BR||wcq<=8)){cmdWeather(q);return;}
   if((/\b(football|nfl|score|scores|who won|touchdown|playing|game|halftime|quarter|kickoff)\b/.test(l)||/how (is|are) (the )?[a-z .]+ (doing|playing)|did (the )?[a-z .]+ (win|lose)/.test(l))&&!/schedule|calendar/.test(l)&&(!BR||wcq<=8)){cmdFootball(q);return;}
+  var _ci=calIntent(q,l);if(_ci){cmdCalendar(q,_ci);return;}
   if(BR){cmdBridge(q,opt);return;}
   if((/^(search|look up|google|find out|news)\b|latest news|what('?s| is) the news|\b(what time|when) (does|do|is) .+ (close|open|closes|opens)\b|\bhours\b|\bis .+ open\b|\bphone number\b|\baddress (for|of)\b|\bhow (much|many|old|tall|far)\b|^who (is|was)\b|^what (is|are|was) (a|an|the)\b/.test(l))&&!/deposit|payment|\bjobs?\b|customer|credit|usage|schedule|calendar|appointment|lead/.test(l)){var ch=!opt.clarified&&needsPlace(q);if(ch){askPlace(q,ch);return;}cmdWeb(q,opt);return;}
   if(/what('?s| is)? ?(needs|need) me|needs me|need my attention|waiting on me|what should i (do|handle)/.test(l)){cmdNeeds(q,opt);return;}
