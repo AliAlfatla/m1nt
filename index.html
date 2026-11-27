@@ -17,6 +17,11 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%}
+html.tv body{font-size:21px;overflow:hidden}
+html.tv .app{padding:var(--tvin,5vh 5vw);box-sizing:border-box;height:100vh}
+html.tv{cursor:none}
+html.tv .hint,html.tv .banner{display:none}
+
 body{margin:0;background:radial-gradient(1100px 760px at 50% 46%,#0b3d35 0%,var(--ink) 64%) fixed,var(--ink);color:var(--text);font-family:var(--font-d);font-size:15px;line-height:1.45;overflow:hidden}
 body::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(92,255,200,.03) 0 1px,transparent 1px 3px)}
 button,input,select{font:inherit;color:inherit}
@@ -709,7 +714,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v47-2026-11-27';
+var BUILD='v48-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -851,7 +856,7 @@ function setLink(kind,txt){$('linkDot').className='dot '+kind;$('linkTxt').textC
 var servers={};
 async function probeLink(){
   var m=await getMcp();
-  if(!m){setLink('demo','Demo only');return;}
+  if(!m){if(BR)setLink('on','Bridge connected · live');else setLink('demo','Not connected · open Setup');return;}
   try{
     var r=await m.listTools();var list=r.servers||[];
     ['Make','Quo','Notion'].forEach(function(n){var s=list.filter(function(x){return x.server===n;})[0];servers[n]=!s?'missing':(s.authStatus==='needs_reauth'?'reauth':'ok');});
@@ -987,7 +992,7 @@ async function get(k,opt){
   try{var r=await FETCH[k]();return {rec:r,err:null};}
   catch(e){return {rec:rec?Object.assign({},rec,{saved:true}):null,err:e};}
 }
-var DEMO_EVENTS=[{start:'T10:00:00',end:'T11:30:00',title:'Example Customer: 2024 Example SUV'},{start:'T14:00:00',end:'T15:00:00',title:'Example appointment'}];
+var DEMO_EVENTS=[];
 
 /* ---------- customer threads: never guess who paused them ---------- */
 function pauseActive(p,now){var m=(now-p.at)/60000;if(p.reason==='takeover')return m<10;if(p.reason==='hold')return m<60;return true;}
@@ -1126,7 +1131,8 @@ function chosenLocal(pf){
 function paceRate(pf){return (pf||pref).pace||0.98;}
 function sentences(text){var s=String(text).replace(/\s+/g,' ').match(/[^.!?]+[.!?]*/g)||[text];return s.map(function(x){return x.trim();}).filter(Boolean);}
 var voiceOut='none';
-async function speak(text,force,ov){
+var tvQuiet=false;
+async function speak(text,force,ov){if(tvQuiet&&!force)return;
   if(!text)return;var pf=ov||pref;
   if(muted&&!force){if(S.mode==='thinking')setMode('idle');return;}
   text=String(text).slice(0,1900);var tok=++speakTok;
@@ -1339,7 +1345,7 @@ var JUNK=/^(mint|min|mid|mind|man|men|amen|mean|hey|hay|hi|ok|okay|uh|um|a|the|a
 var SIL=store('sil')||1300, silTimer=0, wakePend=null;
 var convo={pending:null,last:null,armAfterSpeech:null,armOk:false,hist:[]};
 var BR=store('bridge');
-function setBridge(sv){var p=String(sv||'').trim().split(/\s+/);var u=p[0],c=p[1];if(!/^https:\/\/hook\.[a-z0-9]+\.make\.com\/[A-Za-z0-9]+$/.test(u||'')||!c||c.length<12)return false;BR={url:u,code:c};store('bridge',BR);return true;}
+function setBridge(sv){var p=String(sv||'').trim().split(/\s+/);var u=p[0],c=p[1];if(!/^https:\/\/hook\.[a-z0-9]+\.make\.com\/[A-Za-z0-9]+$/.test(u||'')||!c||c.length<12)return false;BR={url:u,code:c};store('bridge',BR);setTimeout(function(){location.reload();},400);return true;}
 (function(){try{var m=/[#&]k=([^&]+)/.exec(location.hash||'');if(m){var dec=atob(decodeURIComponent(m[1]).replace(/-/g,'+').replace(/_/g,'/'));if(setBridge(dec.replace('|',' ')))logMic('bridge','linked from the address');history.replaceState(null,'',location.pathname+location.search);}}catch(e){}})();
 wake.reply=null;wake.temp=false;wake.replyT=0;wake.needTap=false;
 var CHAINS="walmart|kroger|target|qdoba|lowe'?s|home depot|autozone|o'?reilly|costco|sam'?s club|meijer|aldi|walgreens|cvs|starbucks|mcdonald'?s|chick-?fil-?a|taco bell|wendy'?s|panera|chipotle|dunkin|kfc|subway|burger king|speedway|publix|dollar general|family dollar|menards|harbor freight|best buy|lidl|rite aid|advance auto|jiffy lube";
@@ -1694,6 +1700,7 @@ async function cmdLeads(q,opt){
   }catch(e){if(cur!==my)return;bridgeFail(q,failCopy(e));}
 }
 var ELITE=[{n:'Richard Decker',v:'2026 Subaru Outback Limited',tag:'MONTHLY DAY'},{n:'Marc Clark',v:'2019 Nissan Sentra SR',tag:'MONTHLY DAY'},{n:'Rebecca Lucas',v:'2023 Kia K5 GT-Line',tag:'MONTHLY DAY'},{n:'David Wilson',v:'2024 Rivian R1T',tag:'CONCIERGE'}];
+if(STANDALONE&&!BR){ELITE=[];}
 async function cmdElite(q,opt){
   beginAsk(q);doing('checking your Elite clients on the calendar');var my=cur;var evs=null;
   if(BR){try{var cr=await calBridgeFetch(etDay(0),addDays(etDay(0),150),!!(opt&&opt.live));if(cur!==my)return;evs=cr.events;}catch(e){evs=null;}}
@@ -2716,7 +2723,26 @@ function remCheck(){
   try{if(window.Notification&&Notification.permission==='granted')new Notification('M1NT reminder',{body:r.t});}catch(e){}
   var late=now-r.at>120000;showRems('Reminder',(late?'Missed reminder. ':'Reminder. ')+due.map(function(x){return x.t;}).join('. ')+'.',r,true);
 }
-window.__t={lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
+
+/* ---------- TV mode ---------- */
+var TV={on:false,inset:+(store('tvInset')||5),t:null};
+function tvApply(){var h=document.documentElement;h.classList.toggle('tv',TV.on);h.style.setProperty('--tvin',TV.inset+'vh '+TV.inset+'vw');}
+function tvRotate(){
+  if(!TV.on)return;var qs=["what's on my schedule today","what needs me","how's the system doing"];TV.i=((TV.i||0)+1)%qs.length;
+  tvQuiet=true;try{run(qs[TV.i],{});}catch(e){}setTimeout(function(){tvQuiet=false;},25000);
+}
+function tvSet(on){
+  TV.on=!!on;store('tv',TV.on);tvApply();clearInterval(TV.t);
+  if(TV.on){TV.t=setInterval(tvRotate,120000);setTimeout(tvRotate,1500);
+    try{if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(function(){});}catch(e){}}
+  else{try{if(document.fullscreenElement)document.exitFullscreen();}catch(e){}}
+}
+document.addEventListener('keydown',function(e){
+  if(!TV.on)return;var t=e.target&&e.target.tagName;if(t==='INPUT'||t==='TEXTAREA')return;
+  if(e.key==='ArrowUp'||e.key==='ArrowDown'){TV.inset=Math.max(0,Math.min(14,TV.inset+(e.key==='ArrowUp'?-1:1)));store('tvInset',TV.inset);tvApply();e.preventDefault();}
+});
+(function(){var u=/[?&]tv(=1|=on|&|$)/.test(location.search);if(u||store('tv')===true){TV.on=true;tvApply();setTimeout(function(){tvSet(true);},600);}})();
+window.__t={tvSet:tvSet,lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
 function addReminder(q,s){
   var pw=parseWhen(s);var txt=remText(pw?pw.rest:s);
   if(!pw){convo.pending={kind:'remwhen',text:txt,orig:q,until:Date.now()+120000};beginAsk(q);finish({headline:'When should I remind you?',small:true,spoken:'When should I remind you'+(txt?' to '+txt:'')+'?',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say a time, like in 20 minutes, or tomorrow at 9.'}]});return;}
@@ -2798,6 +2824,7 @@ function run(raw,opt){
   if(retractOnly(q)){dropHeard(q);return;}
   if(MICOFF_RE.test(q)){micOff();return;}
   if(isGoodnight(q)){byeSleep(q);return;}
+  if(/\b(?:tv|television) mode\b|\b(?:turn|switch|put) (?:this )?(?:on|into|to) (?:the )?(?:tv|television)\b|\bwall ?mode\b/.test(l)&&wcq<=8){var off=/\b(off|exit|stop|leave|normal)\b/.test(l);beginAsk(q);tvSet(!off);finish({headline:off?'TV mode off.':'TV mode on. Use the up and down arrows on the remote to fit the edges of your screen.',small:true,spoken:off?'TV mode off.':'TV mode on.',tags:[srcTag('live','TV mode')]});return;}
   if(/^(?:(?:hey |ok |okay |so |and |can you |could you |would you |will you |please |mint )*)(?:text|send|message|txt|shoot|email)\s+(?:me|my (?:phone|cell|number))\b/.test(l)&&wcq>=3){logMic('route','text me');cmdTextMe(q);return;}
   if(wcq<=14&&/\b(?:how(?:'?s| is| are)|is|are|did|has|have|check|status of|what'?s|whats)\b/.test(l)&&/\b(watchdog|fixer|self.?heal|booking sync|back ?up|credit total|(?:morning|daily|evening) briefings?|calendar sync|follow.?up manager|deposit reminders?|notion|quo|make|urable)\b/.test(l)&&/\b(doing|working|running|ran|run|status|healthy|ok|okay|alright|fine|broken|down|last|going|holding)\b/.test(l)&&!/\b(weather|forecast)\b/.test(l)){logMic('route','system status');cmdHealth(q);return;}
   var stk=smallTalk(q);if(stk){logMic('route','small talk');beginAsk(q);finish({headline:stk,small:true,spoken:stk,tags:[srcTag('live','Just talking')]});return;}
