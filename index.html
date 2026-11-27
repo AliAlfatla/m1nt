@@ -716,7 +716,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v59-2026-11-27';
+var BUILD='v60-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -2836,6 +2836,14 @@ function tvFitBox(){
     document.body.appendChild(b);}
   b.style.display='flex';
 }
+function tvMicBoot(force){
+  if(TV.micBusy)return;if(TV.micBooted&&!force)return;TV.micBusy=true;TV.micBooted=true;
+  (async function(){try{wakeUi();if(mic.perm!=='ready'||force)await enableMic();if(mic.perm==='ready'&&!wake.on){var wb=$('wakeBtn');if(wb)wb.click();}}catch(e){}TV.micBusy=false;})();
+}
+['keydown','click','pointerdown'].forEach(function(ev){document.addEventListener(ev,function(){if(TV.on&&!LOCKED&&!TV.micBooted)tvMicBoot(false);},true);});
+document.addEventListener('keydown',function(e){
+  if(!TV.on)return;if(/^(MediaRecord|Microphone|MicrophoneToggle|VoiceDial|LaunchAssistant|Assistant|SpeechInput|MediaPlayPause)$/.test(e.key)||e.key==='m'||e.key==='M'){var tt=e.target&&e.target.tagName;if(tt!=='INPUT'&&tt!=='TEXTAREA'){tvMicBoot(true);e.preventDefault();}}
+});
 document.addEventListener('keydown',function(e){
   if(!TV.on)return;var t=e.target&&e.target.tagName;
   var m={ArrowLeft:'L',ArrowRight:'R',ArrowUp:'U',ArrowDown:'D'}[e.key];
