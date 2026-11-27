@@ -233,7 +233,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v18-2026-11-26';
+var BUILD='v19-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -335,6 +335,9 @@ function setUi(state){
   setTimeout(size,60);setTimeout(size,700);redraw();
 }
 function wakeUi(){if(app.getAttribute('data-state')==='asleep'){setUi('awake');}}
+function etHour(){try{return parseInt(new Intl.DateTimeFormat('en-US',{hour:'numeric',hour12:false,timeZone:'America/New_York'}).format(new Date()),10)%24;}catch(e){return new Date().getHours();}}
+function greetWord(){var h=etHour();return h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
+function byeSleep(){sleepUi();var m=etHour()>=17||etHour()<5?'Goodnight':'Goodbye';var t=m+', Ali.';$('hint').textContent='';try{speak(m+', Ollie.');}catch(e){}}
 function sleepUi(){stopSpeak();closeDrawer();setUi('asleep');setMode('idle');$('hint').textContent='';}
 var idleT=0;
 function armIdle(){clearTimeout(idleT);if(S.mode!=='idle'||app.getAttribute('data-state')!=='answer')return;idleT=setTimeout(function(){if(S.mode==='idle'&&app.getAttribute('data-state')==='answer'&&!drawer.classList.contains('show')&&!ptt.on){setUi('awake');$('hint').textContent='Ready. Ask me anything.';}},20000);}
@@ -879,15 +882,16 @@ function submitHeard(text){
 }
 function handleWake(t,isFinal){
   if(MICOFF_RE.test(t)){logMic('voice','mic off by voice');micOff();$('hint').textContent='Mic off. Press Voice to turn listening back on.';return;}
-  if(isGoodnight(t)){if(isAwake()){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;sleepUi();}return;}
+  if(isGoodnight(t)){if(isAwake()){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;byeSleep();}return;}
   if(S.mode==='speaking'&&STOP_RE.test(t)&&t.trim().split(/\s+/).length<=4){stopSpeak();setMode('idle');logMic('barge','stopped by voice: '+t.slice(0,30));return;}
   if(/\bgood\s?night\b/i.test(t)&&t.trim().split(/\s+/).length<=3)return;   /* bare goodnight is never a question */
   if(busyNow())return;
   var wm=WAKEUP_RE.exec(t);
   if(wm){
+    var wasAsleep=!isAwake();
     if(!isAwake()){wakeUi();try{window.focus();}catch(e){}$('hint').textContent='Awake and listening. Ask me anything. Say “Goodnight, Mint” to fold.';setMode('listening');}
     var rest=cleanQ(t.slice(wm.index+wm[0].length));
-    if(!rest){clearTimeout(silTimer);wakePend=null;return;}
+    if(!rest){clearTimeout(silTimer);wakePend=null;if(wasAsleep){try{speak(greetWord()+', Ollie.');}catch(e){}}return;}
     t=rest;
   }
   if(!isAwake())return;                 /* asleep: only “Wake up, Mint” does anything */
@@ -1211,7 +1215,7 @@ function run(raw,opt){
   if(!BR&&/\b(cancel|delete|refund|charge|transfer|send money|reschedule|resume|pause|book (a|an|me|him|her|them)|take (a )?payment|waive)\b/.test(l)){cmdLocked(q);return;}
   var wcq=q.split(/\s+/).length;
   if(MICOFF_RE.test(q)){micOff();return;}
-  if(isGoodnight(q)){sleepUi();return;}
+  if(isGoodnight(q)){byeSleep();return;}
   if(/\b(weather|forecast|temperature|umbrella|how (hot|cold)|will it (rain|snow))\b/.test(l)&&(!BR||wcq<=8)){cmdWeather(q);return;}
   if((/\b(football|nfl|score|scores|who won|touchdown|playing|game|halftime|quarter|kickoff)\b/.test(l)||/how (is|are) (the )?[a-z .]+ (doing|playing)|did (the )?[a-z .]+ (win|lose)/.test(l))&&!/schedule|calendar/.test(l)&&(!BR||wcq<=8)){cmdFootball(q);return;}
   if(BR){cmdBridge(q,opt);return;}
