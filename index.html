@@ -220,7 +220,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v8-2026-11-26';
+var BUILD='v9-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -974,22 +974,39 @@ async function jget(url){var c=new AbortController();var tm=setTimeout(function(
 function failCopy(e){if(e&&e.name==='AbortError')return 'The lookup timed out.';var m=String(e&&e.message||'');if(/Failed to fetch|NetworkError|Load failed|blocked/i.test(m))return 'This window blocked the request or could not reach the service.';return m||'Unknown error.';}
 function lookupFail(q,what,e){finish({headline:'The live '+what+' lookup failed.',small:true,spoken:'The live '+what+' lookup failed. I do not have a current answer.',tags:[srcTag('na','Unavailable')],banners:[{kind:'na',bold:'LOOKUP FAILED.',text:failCopy(e)+' Nothing was guessed.'}],acts:[{label:'Try again',pri:true,fn:function(){run(q,{});}}]});}
 var WXC={0:'clear',1:'mostly clear',2:'partly cloudy',3:'overcast',45:'foggy',48:'foggy',51:'light drizzle',53:'drizzle',55:'heavy drizzle',56:'freezing drizzle',57:'freezing drizzle',61:'light rain',63:'rain',65:'heavy rain',66:'freezing rain',67:'freezing rain',71:'light snow',73:'snow',75:'heavy snow',77:'snow grains',80:'rain showers',81:'rain showers',82:'heavy rain showers',85:'snow showers',86:'heavy snow showers',95:'thunderstorms',96:'thunderstorms with hail',99:'thunderstorms with hail'};
+var DOWN=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+function wxOffset(q){
+  var l=q.toLowerCase();
+  if(/day after (tomorrow|next)/.test(l))return 2;
+  if(/(day after (that|then)|the next day|following day|day after\b|and then the day|next day)/.test(l))return (convo.wxOff!=null?convo.wxOff:1)+1;
+  if(/day before/.test(l))return Math.max(0,(convo.wxOff!=null?convo.wxOff:1)-1);
+  if(/\btomorrow\b/.test(l))return 1;
+  if(/\b(today|tonight|right now|this morning|this afternoon|this evening)\b/.test(l))return 0;
+  var tdw=new Date(etDay(0)+'T12:00:00').getDay();
+  if(/weekend/.test(l))return ((6-tdw+7)%7)||7;
+  for(var i=0;i<7;i++){if(l.indexOf(DOWN[i])>=0){var o=(i-tdw+7)%7;return o;}}
+  return null;
+}
+function wxDayName(off){if(off===0)return 'Today';if(off===1)return 'Tomorrow';return new Date(etDay(off)+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});}
 async function cmdWeather(q){
   beginAsk(q);doing('checking live weather');
   var m=q.match(/\b(?:in|for|at)\s+([A-Za-z .'-]+?)(?:\s+(?:today|tonight|tomorrow|right now|this (?:week|weekend)|now)\b|[?.!,]|$)/i);
-  var place=m?m[1].trim():'';if(/^(the|a|my)?\s*(morning|afternoon|evening|week|weekend)$/i.test(place))place='';
+  var place=m?m[1].trim():'';if(/^(the|a|my)?\s*(morning|afternoon|evening|week|weekend)$/i.test(place)||/\b(day|week|weekend|tomorrow|morning|afternoon|evening|night|that|then|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i.test(place))place='';
   var loc={name:'Louisville, Kentucky',lat:38.2527,lon:-85.7585,def:true};
+  var fu=convo.wxFollow;convo.wxFollow=false;var resolvedOff=wxOffset(q);if(resolvedOff==null)resolvedOff=(fu&&convo.wxOff!=null)?convo.wxOff:0;
+  if(!place&&fu&&convo.wxLoc)loc=convo.wxLoc;
   try{
+    if(resolvedOff>7)throw new Error('I can only see about a week ahead.');
     if(place){var g=await jget('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name='+encodeURIComponent(place));var r0=g.results&&g.results[0];if(!r0)throw new Error('I could not find a place called '+place+'.');loc={name:r0.name+(r0.admin1?', '+r0.admin1:''),lat:r0.latitude,lon:r0.longitude,def:false};}
-    var w=await jget('https://api.open-meteo.com/v1/forecast?latitude='+loc.lat+'&longitude='+loc.lon+'&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=2');
-    var tom=/tomorrow/i.test(q),c=w.current,d=w.daily,i=tom?1:0;
-    var cond=WXC[tom?d.weather_code[1]:c.weather_code]||'mixed conditions';
+    var w=await jget('https://api.open-meteo.com/v1/forecast?latitude='+loc.lat+'&longitude='+loc.lon+'&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=8');
+    var off=resolvedOff,tom=off>0,c=w.current,d=w.daily,i=off,dl=wxDayName(off);convo.wxOff=off;convo.wxLoc=loc;
+    var cond=WXC[tom?d.weather_code[i]:c.weather_code]||'mixed conditions';
     var hi=Math.round(d.temperature_2m_max[i]),lo=Math.round(d.temperature_2m_min[i]),pp=d.precipitation_probability_max[i];
     var short=loc.name.split(',')[0];var upd=String(c.time||'').slice(11,16);
-    var head=tom?'Tomorrow in '+loc.name+': '+cond+', '+hi+'° / '+lo+'°':Math.round(c.temperature_2m)+'° and '+cond+' in '+loc.name;
-    var spoken=tom?'Tomorrow in '+short+': '+cond+', a high of '+hi+' and a low of '+lo+', with a '+pp+' percent chance of precipitation.':'In '+short+' it is '+Math.round(c.temperature_2m)+' degrees and '+cond+', feels like '+Math.round(c.apparent_temperature)+'. Today\'s high is '+hi+', the low is '+lo+', with a '+pp+' percent chance of precipitation.';
+    var head=tom?dl+' in '+loc.name+': '+cond+', '+hi+'° / '+lo+'°':Math.round(c.temperature_2m)+'° and '+cond+' in '+loc.name;
+    var spoken=tom?dl+' in '+short+': '+cond+', a high of '+hi+' and a low of '+lo+', with a '+pp+' percent chance of precipitation.':'In '+short+' it is '+Math.round(c.temperature_2m)+' degrees and '+cond+', feels like '+Math.round(c.apparent_temperature)+'. Today\'s high is '+hi+', the low is '+lo+', with a '+pp+' percent chance of precipitation.';
     var rows=[];if(!tom)rows.push({t:'Now',n:Math.round(c.temperature_2m)+'° · feels '+Math.round(c.apparent_temperature)+'° · wind '+Math.round(c.wind_speed_10m)+' mph'});
-    rows.push({t:tom?'Tomorrow':'Today',n:'High '+hi+'° · low '+lo+'° · '+cond});rows.push({t:'Precipitation',n:pp+'% chance'});
+    rows.push({t:tom?dl:'Today',n:'High '+hi+'° · low '+lo+'° · '+cond});rows.push({t:'Precipitation',n:pp+'% chance'});
     finish({headline:head,follow:'weather',small:true,spoken:spoken,rows:rows,tags:[srcTag('live','Open-Meteo'),srcTag('live','Updated '+(upd?t12(upd):'just now')+' local')],srcNote:loc.def?'Default location: Louisville, Kentucky. Say “weather in <city>” for another.':'',acts:[{label:'Refresh',fn:function(){run(q,{});}}]});
   }catch(e){lookupFail(q,'weather',e);}
 }
@@ -1117,7 +1134,7 @@ async function freeClaude(q){
 function followUp(q,opt){
   var L=convo.last,l=q.toLowerCase();
   if(/\b(schedule|calendar|deposit|lead|customer|jobs?|brief|needs me)\b/.test(l))return false;
-  if(L.kind==='weather'){run('weather '+q,{voice:true,wake:true,reply:'x'});return true;}
+  if(L.kind==='weather'){convo.wxFollow=true;run('weather '+q,{voice:true,wake:true,reply:'x'});return true;}
   if(L.kind==='football'){run(q+' football score',{voice:true,wake:true,reply:'x'});return true;}
   if(L.kind==='web'){if(/\b(weather|forecast|football|score)\b/.test(l))return false;cmdWebFollow(q,L,opt);return true;}
   return false;
