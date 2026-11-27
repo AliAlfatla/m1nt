@@ -268,6 +268,11 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 #lock.shake .lk-d{animation:lkshake .4s}
 @keyframes lkshake{20%{transform:translateX(-12px)}40%{transform:translateX(12px)}60%{transform:translateX(-8px)}80%{transform:translateX(8px)}}
 #lock .lk-skip{background:none;border:0;color:var(--muted);font:500 11px var(--font-m);text-decoration:underline;padding:6px}
+
+.fu-top{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin:0 0 14px}.fu-st{border:1px solid var(--line);border-radius:14px;padding:12px 10px;text-align:center;background:rgba(92,255,200,.05);animation:fuPop .5s ease-out both;animation-delay:var(--d,0s)}.fu-st b{display:block;font:700 28px var(--font-m);color:var(--mint)}.fu-st span{font:600 10px var(--font-m);letter-spacing:.12em;opacity:.8}.fu-st.warn b{color:#ffb84d}.fu-st.bad b{color:#ff6b6b}
+.fu-sec{font:700 11px var(--font-m);letter-spacing:.16em;margin:16px 0 8px;opacity:.85}.fu-card{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:0 0 9px;background:rgba(92,255,200,.04);animation:fuIn .55s ease-out both;animation-delay:var(--d,0s);position:relative;overflow:hidden}.fu-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--mint)}.fu-card.warn:before{background:#ffb84d}.fu-card.bad:before{background:#ff6b6b}.fu-card.dim:before{background:#5a6b7a}
+.fu-h{display:flex;justify-content:space-between;gap:8px;align-items:center}.fu-n{font:700 14px var(--font-m)}.fu-pill{font:700 9px var(--font-m);letter-spacing:.12em;padding:3px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}.fu-r{font:12px var(--font-m);opacity:.75;margin-top:4px}.fu-b{margin-top:8px;padding:8px 11px;border-radius:12px 12px 12px 3px;background:rgba(92,255,200,.13);font:12.5px/1.4 var(--font-m);max-width:92%;animation:fuType 1.1s steps(40,end) both;animation-delay:var(--d,0s);overflow:hidden}
+@keyframes fuPop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}@keyframes fuIn{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}@keyframes fuType{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* ===== visual screens ===== */
 .app[data-state="answer"][data-viz] .center{padding:10px 24px 4px 230px}
@@ -743,7 +748,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v77-2026-11-27';
+var BUILD='v78-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1861,6 +1866,48 @@ async function cmdInventory(q,opt){
     finish({headline:recs.length+' items · '+bad.length+' need attention',small:true,spoken:'You have '+recs.length+' inventory items. '+(bad.length?bad.length+' need attention: '+names(bad)+'. ':'Nothing is low or out. ')+(ord.length?ord.length+' are on order: '+names(ord)+'.':'Nothing is on order.')+' Tap a tab to filter.',node:w,tags:[srcTag('live','Notion inventory via Make'),srcTag('live','Snapshot, not live')],srcNote:'From your Notion Inventory'+(D.asof?' ('+D.asof+')':'')+'. Read-only. Counts are not tracked, only status.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}}]});
   }catch(e){if(cur!==my)return;bridgeFail(q,failCopy(e));}
 }
+
+var fuCache=null;
+async function fuFetch(live){
+  if(!live&&fuCache&&Date.now()-fuCache.at<60000)return fuCache;
+  var c=new AbortController(),tm=setTimeout(function(){c.abort();},15000);
+  try{var r=await fetch(SEND_URL,{method:'POST',body:new URLSearchParams({code:BR.code,action:'boards'}),signal:c.signal});var t=await r.text();
+    var m=/===FOLLOWUPS===([\s\S]*?)(?:===[A-Z]+===|$)/.exec(t);if(!m)throw new Error('no followups section');
+    var raw=m[1].trim(),j=null;try{j=JSON.parse(raw);}catch(e){}
+    fuCache={at:Date.now(),j:j};return fuCache;
+  }finally{clearTimeout(tm);}
+}
+async function cmdFollowups(q,opt){
+  beginAsk(q);doing('reading your follow-ups');var my=cur;
+  if(!BR){finish({headline:'Follow-ups need the Claude link.',small:true,spoken:'Follow-ups need the Claude link in Setup.',tags:[srcTag('na','Unavailable')]});return;}
+  try{var D=await fuFetch(opt&&opt.live);if(cur!==my)return;var j=D.j;
+    if(!j||!j.items){finish({headline:'No follow-up log yet.',small:true,spoken:'The smart follow-up agent has not logged a run yet. It runs every day at 12:11 PM.',tags:[srcTag('na','No log yet')]});return;}
+    var dry=j.mode==='dry';var items=j.items||[];
+    var by=function(st){return items.filter(function(i){return i.status===st;});};
+    var sent=by('sent'),plan=by('planned'),need=by('needs_reply'),closed=by('closed'),wait=by('waiting'),skip=by('skipped');
+    var past=j.pastDue||[],up=j.upcoming||[];
+    var w=el('div','needs bd-leads');var top=el('div','fu-top');
+    var stats=[[dry?plan.length:sent.length,dry?'PLANNED TODAY':'SENT TODAY',''],[plan.length+sent.length+need.length+wait.length+skip.length+closed.length,'DUE TODAY','warn'],[past.length,'PAST DUE',past.length?'bad':''],[need.length,'NEEDS YOU',need.length?'warn':''],[closed.length,'CLOSED','']];
+    stats.forEach(function(x,i){var d=el('div','fu-st '+x[2]);d.style.setProperty('--d',(0.08*i)+'s');var b=el('b',null,'0');d.appendChild(b);d.appendChild(el('span',null,x[1]));top.appendChild(d);
+      var n=+x[0],t0=Date.now();if(reduce||!n){b.textContent=String(n);}else{(function tick(){var k=Math.min(1,(Date.now()-t0)/700);b.textContent=String(Math.round(n*k));if(k<1)requestAnimationFrame(tick);})();}});
+    w.appendChild(top);
+    var di=0;
+    function card(it,cls,pill,extra){var c=el('div','fu-card '+cls);c.style.setProperty('--d',(0.12*(di++))+'s');var h=el('div','fu-h');h.appendChild(el('div','fu-n',it.name||'?'));h.appendChild(el('span','fu-pill',pill));c.appendChild(h);
+      if(it.reason||extra)c.appendChild(el('div','fu-r',[extra,it.reason].filter(Boolean).join(' · ')));
+      if(it.text){var b=el('div','fu-b',it.text);b.style.setProperty('--d',(0.12*di+0.2)+'s');c.appendChild(b);}return c;}
+    function sec(title,arr,fn){if(!arr.length)return;w.appendChild(el('div','fu-sec',title+' · '+arr.length));arr.forEach(function(x){w.appendChild(fn(x));});}
+    sec(dry?'PLANNED, NOT SENT YET (dry run)':'SENT TODAY',dry?plan:sent,function(i){return card(i,'', dry?'PLANNED':'SENT'+(i.attempt?' #'+i.attempt:''),i.attempt&&dry?'attempt #'+i.attempt:'');});
+    sec('NEEDS YOU',need,function(i){return card(i,'warn','REPLY NEEDED','');});
+    sec('PAST DUE',past,function(i){return card({name:i.name,reason:i.reason},'bad',(i.daysLate?i.daysLate+'D LATE':'LATE'),i.due?'was due '+i.due:'');});
+    sec('CLOSED',closed,function(i){return card(i,'dim','CLOSED','');});
+    sec('WAITING ON PURPOSE',wait,function(i){return card(i,'dim','HOLD','');});
+    sec('SKIPPED',skip,function(i){return card(i,'dim','SKIPPED','');});
+    sec('COMING UP',up,function(i){return card({name:i.name},'dim','DUE '+i.due,'');});
+    var h=j.history||[];if(h.length){w.appendChild(el('div','fu-sec','LAST '+h.length+' DAYS'));w.appendChild(el('div','fu-r',h.map(function(x){return x.date.slice(5)+': '+x.sent+' sent'+(x.closed?', '+x.closed+' closed':'')+(x.needsReply?', '+x.needsReply+' need you':'');}).join('  |  ')));}
+    var spoken=(dry?'This is a dry run, nothing was sent. ':'')+(dry?plan.length+' follow-ups are planned today. ':sent.length+' follow-ups went out today. ')+(need.length?need.length+' need you to reply: '+need.slice(0,4).map(function(i){return i.name;}).join(', ')+'. ':'')+(past.length?past.length+' are past due: '+past.slice(0,4).map(function(i){return i.name;}).join(', ')+'. ':'No one is past due. ')+(closed.length?closed.length+' were closed out. ':'')+(up.length?up.length+' more coming up in the next few days.':'');
+    finish({headline:(dry?plan.length+' planned':sent.length+' sent')+' · '+past.length+' past due',small:true,spoken:spoken,node:w,tags:[srcTag('live','Follow-up agent log via Make'),srcTag('live',dry?'Dry run':'Updated '+String(j.updated||'').slice(0,16).replace('T',' '))],srcNote:'What the daily smart follow-up agent did, plus what is due and past due. Runs every day at 12:11 PM.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}}]});
+  }catch(e){if(cur!==my)return;bridgeFail(q,failCopy(e));}
+}
 async function cmdLeads(q,opt){
   beginAsk(q);doing('reading your leads');var my=cur;
   if(!BR){finish({headline:'Leads need the Claude link.',small:true,spoken:'Leads need the Claude link in Setup.',tags:[srcTag('na','Unavailable')]});return;}
@@ -2929,6 +2976,7 @@ function routeKnown(q,opt,dry){
   if((/\b(system health|health check|health report|diagnostics?|system status|status check|status report|all systems|anything (?:broken|wrong|down|failing)|any (?:problems|issues|errors|bugs)|what.s (?:broken|down|wrong|not working)|is anything (?:broken|down|wrong))\b/.test(s)||(_sysSubj&&_sysQ&&wcq<=10&&!/\b(you|your|i|my day|schedule|business)\b.*\b(doing|going)\b/.test(s.replace(/\b(the system|system)\b/g,''))))&&!/\b(weather|timer|calendar|text|message|send|book|cancel)\b/.test(s)){if(dry)return true;logMic('route','health');cmdHealth(q);return true;}
   if(/\b(?:my|our|the) (?:upcoming )?(?:customers|clients)\b|\b(?:customer|client) list\b|\bwho(?:'?s| is| are) (?:coming|booked|on (?:the )?books)\b|\bshow (?:me )?(?:all )?(?:customers|clients)\b|\bpull up (?:the |my )?(?:customers|clients)\b/.test(s)&&!/\b(text|message|call|email|send|tell|remind)\b/.test(s)&&wcq<=12){if(dry)return true;logMic('route','customers');cmdCustomers(q,opt);return true;}
   if(/\b(inventory|stock|supplies|restock(?:ing)?|reorder(?:ing)?|running (?:low|out)|out of (?:stock|chemicals|towels|supplies)|low on|what (?:do )?(?:i|we) need to (?:order|buy|reorder|restock)|what needs (?:to be )?(?:reorder|order|restock|buy)\w*|what(?:'s| is) (?:low|out|broken|on order)|(?:chemicals?|towels?|equipment|tools?) (?:list|status|check))\b/.test(s)&&!/\b(text|message|send|add|create|delete|remove|how do i|lead|leads|customer)\b/.test(s)&&wcq<=13){if(dry)return true;logMic('route','inventory');cmdInventory(q,/refresh|reload|update/.test(s)?{live:true}:{inv:s});return true;}
+  if(/\b(follow[- ]?ups?|following up)\b/.test(s)&&!/\b(text|message|send|add|create|delete|remove|book|cancel|how do i|write)\b/.test(s)&&wcq<=14){if(dry)return true;logMic('route','followups');cmdFollowups(q,/refresh|reload|update/.test(s)?{live:true}:undefined);return true;}
   if(/\b(leads?|lead list|lead pipeline|sales pipeline|pipeline|prospects?|inquiries|enquiries)\b/.test(s)&&!/\b(text|message|call|email|send|add|create|delete|remove|book|cancel|how do i|generate|get more|google ads|ads)\b/.test(s)&&wcq<=13&&!/\bwhat (?:is|does) (?:a )?lead\b/.test(s)){if(dry)return true;logMic('route','leads');cmdLeads(q,/refresh|reload|update/.test(s)?{live:true}:undefined);return true;}
   if(/\b(elite|vips?|v i p|v\.i\.p|evermint elite|top (?:tier )?clients|best clients|premium clients|members?|membership)\b/.test(s)&&/\b(clients?|customers?|members?|people|list|board|status|looking|look|going|doing|how|what|show|pull up|check|any|who|see|tell|update|up with)\b/.test(s)&&!/\b(text|message|call|email|send|book|cancel|reschedule|price|cost|how much|sign up|join|what is (?:the )?(?:elite|vip)|package)\b/.test(s)&&wcq<=13){if(dry)return true;logMic('route','elite');cmdElite(q,opt);return true;}
   var sfm=/\b(?:turn|switch|set)?\s*(?:the )?(?:sounds?|sound effects|chimes?|sfx)\s+(on|off)\b|\b(mute|unmute)\s+(?:the )?(?:sounds?|sound effects|chimes?|sfx)\b|\bturn (on|off) (?:the )?(?:sounds?|sound effects|chimes?)\b/.exec(s);
