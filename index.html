@@ -357,6 +357,21 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
 .wx-hc.foc{background:rgba(92,255,200,.09);outline:1px dashed rgba(92,255,200,.55);outline-offset:1px}
 .wx-hc.evh .wx-hl:before{content:'◆ ';color:var(--mint)}
 .wx-dw{cursor:pointer}.wx-dw:hover{box-shadow:inset 0 0 0 1px var(--mint),0 0 18px rgba(92,255,200,.35)}
+
+.wx-hrr{height:auto!important;align-items:flex-start!important;overflow-x:auto;scrollbar-width:none}.wx-hrr::-webkit-scrollbar{display:none}
+.wx-hc{min-width:34px;justify-content:flex-start!important;gap:1px;padding:3px 0;border-radius:4px;opacity:0;animation:hcIn .4s ease-out forwards;animation-delay:calc(.5s + var(--i,0)*28ms)}
+@keyframes hcIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.wx-hg{font-size:17px;line-height:1.25;filter:grayscale(.15)}
+.wx-hc.wet .wx-hg{filter:drop-shadow(0 0 6px #5cffc8)}
+.wx-ht{font:600 11px/1.3 'JetBrains Mono',ui-monospace,monospace;color:#e8fff6}
+.wx-hc .wx-hb{display:none}
+.qbar{position:fixed;left:50%;bottom:122px;transform:translateX(-50%);width:min(780px,calc(100vw - 28px));z-index:40;border:1px solid rgba(92,255,200,.55);border-radius:8px;background:rgba(3,22,22,.9);backdrop-filter:blur(6px);box-shadow:0 0 28px rgba(92,255,200,.2);padding:10px 38px 10px 14px;animation:qbIn .35s cubic-bezier(.2,.85,.2,1)}
+@keyframes qbIn{from{opacity:0;transform:translateX(-50%) translateY(18px)}to{opacity:1;transform:translateX(-50%)}}
+.qbar .qq{font:600 10px/1.2 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.16em;color:var(--mint);text-transform:uppercase;margin-bottom:4px}
+.qbar .qa{font-size:16px;line-height:1.4;color:#eafff7}
+.qbar .qx{position:absolute;right:8px;top:6px;background:none;border:0;color:var(--mint);font-size:18px;cursor:pointer}
+.qbar.think .qa{opacity:.7}
+.wx-ghost{position:fixed!important;margin:0!important;z-index:60;pointer-events:none;background:rgba(3,26,26,.94)!important;border:1px solid var(--mint)!important;box-shadow:0 0 30px rgba(92,255,200,.55)!important;border-radius:6px}
 </style>
 <script type="application/json" id="claude-artifacts-manifest">{"permissions": []}</script>
 
@@ -435,7 +450,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v33-2026-11-26';
+var BUILD='v34-2026-11-26';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -754,7 +769,7 @@ var bridgeAbort=null;
 function beginAsk(q){
   newCommandUse(q);wakeUi();setUi('answer');
   if(bridgeAbort){try{bridgeAbort.abort();}catch(e){}bridgeAbort=null;}
-  cur={q:q};app.removeAttribute('data-viz');simClear();wxBackdropStop();
+  cur={q:q};app.removeAttribute('data-viz');simClear();wxBackdropStop();var oqb=$('qbar');if(oqb)oqb.remove();
   $('asked').textContent='';$('asked').appendChild(el('b',null,'You asked  '));$('asked').appendChild(document.createTextNode(q));
   $('doing').className='doing';$('doing').textContent='';$('ans').textContent='';clear($('extra'));clear($('srcRow'));clear($('acts'));
   setMode('thinking');renderDock();
@@ -939,7 +954,7 @@ async function initMic(){
   else micBackend='none';
   micUi();
 }
-var micLog=[];
+var micLog=[];window.__ml=micLog;
 function logMic(kind,detail){micLog.push({at:Date.now(),kind:kind,detail:detail||''});if(micLog.length>60)micLog.shift();renderSetupIfOpen();}
 function micStart(sink,continuous,be){
   be=be||micBackend;lastBE=be;
@@ -1090,7 +1105,7 @@ function submitReply(text){
 wake.ignoreUntil=0;wake.wasOn=false;wake.fails=0;wake.sessionAt=0;wake.retryT=0;wake.retrying=false;
 function looksLikeEcho(t){var sp=String((cur&&cur.spoken)||'').toLowerCase();if(!sp)return false;var w=normQ(t).split(' ').filter(function(x){return x.length>2;});if(!w.length)return false;var hit=w.filter(function(x){return sp.indexOf(x)>=0;}).length;return hit/w.length>=0.6;}
 function busyNow(){return S.mode==='speaking'||S.mode==='thinking'||Date.now()<wake.cooldownUntil;}
-function cleanQ(q){var r=String(q||'').replace(LEAD_RE,'').trim();return (r.length<3||JUNK.test(r))?'':r;}
+function cleanQ(q){var r=String(q||'').replace(/^\s*(?:a|ay|kay|k)[,.!\s]+(?=(?:what|how|and|so|can|will|could|pull|show|open|next|then|the next)\b)/i,'').replace(LEAD_RE,'').trim();return (r.length<3||JUNK.test(r))?'':r;}
 function capArm(){wake.cap=true;setMode('listening');micUi();$('hint').textContent='Listening for your question…';clearTimeout(wake.capTimer);wake.capTimer=setTimeout(function(){wake.cap=false;if(S.mode==='listening')setMode('idle');$('hint').textContent='';micUi();},9000);}
 function submitWake(text){clearTimeout(silTimer);wakePend=null;if(Date.now()<wake.ignoreUntil)return;wake.ignoreUntil=Date.now()+2500;runFromWake(text);}
 function isAwake(){return app.getAttribute('data-state')!=='asleep';}
@@ -1112,7 +1127,7 @@ function handleWake(t,isFinal){
   if(isGoodnight(t)){if(isAwake()){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;byeSleep(t);}return;}
   if(S.mode==='speaking'&&STOP_RE.test(t)&&t.trim().split(/\s+/).length<=4){stopSpeak();setMode('idle');logMic('barge','stopped by voice: '+t.slice(0,30));return;}
   if(/\bgood\s?night\b/i.test(t)&&t.trim().split(/\s+/).length<=3)return;   /* bare goodnight is never a question */
-  if((S.mode==='speaking'||S.mode==='thinking')&&isFinal&&isAwake()){var cq=cleanQ(t);if(cq&&!looksLikeEcho(cq)&&routeKnown(cq,{},true)){logMic('barge','built-in during busy: '+cq.slice(0,40));clearTimeout(silTimer);wakePend=null;wake.ignoreUntil=Date.now()+1500;wake.pausedForSpeech=false;wake.cap=false;stopSpeak();run(cq,{voice:true,wake:true});return;}}
+  if((S.mode==='speaking'||S.mode==='thinking')&&isFinal&&isAwake()){var cq=cleanQ(t);if(cq&&!looksLikeEcho(cq)&&(routeKnown(cq,{},true)||(wxCtxNow()&&wxFragment(cq)))){logMic('barge','built-in during busy: '+cq.slice(0,40));clearTimeout(silTimer);wakePend=null;wake.ignoreUntil=Date.now()+1500;wake.pausedForSpeech=false;wake.cap=false;stopSpeak();run(cq,{voice:true,wake:true});return;}}
   if(busyNow())return;
   var wm=WAKEUP_RE.exec(t);
   if(wm){
@@ -1251,9 +1266,10 @@ function wxOffset(q){
   return null;
 }
 function wxDayName(off){if(off===0)return 'Today';if(off===1)return 'Tomorrow';return new Date(etDay(off)+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});}
-async function cmdWeather(q){
+async function cmdWeather(q,disp){
   var cardRects=Array.prototype.map.call(document.querySelectorAll('#extra .wx-dw'),function(n){var r=n.getBoundingClientRect();return {l:r.left,t:r.top,w:r.width,h:r.height};});
-  beginAsk(q);var my=cur;doing('checking live weather');
+  var gcard=null,goff=wxOffset(q);if(goff!=null&&cardRects[goff]){var nodes=document.querySelectorAll('#extra .wx-dw');if(nodes[goff]){gcard=nodes[goff].cloneNode(true);gcard.classList.add('wx-ghost');var cr0=cardRects[goff];gcard.style.cssText='left:'+cr0.l+'px;top:'+cr0.t+'px;width:'+cr0.w+'px;height:'+cr0.h+'px';document.body.appendChild(gcard);if(gcard.animate)gcard.animate([{transform:'scale(1)'},{transform:'scale(1.16) translateY(-6px)'}],{duration:420,easing:'cubic-bezier(.2,.85,.2,1)',fill:'forwards'});setTimeout(function(){if(gcard&&gcard.parentNode)gcard.remove();},7000);}}
+  beginAsk(disp||q);var my=cur;doing('checking live weather');
   var m=q.match(/\b(?:in|for|at)\s+([A-Za-z .'-]+?)(?:\s+(?:today|tonight|tomorrow|right now|this (?:week|weekend)|now)\b|[?.!,]|$)/i);
   var place=m?m[1].trim():'';if(/^(the|a|my)?\s*(morning|afternoon|evening|week|weekend)$/i.test(place)||/\b(day|week|weekend|tomorrow|morning|afternoon|evening|night|that|then|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i.test(place))place='';
   if(/^(me|us|you|my|our|the|this|that|a|an|real|quick|please|now|today|tomorrow|tonight|week|weekend|here|it)\b/i.test(place))place='';
@@ -1288,7 +1304,9 @@ async function cmdWeather(q){
       else if(evs===null)fsay='I could not read your calendar, so here is the general forecast.';
       else fsay='I do not see a '+(foc&&!foc.hour?foc.label.replace(/^This /,'').toLowerCase()+' ':'')+'detail on your calendar '+(off===0?'today':off===1?'tomorrow':'that day')+'.';
     }else if(foc){fsay=winText(w,off,foc.a,foc.b,foc.label)||'';}
+    convo.wxHr=(foc&&foc.hour!=null)?foc.hour:(evh.length?evh[0]:null);convo.wxSayAt=Date.now();
     if(fsay)spoken=fsay+' '+(tom?dl+' overall: '+cond+', high '+hi+', low '+lo+'.':'Overall today: '+cond+', high '+hi+', low '+lo+'.');else if(hp)spoken+=' '+hp.say;
+    convo.wxSay=head+'. '+spoken;
     var wn=wxNode(loc,c,d,off,cond,(hh<6||hh>=19));if(hp)wn.appendChild(hourStrip(hp,foc,evh));flipFrom(cardRects[off],'#extra .wx:not(.wxw)');finish({headline:head,follow:'weather',small:true,spoken:spoken,node:wn,viz:'wx',tags:[srcTag('live','Open-Meteo'),srcTag('live','Updated '+(upd?t12(upd):'just now')+' local')],srcNote:loc.def?'Default location: Louisville, Kentucky. Say “weather in <city>” for another.':'',acts:[{label:'Refresh',fn:function(){run(q,{});}}]});
   }catch(e){lookupFail(q,'weather',e);}
 }
@@ -1419,27 +1437,34 @@ async function wxBlurb(){
   var d=w.daily;return [0,1,2].map(function(i){return wxDayName(i)+': '+(WXC[d.weather_code[i]]||'mixed')+', high '+Math.round(d.temperature_2m_max[i])+', low '+Math.round(d.temperature_2m_min[i])+', '+d.precipitation_probability_max[i]+'% precipitation';}).join('; ');
 }
 function bridgeFail(q,why){finish({headline:'I could not reach Claude just now.',small:true,spoken:'I could not reach Claude just now.',tags:[srcTag('na','Unavailable')],banners:[{kind:'na',bold:'BRIDGE.',text:why+' Nothing was guessed.'}],acts:[{label:'Try again',pri:true,fn:function(){run(q,{});}}]});}
+function keepBar(q,text,think){var b=$('qbar');if(!b){b=el('div','qbar');b.id='qbar';b.appendChild(el('div','qq'));b.appendChild(el('div','qa'));var x=el('button','qx','×');x.type='button';x.title='Close';x.addEventListener('click',function(){b.remove();});b.appendChild(x);document.body.appendChild(b);}
+  b.querySelector('.qq').textContent='You asked  '+q;b.querySelector('.qa').textContent=text;b.classList.toggle('think',!!think);clearTimeout(b._t);b._t=setTimeout(function(){if(b.parentNode)b.remove();},90000);}
 async function cmdBridge(q,opt){
-  beginAsk(q);doing('thinking it through with Claude (live web and your data)');setMode('thinking');
+  var keep=app.getAttribute('data-state')==='answer'&&!!document.querySelector('#extra .wx,#extra .cv,#extra .needs');
+  if(keep){newCommandUse(q);if(bridgeAbort){try{bridgeAbort.abort();}catch(e){}bridgeAbort=null;}cur={q:q,keep:true};keepBar(q,'Thinking it through with Claude…',true);setMode('thinking');}
+  else{beginAsk(q);doing('thinking it through with Claude (live web and your data)');setMode('thinking');}
+  function done(text,tags,o){if(!keep){finish(o);return;}keepBar(q,text,false);cur.spoken=text;pushHist({q:q,a:text,tags:tags,use:usageLine(),at:Date.now()});convo.hist.push({q:q,a:text});if(convo.hist.length>8)convo.hist.shift();if(!muted)speak(text,false);else setMode('idle');}
   var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},45000);bridgeAbort=ctl;var my=cur;
   try{
     var hit=(opt&&opt.nocache)?null:acacheGet(q);
-    if(hit){clearTimeout(tm);var ag=ageText(Date.now()-hit.e.at);finish({headline:hit.e.a,small:true,spoken:hit.e.a,tags:[srcTag('live','Remembered · '+ag)],srcNote:'Stable answer remembered on this device. Say "ask fresh" or tap the button to look it up again.',acts:[{label:'Ask fresh',fn:function(){run(q,{nocache:true});}}]});return;}
+    if(hit){clearTimeout(tm);var ag=ageText(Date.now()-hit.e.at);done(hit.e.a,['Remembered · '+ag],{headline:hit.e.a,small:true,spoken:hit.e.a,tags:[srcTag('live','Remembered · '+ag)],srcNote:'Stable answer remembered on this device. Say "ask fresh" or tap the button to look it up again.',acts:[{label:'Ask fresh',fn:function(){run(q,{nocache:true});}}]});return;}
     var qq=q;
+    if(wxCtxNow()&&convo.wxSay&&Date.now()-(convo.wxSayAt||0)<900000)qq+='\n\n[Weather currently on the screen, live from Open-Meteo: '+convo.wxSay+' Use this for any weather or rain question instead of searching the web. Ali\'s calendar is in the business data.]';
     if(/\b(brief me|briefing|catch me up|what do i need to know|how does my day look|start my day|rundown)\b/i.test(q)){try{qq+='\n\n[Live weather from Open-Meteo for Louisville: '+await wxBlurb()+']';}catch(e){}}
     var r=await fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,q:qq,history:histText()}),signal:ctl.signal});
     var t=(await r.text()).trim();clearTimeout(tm);if(cur!==my)return;
     if(!r.ok)throw new Error('The bridge answered HTTP '+r.status+'.');
+    if(keep&&(!t||/^(Accepted|M1NT_BRIDGE_ERROR)/.test(t))){keepBar(q,'I could not get an answer from Claude just now.',false);setMode('idle');return;}
     if(/^Accepted$/i.test(t)){bridgeFail(q,'The bridge did not accept the access code. Paste your link again in Setup.');return;}
     if(!t||/^M1NT_BRIDGE_ERROR/.test(t)){bridgeFail(q,'Claude did not answer.');return;}
-    if(/^~+$/.test(t)){addUse('claude',1);usageChip();logMic('ignored','unclear, stayed silent: '+q.slice(0,40));wxBackdropStop();setUi('awake');setMode('listening');$('hint').textContent='';renderDock();return;}
+    if(/^~+$/.test(t)){addUse('claude',1);usageChip();logMic('ignored','unclear, stayed silent: '+q.slice(0,40));if(keep){var qb0=$('qbar');if(qb0)qb0.remove();setMode('idle');return;}wxBackdropStop();setUi('awake');setMode('listening');$('hint').textContent='';renderDock();return;}
     addUse('claude',1);usageChip();acachePut(q,t);
-    finish({headline:t,small:true,spoken:t,tags:[srcTag('live','Claude via Make'),srcTag('live','Answered '+clockET(Date.now())+' ET')],srcNote:'Live web search plus your saved calendar, bookings and deposit snapshots. Read-only.',acts:[{label:'Ask again',fn:function(){run(q,{});}}]});
-  }catch(e){clearTimeout(tm);if(cur!==my)return;bridgeFail(q,e&&e.name==='AbortError'?'The lookup took longer than 45 seconds.':failCopy(e));}
+    done(t,['Claude via Make'],{headline:t,small:true,spoken:t,tags:[srcTag('live','Claude via Make'),srcTag('live','Answered '+clockET(Date.now())+' ET')],srcNote:'Live web search plus your saved calendar, bookings and deposit snapshots. Read-only.',acts:[{label:'Ask again',fn:function(){run(q,{});}}]});
+  }catch(e){clearTimeout(tm);if(cur!==my)return;if(keep){keepBar(q,'That lookup failed. '+(e&&e.name==='AbortError'?'It took longer than 45 seconds.':'Try again in a moment.'),false);setMode('idle');return;}bridgeFail(q,e&&e.name==='AbortError'?'The lookup took longer than 45 seconds.':failCopy(e));}
 }
 function followUp(q,opt){
   var L=convo.last,l=q.toLowerCase();
-  var s0=stripFill(normQ(q));if(timerIntent(s0)||/\b(timer|timers|alarm|stopwatch|clock|remind me|flip a coin|calculate|minimi[sz]e|maximi[sz]e|stand ?by|good ?night)\b/.test(s0))return false;
+  var s0=stripFill(normQ(q));if(/\b(should|reschedule|cancel|postpone|push it|move it|worth|better off|recommend|advise|do you think|would you|your opinion|text|message|call)\b/.test(s0))return false;if(timerIntent(s0)||/\b(timer|timers|alarm|stopwatch|clock|remind me|flip a coin|calculate|minimi[sz]e|maximi[sz]e|stand ?by|good ?night)\b/.test(s0))return false;
   var wc=q.trim().split(/\s+/).length;
   if(!(/^(and|what about|how about|what if|also|then|same|ok|okay|now)\b/i.test(q.trim())||wc<=4||(wxOffset(q)!=null&&wc<=(L&&L.kind==='weather'?16:5))||(L&&L.kind==='weather'&&hourFocus(q)&&wc<=12)))return false;
   if(/\b(weather|forecast|rain|snow|temperature)\b/.test(l)&&L.kind!=='weather'){convo.wxFollow=true;run('weather '+q,{voice:true,wake:true,reply:'x'});return true;}
@@ -1671,7 +1696,7 @@ function hr12(h){h=((h%24)+24)%24;return (h%12||12)+(h<12?' AM':' PM');}
 function hourlyPlan(w,off){
   var h=w.hourly,d=w.daily;if(!h||!h.time||!d||!d.time||!d.time[off])return null;
   var day=d.time[off],nowH=off===0?+String(w.current.time||'').slice(11,13):0,hrs=[];
-  for(var i=0;i<h.time.length;i++){if(String(h.time[i]).slice(0,10)!==day)continue;var hh=+String(h.time[i]).slice(11,13);if(hh<nowH)continue;var pr=+h.precipitation[i]||0,pp=+h.precipitation_probability[i]||0,cd=+h.weather_code[i]||0;hrs.push({h:hh,pr:pr,pp:pp,cd:cd,wet:pr>=0.1||(pp>=50&&cd>=51)});}
+  for(var i=0;i<h.time.length;i++){if(String(h.time[i]).slice(0,10)!==day)continue;var hh=+String(h.time[i]).slice(11,13);if(hh<nowH)continue;var pr=+h.precipitation[i]||0,pp=+h.precipitation_probability[i]||0,cd=+h.weather_code[i]||0;hrs.push({h:hh,pr:pr,pp:pp,cd:cd,t:+(h.temperature_2m&&h.temperature_2m[i]),wet:pr>=0.1||(pp>=50&&cd>=51)});}
   if(!hrs.length)return null;
   var rg=[],cu=null;hrs.forEach(function(x){if(x.wet){if(!cu){cu={a:x.h,b:x.h+1,snow:(x.cd>=71&&x.cd<=77)||x.cd===85||x.cd===86,storm:x.cd>=95};rg.push(cu);}else{cu.b=x.h+1;if(x.cd>=95)cu.storm=true;}}else cu=null;});
   var first=hrs[0].h,say='',who=function(r){return r.storm?'storms':(r.snow?'snow':'rain');};
@@ -1685,17 +1710,44 @@ function hourlyPlan(w,off){
   }
   return {hrs:hrs,say:say,rg:rg};
 }
+function hrGlyph(code,h){var k=wxKind(code,h<6||h>=20);return {sun:'☀',night:'☾',partly:'⛅',cloud:'☁',fog:'🌫',drizzle:'🌦',rain:'🌧',snow:'❄',storm:'⛈'}[k]||'☁';}
 function hourStrip(plan,foc,evs){
-  var w=el('div','wx-hr');w.appendChild(el('div','wx-hrt','RAIN BY HOUR'));var row=el('div','wx-hrr');
-  plan.hrs.forEach(function(x,i){var c=el('div','wx-hc'+(x.wet?' wet':'')+((foc&&x.h>=foc.a&&x.h<foc.b)?' foc':'')+((evs&&evs.indexOf(x.h)>=0)?' evh':''));var v=Math.max(x.pp,x.wet?40:0);var bar=el('div','wx-hb');bar.style.height=Math.max(4,Math.round(v*0.4))+'px';c.appendChild(bar);c.appendChild(el('div','wx-hl',(i%3===0||plan.hrs.length<9)?hr12(x.h).replace(' ',''):''));c.title=hr12(x.h)+' · '+x.pp+'% chance'+(x.pr>=0.1?' · '+x.pr.toFixed(2)+' mm':'');row.appendChild(c);});
+  var w=el('div','wx-hr');w.appendChild(el('div','wx-hrt','HOUR BY HOUR'));var row=el('div','wx-hrr');
+  plan.hrs.forEach(function(x,i){var c=el('div','wx-hc'+(x.wet?' wet':'')+((foc&&x.h>=foc.a&&x.h<foc.b)?' foc':'')+((evs&&evs.indexOf(x.h)>=0)?' evh':''));c.style.setProperty('--i',i);
+    c.appendChild(el('div','wx-hg',hrGlyph(x.cd,x.h)));c.appendChild(el('div','wx-ht',isNaN(x.t)?'':Math.round(x.t)+'°'));c.appendChild(el('div','wx-hl',hr12(x.h).replace(' ','')));
+    c.title=hr12(x.h)+' · '+(WXC[x.cd]||'')+' · '+x.pp+'% chance'+(x.pr>=0.1?' · '+x.pr.toFixed(2)+' mm':'');row.appendChild(c);});
   w.appendChild(row);return w;
 }
 
+
+function wxCtxNow(){return (convo.last&&convo.last.kind==='weather'&&Date.now()-convo.last.at<300000)||(app.getAttribute('data-state')==='answer'&&!!document.querySelector('#extra .wx'));}
+var WDAY='(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)';
+var WDAYX='(?:today|tomorrow|tonight|'+WDAY+'(?:\\\'s)?|next '+WDAY+'|(?:this |the )?weekend|(?:the )?next day|(?:the )?day after(?: that| tomorrow)?|(?:the )?(?:previous|last) day|(?:the )?day before(?: that)?)';
+var WTIME='(?:(?:at|around|about|by|near)\\s+)?(\\d{1,2})(?::(\\d\\d))?\\s*(a m|p m|am|pm|a\\.m\\.|p\\.m\\.)?(?:\\s*o\'?clock)?';
+var WPER='(?:in )?(?:the )?(morning|afternoon|evening|tonight|noon|overnight|lunch|midday|night)';
+function wxFragment(q){
+  var s=stripFill(normQ(q)),guard=0;
+  s=s.replace(/^(?:(?:okay|ok|now|then|alright|and|so|well|also|yeah|yes)\s+)+/,'');
+  var LEADV=/^(?:pull up|bring up|show me|show|open up|open|let me see|check on|check|look at|go to|tell me|give me|what'?s|what is|whats|zoom (?:in )?(?:on|into|to)|expand|display|see|view|how about|what about|how bout|what bout|what if|try|do|go|move to|jump to|switch to|and)\s+/;
+  while(guard++<3&&LEADV.test(s))s=s.replace(LEADV,'');
+  s=s.replace(/\s+(?:please|again|too|then|now|for me|as well|instead)$/,'').replace(/^(?:the )?(?:weather|forecast) (?:for|on) /,'').replace(/\s+(?:weather|forecast)$/,'').replace(/^(?:for|on) /,'').trim();
+  if(!s||s.split(' ').length>8)return null;
+  if(/^(?:the )?(?:whole |entire |rest of the |this |next )?(?:week|7 days?|seven days?|week ahead|next 7 days|next seven days|7 day|seven day)$/.test(s))return 'weather for the week';
+  var md=new RegExp('^('+WDAYX+')$','i').exec(s);if(md)return 'weather '+md[1];
+  var mp=new RegExp('^'+WPER+'$','i').exec(s);if(mp)return 'weather '+mp[1];
+  var mt=new RegExp('^'+WTIME+'(?:\\s+(?:in the (morning|afternoon|evening)|(tomorrow|tonight|that day|that morning|that night)))?$','i').exec(s);
+  if(mt&&!(mt[3]==null&&mt[1].length>2)){var ap=(mt[3]||'').replace(/[. ]/g,'');return 'weather at '+mt[1]+(mt[2]?':'+mt[2]:'')+(ap?' '+ap:(mt[4]==='evening'?' pm':(mt[4]==='morning'?' am':'')))+(mt[5]&&/tomorrow/.test(mt[5])?' tomorrow':'');}
+  var mc=new RegExp('^('+WDAYX+')[,\\s]+(?:(?:and|so|what about|how about)\\s+)?(?:(?:at|around|about)\\s+)?(.+)$','i').exec(s);
+  if(mc){var rest=mc[2].replace(/^(?:what about|how about|and|at)\s+/,'');var t2=new RegExp('^'+WTIME+'$','i').exec(rest),p2=new RegExp('^'+WPER+'$','i').exec(rest);
+    if(t2){var a2=(t2[3]||'').replace(/[. ]/g,'');return 'weather '+mc[1]+' at '+t2[1]+(t2[2]?':'+t2[2]:'')+(a2?' '+a2:'');}
+    if(p2)return 'weather '+mc[1]+' '+p2[1];}
+  return null;
+}
 var DETAIL_RE=/\b(?:my|the|our)\s+(?:\w+\s+)?(?:detail|details|detailing|appointment|appointments|job|jobs|booking|bookings|customer|customers|client|clients|first car|next car|first appointment|next appointment|first job|next job|first detail|next detail|ceramic|coating|wash)\b|\bwhen i(?:'m| am) (?:working|detailing)\b|\bduring (?:the )?(?:job|detail|appointment)\b/i;
 function hourFocus(q){
   var l=String(q).toLowerCase().replace(/a\.m\./g,'am').replace(/p\.m\./g,'pm');
   var m=/\b(?:at|around|by|about|near|before|after|for the)\s+(\d{1,2})(?::(\d\d))?\s*(a m|p m|am|pm|o'?clock)?\b/.exec(l);
-  if(m&&!/\b(days?|degrees?|percent|minutes?|hours?)\b/.test(l.slice(m.index,m.index+m[0].length+10))){var h=+m[1],ap=(m[3]||'').replace(' ','');if(h>=1&&h<=12){if(ap==='pm'&&h<12)h+=12;else if(ap==='am'&&h===12)h=0;else if(!ap&&h<=6)h+=12;return {a:Math.max(0,h-1),b:Math.min(24,h+2),label:'Around '+hr12(h),hour:h};}}
+  if(m&&!/\b(days?|degrees?|percent|minutes?|hours?)\b/.test(l.slice(m.index,m.index+m[0].length+10))){var h=+m[1],ap=(m[3]||'').replace(' ','');if(h>=1&&h<=12){if(ap==='pm'&&h<12)h+=12;else if(ap==='am'&&h===12)h=0;else if(!ap){if(convo.wxHr!=null&&h<=12){var c1=h%12,c2=h%12+12;h=Math.abs(c1-convo.wxHr)<Math.abs(c2-convo.wxHr)?c1:c2;}else if(h<=6)h+=12;}return {a:Math.max(0,h-1),b:Math.min(24,h+2),label:'Around '+hr12(h),hour:h};}}
   if(/\bmorning\b/.test(l))return {a:6,b:12,label:'This morning'};
   if(/\bafternoon\b/.test(l))return {a:12,b:17,label:'This afternoon'};
   if(/\b(evening)\b/.test(l))return {a:17,b:21,label:'This evening'};
@@ -1714,9 +1766,10 @@ function winText(w,off,a,b,lab){
   return lab+': '+(lo===hi?'about '+hi:lo+' to '+hi)+' degrees and '+txt+'.';
 }
 function flipFrom(rect,sel){
+  document.querySelectorAll('.wx-ghost').forEach(function(g){var an=g.animate?g.animate([{opacity:1},{opacity:0}],{duration:420,delay:120,fill:'forwards'}):null;if(an)an.onfinish=function(){g.remove();};else g.remove();});
   if(!rect)return;setTimeout(function(){var nw=document.querySelector(sel);if(!nw||!nw.animate)return;var nr=nw.getBoundingClientRect();if(!nr.width)return;
     var dx=rect.l-nr.left,dy=rect.t-nr.top,sx=Math.max(.05,rect.w/nr.width),sy=Math.max(.05,rect.h/nr.height);
-    nw.style.transformOrigin='0 0';nw.animate([{transform:'translate('+dx+'px,'+dy+'px) scale('+sx+','+sy+')',opacity:.35,filter:'blur(2px)'},{transform:'none',opacity:1,filter:'none'}],{duration:760,easing:'cubic-bezier(.2,.85,.2,1)'});
+    nw.style.transformOrigin='0 0';nw.animate([{transform:'translate('+dx+'px,'+dy+'px) scale('+sx+','+sy+')',opacity:.35,filter:'blur(2px)'},{transform:'none',opacity:1,filter:'none'}],{duration:950,easing:'cubic-bezier(.2,.85,.2,1)'});
     var hr=nw.querySelector('.wx-hr');if(hr&&hr.animate)hr.animate([{opacity:0,transform:'translateY(14px)'},{opacity:0,transform:'translateY(14px)',offset:.55},{opacity:1,transform:'none'}],{duration:1100,easing:'ease-out'});},40);
 }
 function hudify(w){w.classList.add('hudb');['c1','c2'].forEach(function(k){w.appendChild(el('span','hud-'+k));});return w;}
@@ -1756,7 +1809,7 @@ function fmtMS(ms){ms=Math.max(0,ms);var s=Math.ceil(ms/1000),h=Math.floor(s/360
 function beep(){try{var A=window.AudioContext||window.webkitAudioContext;var a=new A();[0,0.28,0.56,0.9,1.18,1.46].forEach(function(t){var o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=880;g.gain.value=0.0001;o.connect(g);g.connect(a.destination);var s=a.currentTime+t;g.gain.exponentialRampToValueAtTime(0.25,s+0.02);g.gain.exponentialRampToValueAtTime(0.0001,s+0.22);o.start(s);o.stop(s+0.25);});}catch(e){}}
 
 /* ================= INTENT ROUTER: many ways to say each thing, no Claude lookups for built-in screens ================= */
-var FILL_RE=/^(?:(?:hey|ok|okay|alright|all right|so|um|uh|well|yo|and|now|then|mint|please|kindly|can you|could you|would you|will you|can i|could i|i want you to|i want to|i wanna|i'd like to|i would like to|i need to|i need you to|go ahead and|just|let me|lemme|let's|lets)\s+)+/i;
+var FILL_RE=/^(?:(?:hey|okay|ok|ay|kay|a(?=\s+(?:what|how|and|so|can|will|could|pull|show|open|next|then|the next)\b)|alright|all right|so|um|uh|well|yo|and|now|then|mint|please|kindly|can you|could you|would you|will you|can i|could i|i want you to|i want to|i wanna|i'd like to|i would like to|i need to|i need you to|go ahead and|just|let me|lemme|let's|lets)\s+)+/i;
 function normQ(q){return String(q).toLowerCase().replace(/[’]/g,"'").replace(/[^a-z0-9' ]+/g,' ').replace(/\s+/g,' ').trim();}
 function stripFill(l){return l.replace(FILL_RE,'').trim();}
 var VIEW_V='(?:pull up|bring up|show(?: me)?|open|display|see|view|check|look at|look up|let me see|give me|get me|show up)';
@@ -2066,6 +2119,8 @@ function run(raw,opt){
   if(opt.fresh){convo.pending=null;convo.last=null;}
   if(convo.pending&&(opt.reply||shortReply(q)||convo.pending.kind==='textbody')){var comp=completePending(q);if(comp){logMic('reply','completed: '+comp.slice(0,70));q=comp;opt.clarified=true;}}
   else if(convo.pending&&Date.now()>convo.pending.until)convo.pending=null;
+  var wxCtx=wxCtxNow();
+  if(wxCtx&&!opt.noFrag){var fr=wxFragment(q);if(fr){logMic('route','weather fragment: '+fr);convo.wxFollow=true;cmdWeather(fr,q);return;}}
   if(opt.reply==='follow'&&convo.last&&Date.now()-convo.last.at<300000&&followUp(q,opt))return;
   var l=q.toLowerCase();
   if(!BR&&/\b(cancel|delete|refund|charge|transfer|send money|reschedule|resume|pause|book (a|an|me|him|her|them)|take (a )?payment|waive)\b/.test(l)){cmdLocked(q);return;}
