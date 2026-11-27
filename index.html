@@ -17,8 +17,8 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%}
-html.tv body{overflow:hidden}
-html.tv .app{position:fixed;left:50%;top:50%;width:1600px;height:900px;max-width:none;box-sizing:border-box;transform:translate(-50%,-50%) scale(var(--tvk,1));transform-origin:center center}
+html.tv body,html.fit body{overflow:hidden}
+html.tv .app,html.fit .app{position:fixed;left:50%;top:50%;width:1600px;height:900px;max-width:none;box-sizing:border-box;transform:translate(-50%,-50%) scale(var(--tvk,1));transform-origin:center center}
 html.tv{cursor:none}
 html.tv #micChip,html.tv #micOff,html.tv #useBtn,html.tv #histBtn,html.tv #installBtn{display:none!important}
 html.tv :focus{outline:3px solid #5cffc8!important;outline-offset:3px;box-shadow:0 0 14px rgba(92,255,200,.7)}
@@ -716,7 +716,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v56-2026-11-27';
+var BUILD='v57-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -2793,7 +2793,12 @@ function remCheck(){
 
 /* ---------- TV mode ---------- */
 var TV={on:false,inset:+(store('tvInset')||5),t:null};
-function tvApply(){var h=document.documentElement;h.classList.toggle('tv',TV.on);var k=Math.min(window.innerWidth/1600,window.innerHeight/900)*(1-2*TV.inset/100);h.style.setProperty('--tvk',Math.max(.2,k).toFixed(4));try{tvFitBox();}catch(e){}}
+function fitAuto(){
+  var h=document.documentElement;var on=!TV.on&&window.innerWidth>=1000&&window.innerHeight<880;
+  h.classList.toggle('fit',on);if(on)h.style.setProperty('--tvk',(Math.min(window.innerWidth/1600,window.innerHeight/900)*0.98).toFixed(4));
+}
+window.addEventListener('resize',function(){try{fitAuto();}catch(e){}});
+function tvApply(){var h=document.documentElement;h.classList.toggle('tv',TV.on);if(TV.on)h.classList.remove('fit');var k=Math.min(window.innerWidth/1600,window.innerHeight/900)*(1-2*TV.inset/100);h.style.setProperty('--tvk',Math.max(.2,k).toFixed(4));try{tvFitBox();}catch(e){}}
 window.addEventListener('resize',function(){if(TV.on)tvApply();});
 function tvRotate(){
   if(!TV.on)return;if(Date.now()-(TV.lastUser||0)<240000)return;if(S.mode!=='idle'&&S.mode!=='asleep')return;var qs=["what's on my schedule today","what needs me","how's the system doing"];TV.i=((TV.i||0)+1)%qs.length;
@@ -2803,7 +2808,7 @@ function tvSet(on){
   TV.on=!!on;store('tv',TV.on);tvApply();clearInterval(TV.t);
   if(TV.on){TV.t=setInterval(tvRotate,120000);setTimeout(tvRotate,1500);
     try{if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(function(){});}catch(e){}}
-  else{try{if(document.fullscreenElement)document.exitFullscreen();}catch(e){}}
+  else{try{if(document.fullscreenElement)document.exitFullscreen();}catch(e){}try{fitAuto();}catch(e){}}
 }
 function tvFocusables(){
   var lk=document.getElementById('lock').classList.contains('on');
@@ -2836,6 +2841,7 @@ document.addEventListener('keydown',function(e){
   if(m){if((t==='INPUT'||t==='TEXTAREA')&&(m==='L'||m==='R')&&e.target.value)return;tvMove(m);e.preventDefault();return;}
   if(e.key==='+'||e.key==='='||e.key==='-'){TV.inset=Math.max(0,Math.min(14,TV.inset+(e.key==='-'?1:-1)));store('tvInset',TV.inset);tvApply();}
 });
+try{fitAuto();}catch(e){}
 (function(){var ua=navigator.userAgent||'';var u=/[?&]tv(=1|=on|&|$)/.test(location.search)||(/SMART-?TV|SmartTV|Tizen|Web0S|webOS|NetCast|BRAVIA|AFT[A-Z]|Android ?TV|GoogleTV|CrKey|HbbTV|Roku|VIDAA|\bTV\b/i.test(ua)&&!/[?&]tv=(0|off)/.test(location.search));if(/[?&]tv=(0|off)/.test(location.search)){store('tv',false);}if(u||store('tv')===true){TV.on=true;tvApply();setTimeout(function(){tvSet(true);},600);}})();
 window.__t={lexTalk:lexTalk,tvSet:tvSet,lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
 function addReminder(q,s){
