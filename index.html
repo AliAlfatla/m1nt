@@ -554,7 +554,7 @@ button.chip:hover,button.chip[aria-pressed="true"]{border-color:var(--mint);colo
     <canvas id="fx" aria-hidden="true"></canvas>
     <div class="ctag" id="ctag" aria-live="polite"></div>
     <button class="panel" data-pos="l" data-i="0" id="pCal" type="button"><div class="ph"><h2>Calendar</h2><span id="pCalTag"></span></div><div class="pbig" id="pCalBig">Tomorrow</div><div class="psub" id="pCalSub">Tap to check</div><div class="popen">Open ›</div></button>
-    <button class="panel" data-pos="l" data-i="1" id="pEvm" type="button"><div class="ph"><h2>Evermint</h2><span id="pEvmTag"></span></div><div class="pbig">4 Elite clients</div><div class="psub">Monthly day plus David Wilson. Setup snapshot.</div><div class="popen">Open ›</div></button>
+    <button class="panel" data-pos="l" data-i="1" id="pEvm" type="button"><div class="ph"><h2>Evermint</h2><span id="pEvmTag"></span></div><div class="pbig">Elite clients</div><div class="psub">Monthly day and concierge. Setup snapshot.</div><div class="popen">Open ›</div></button>
     <button class="panel" data-pos="r" data-i="0" id="pBrf" type="button"><div class="ph"><h2>Briefings</h2><span id="pBrfTag"></span></div><div class="pbig" id="pBrfBig">Morning · Evening</div><div class="psub" id="pBrfSub">Tap to read the latest</div><div class="popen">Open ›</div></button>
     <button class="panel" data-pos="r" data-i="1" id="pSys" type="button"><div class="ph"><h2>System health</h2><span id="pSysTag"></span></div><div class="pbig" id="pSysBig">Not checked</div><div class="psub" id="pSysSub">Tap to check once</div><div class="popen">Open ›</div></button>
     <div class="center" id="center">
@@ -699,7 +699,7 @@ function vaultNode(){
 function cmdVault(q){
   beginAsk(q);finish({headline:'Opening the vault',small:true,spoken:'Vault open. I cannot see your expenses or revenue yet, because this screen is not connected to Square or your bank, and I will not make up numbers. Say the word and I can connect them read only.',node:vaultNode(),viz:'board',tags:[srcTag('na','Money not connected'),srcTag('snap','Rule: read-only')],srcNote:'The animation is visual only. This screen never asks for or uses your safety code.'});
 }
-var ELITE=['Richard Decker','Marc Clark','Rebecca Lucas','David Wilson'];
+var ELITE=[];
 var $=function(id){return document.getElementById(id);};
 var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 var app=$('app');
@@ -714,7 +714,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v48-2026-11-27';
+var BUILD='v49-2026-11-27';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1027,7 +1027,7 @@ function bookingStatus(b,wv){
   var pm=/PARTIAL:\s*\$([\d.]+)\s+paid/i.exec(b.pay);
   if(pm)return {kind:'paid',label:'Deposit paid ($'+pm[1]+')',note:'Per Urable: '+b.pay};
   if(/paid in full|^paid/i.test(b.pay))return {kind:'paid',label:'Paid',note:b.pay};
-  if(ELITE.indexOf(b.name)>=0)return {kind:'elite',label:'Elite client, no deposit expected',note:'Setup rule, not read from Urable.'};
+  if(ELITE.some(function(c){return c.n===b.name;}))return {kind:'elite',label:'Elite client, no deposit expected',note:'Setup rule, not read from Urable.'};
   if(/none received/i.test(b.pay))return {kind:'missing',label:'Deposit missing',note:'Urable shows no payment.'};
   return {kind:'unknown',label:'Payment status: '+b.pay,note:''};
 }
@@ -1634,7 +1634,8 @@ async function getStatus(){
   var c=new AbortController(),tm=setTimeout(function(){c.abort();},12000);
   try{var r=await fetch(SEND_URL,{method:'POST',body:new URLSearchParams({code:BR.code,action:'status'}),signal:c.signal});var t=await r.text();if(!/^SYSTEM STATUS/.test(t))return null;
     var ls=t.split('\n');var asof=(ls[0].match(/taken (.*)$/)||[])[1]||'';
-    statusCache={at:Date.now(),asof:asof,rows:ls.slice(1).map(function(l){var a=l.split('|');return {area:a[0],name:a[1]||'',state:a[2]||'OK',detail:a[3]||''};}).filter(function(x){return x.name;})};return statusCache;
+    var all=ls.slice(1).map(function(l){return l.split('|');});ELITE=all.filter(function(a){return a[0]==='ELITE';}).map(function(a){var d=(a[3]||'').split('~');return {n:a[1],v:a[2]||'',tag:d[0]||'',plan:d[1]||''};});
+    statusCache={at:Date.now(),asof:asof,rows:ls.slice(1).filter(function(l){return l.indexOf('ELITE|')!==0;}).map(function(l){var a=l.split('|');return {area:a[0],name:a[1]||'',state:a[2]||'OK',detail:a[3]||''};}).filter(function(x){return x.name;})};return statusCache;
   }catch(e){return null;}finally{clearTimeout(tm);}
 }
 var STAT_MAP=[[/watchdog/,/watchdog/i],[/fixer/,/fixer/i],[/self.?heal/,/self-heal/i],[/booking sync|sync/,/booking sync/i],[/back ?up/,/backup/i],[/credit/,/credit/i],[/(?:morning|daily) briefing/,/morning|daily/i],[/evening briefing|briefings?/,/evening/i],[/follow.?up manager|follow.?ups?/,/follow-up manager/i],[/deposit remind/,/deposit reminder/i],[/calendar sync/,/calendar sync/i],[/david/,/david/i],[/notion/,/notion/i],[/\bquo\b/,/quo/i],[/\bmake\b/,/^make/i],[/urable/,/urable/i]];
@@ -1699,10 +1700,9 @@ async function cmdLeads(q,opt){
     finish({headline:recs.length+' open leads',small:true,spoken:'You have '+recs.length+' open leads. '+cnt('quoted')+' have a quote out, '+cnt('waiting')+' are waiting on a reply, '+cnt('new')+' are new or in first contact, and '+cnt('future')+' are for later.'+(due?' '+due+' '+(due===1?'is':'are')+' due for follow-up by tomorrow.':'')+' Tap a tab to filter.',node:w,tags:[srcTag('live','Notion via Make'),srcTag('live','Snapshot, not live')],srcNote:'From your Leads CRM snapshot. Read-only. Say refresh leads to re-read.',acts:[{label:'Refresh',fn:function(){run(q,{live:true});}}]});
   }catch(e){if(cur!==my)return;bridgeFail(q,failCopy(e));}
 }
-var ELITE=[{n:'Richard Decker',v:'2026 Subaru Outback Limited',tag:'MONTHLY DAY'},{n:'Marc Clark',v:'2019 Nissan Sentra SR',tag:'MONTHLY DAY'},{n:'Rebecca Lucas',v:'2023 Kia K5 GT-Line',tag:'MONTHLY DAY'},{n:'David Wilson',v:'2024 Rivian R1T',tag:'CONCIERGE'}];
-if(STANDALONE&&!BR){ELITE=[];}
+var ELITE=[];
 async function cmdElite(q,opt){
-  beginAsk(q);doing('checking your Elite clients on the calendar');var my=cur;var evs=null;
+  beginAsk(q);try{await getStatus();}catch(e){}doing('checking your Elite clients on the calendar');var my=cur;var evs=null;
   if(BR){try{var cr=await calBridgeFetch(etDay(0),addDays(etDay(0),150),!!(opt&&opt.live));if(cur!==my)return;evs=cr.events;}catch(e){evs=null;}}
   if(cur!==my)return;
   var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -2449,7 +2449,7 @@ function capsNote(){
 var HELP_RE=/\b(what can you do|what do you do|what are you capable of|what are your (?:commands|capabilities|features|tools|abilities)|your (?:commands|capabilities|features|tools|abilities)|list (?:the )?(?:commands|tools|features)|show (?:me )?(?:the )?(?:commands|tools|features)|what (?:commands|tools|features) (?:do you have|can i use|are there)|how do i use (?:you|this|mint)|what can i (?:ask|say)|help me with mint|^help$)\b/;
 var TSTAT_RE=/\b(did you (?:set|start|make)(?: (?:the|a|my|that))? (?:timer|alarm|countdown)|is (?:the|my|a|that) (?:timer|alarm|countdown) (?:running|going|set|on|working|active)|(?:are there|do i have|have i got|got) (?:any|a) (?:timers?|alarms?|countdowns?)|(?:what|which) (?:timers?|alarms?) (?:do i have|are (?:running|set|going))|any (?:timers?|alarms?)|(?:timers?|alarms?) (?:running|going|status)|did (?:it|that|the (?:timer|alarm)) (?:start|go|set)|is it (?:running|going|counting)|is (?:there )?a (?:timer|alarm))\b/;
 function helpNode(){
-  var cats=[['⏱','Timers & clock',['set a timer for 10 minutes','half hour timer','cancel the timer','start a stopwatch','what time is it']],['☁','Weather',['what\'s the weather','weather for the week','will it rain tomorrow']],['▦','Calendar',['what do I have the next 3 days','pull up my calendar','am I booked this week']],['$','What needs me',['what needs me','who owes me a deposit']],['✉','Texts (simulated)',['text Rebecca that we have to move her detail','tell Shane I\'m running late']],['✎','Notes',['add a note: call the tint shop','show my notes','clear my notes']],['∑','Math & fun',['what\'s 18% tip on 85','convert 50 miles to km','flip a coin','roll a die']],['🏈','Scores',['how are the Lions doing']]];
+  var cats=[['⏱','Timers & clock',['set a timer for 10 minutes','half hour timer','cancel the timer','start a stopwatch','what time is it']],['☁','Weather',['what\'s the weather','weather for the week','will it rain tomorrow']],['▦','Calendar',['what do I have the next 3 days','pull up my calendar','am I booked this week']],['$','What needs me',['what needs me','who owes me a deposit']],['✉','Texts (simulated)',['text Alex that we have to move the detail','tell Shane I\'m running late']],['✎','Notes',['add a note: call the tint shop','show my notes','clear my notes']],['∑','Math & fun',['what\'s 18% tip on 85','convert 50 miles to km','flip a coin','roll a die']],['🏈','Scores',['how are the Lions doing']]];
   var w=el('div','help');cats.forEach(function(c,i){var d=el('div','hc');d.style.setProperty('--d',(0.06*i)+'s');var h=el('div','hc-h');h.appendChild(el('span','hc-i',c[0]));h.appendChild(el('b',null,c[1]));d.appendChild(h);c[2].forEach(function(x){var b=el('button','hc-x','“'+x+'”');b.type='button';b.addEventListener('click',function(){run(x,{});});d.appendChild(b);});w.appendChild(d);});return w;
 }
 
@@ -2645,7 +2645,7 @@ async function lkTry(){
   var code=lkBuf;if(code.length<LKN)return;lkBusy=true;var ok=await lkCheck(code);
   if(!ok){lkBusy=false;lkFail();return;}
   lkFails=0;LOCKED=false;$('lock').classList.add('ok');$('lkT').textContent='ACCESS GRANTED';$('lkS').textContent='';sfx('unlock');
-  setTimeout(function(){hideLock();lkBusy=false;try{wakeUi();}catch(e){}try{preloadData();}catch(e){}$('hint').textContent=BR?'':'This address is new. Open Setup once and paste your bridge link and access code.';try{speak(greetWord()+', Ali.');}catch(e){}setTimeout(remCheck,800);},1700);
+  setTimeout(function(){hideLock();lkBusy=false;try{wakeUi();}catch(e){}try{preloadData();}catch(e){}try{if(BR)getStatus();}catch(e){}$('hint').textContent=BR?'':'This address is new. Open Setup once and paste your bridge link and access code.';try{speak(greetWord()+', Ali.');}catch(e){}setTimeout(remCheck,800);},1700);
 }
 function hideLock(){$('lock').classList.remove('on','ok');}
 function lkKey(k){
@@ -2929,7 +2929,7 @@ var VIEWS={
   },
   elite:function(){
     dBody.appendChild(el('div','banner','SNAPSHOT. Client list comes from the Elite setup, not a live lookup. Next visits are filled in from the calendar when it is loaded.'));
-    var plan=[['Richard Decker','2nd Tuesday · 12:00 PM'],['Marc Clark','2nd Tuesday · 3:30 PM'],['Rebecca Lucas','2nd Tuesday · 6:00 PM'],['David Wilson','Own monthly check-in']];
+    var plan=ELITE.map(function(c){return [c.n,c.plan||''];});
     plan.forEach(function(p){var next=D.cal?D.cal.data.filter(function(e){return e.title.indexOf(p[0]+':')===0&&e.start.slice(0,10)>=etDay(0);}).sort(function(a,b){return a.start<b.start?-1:1;})[0]:null;dBody.appendChild(item('ELITE',p[0],p[1]+(next?' · next: '+prettyDay(next.start.slice(0,10))+' '+t12(next.start.slice(11,16)):(D.cal?' · next visit not on the calendar':''))));});
   },
   briefings:function(){
