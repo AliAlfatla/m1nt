@@ -683,6 +683,10 @@ function converse(st,raw,opts){
  var u=understandClean(raw);var res=null;
  if(!u.n0)return null;
  var L=lite(u.fixed);
+ /* teaching, undoing and listing learned phrases: handled here so every surface behaves the same. Never an action. */
+ var _ud=LEARNAPI.parseUndo(raw);if(_ud){var _u=LEARNAPI.undo(opts.learned||[],_ud.target,nowMs);st.at=nowMs;if(!_u.hit.length)return finish(st,raw,{k:'reply',kind:'learn',text:'I do not have a learned phrase to undo.'},nowMs);return finish(st,raw,{k:'reply',kind:'learn',text:'Done. I forgot '+_u.hit.map(function(e){return '"'+e.k+'"';}).join(' and ')+'.',unlearn:_u.hit.map(function(e){return e.id;})},nowMs);}
+ if(LEARNAPI.parseList(raw)){var _a=LEARNAPI.active(opts.learned||[]);st.at=nowMs;return finish(st,raw,{k:'reply',kind:'learn',text:_a.length?'I have learned '+_a.length+': '+_a.slice(-6).map(function(e){return '"'+e.k+'" for '+e.m.replace('status:','').replace('cal','calendar');}).join(', ')+'.':'Nothing learned yet.'},nowMs);}
+ var _tc=LEARNAPI.teach(raw,nowMs,opts.learned);if(_tc){st.at=nowMs;var _r={k:'reply',kind:'learn',text:_tc.text};if(_tc.ok)_r.learn=_tc.cand;return finish(st,raw,_r,nowMs);}
  /* a pending question from Claude: bare answers, confirmations and option picks belong to Claude (keeps existing confirmations) */
  if(st.pendingQ&&nowMs-st.lastAssistantAt<TOPIC_AGE&&(CONFIRM.test(L)||isAck(L)||/^(?:no|nope|not yet|cancel|stop|never ?mind|forget it|yes|yep|sure|ok|do it)\b/.test(L)||REFFRAG.test(L)||/\b(?:option|number) [a-d1-4]\b/.test(L))){st.at=nowMs;return finish(st,raw,null,nowMs);}
  /* option references against options Claude listed */
@@ -747,6 +751,72 @@ function phraseKey(raw){
 function tokSim(a,b){var A=a.split(' ').filter(Boolean),B=b.split(' ').filter(Boolean);if(!A.length||!B.length)return 0;var used={},m=0;A.forEach(function(x){for(var j=0;j<B.length;j++){if(used[j])continue;var y=B[j];if(x===y||(x.length>=5&&y.length>=5&&dl(x,y,1)<=1)){used[j]=1;m++;return;}}});return 2*m/(A.length+B.length);}
 function jaccard(a,b){var A={},B={},i;a.split(' ').forEach(function(x){if(x)A[x]=1;});b.split(' ').forEach(function(x){if(x)B[x]=1;});var inter=0,uni=0;for(i in A){uni++;if(B[i])inter++;}for(i in B)if(!A[i])uni++;return uni?inter/uni:0;}
 var LEARNAPI={
+
+ /* ---- shared list helpers: used identically by the site and by the owner-SMS router ---- */
+ sanitize:function(list){var out=[];(Array.isArray(list)?list:[]).forEach(function(e){if(!e||typeof e.id!=='string'||e.id.length>40||typeof e.k!=='string'||e.k.length>120||!e.k)return;if(!LMEAN.test(e.m||''))return;if(SECRET.test(e.k))return;var st=e.st==='validated'?'validated':'candidate';out.push({id:e.id,k:e.k,m:e.m,d:e.d?1:0,st:st,off:e.off?1:0,offAt:+e.offAt||0,at:+e.at||0,src:String(e.src||'').slice(0,12),hits:+e.hits||0});});return out;},
+ merge:function(a,b){
+  var by={},order=[];
+  LEARNAPI.sanitize((a||[]).concat(b||[])).forEach(function(e){var o=by[e.id];if(!o){by[e.id]=e;order.push(e.id);return;}o.off=(o.off||e.off)?1:0;o.offAt=Math.max(o.offAt||0,e.offAt||0);if(e.st==='validated')o.st='validated';o.at=Math.max(o.at||0,e.at||0);o.hits=Math.max(o.hits||0,e.hits||0);});
+  var list=order.map(function(i){return by[i];});
+  var tomb={};list.forEach(function(e){if(e.off){var g=e.k+'|'+e.m;tomb[g]=Math.max(tomb[g]||0,e.offAt||e.at||1);}});
+  list.forEach(function(e){if(!e.off&&e.at<=(tomb[e.k+'|'+e.m]||0)){e.off=1;e.offAt=tomb[e.k+'|'+e.m];}});
+  var seen={},keep=[];list.sort(function(x,y){return (x.at||0)-(y.at||0);}).forEach(function(e){var g=e.k+'|'+e.m;if(!e.off){if(seen[g])return;seen[g]=1;}keep.push(e);});
+  var act=keep.filter(function(e){return !e.off;}).slice(-150),offl=keep.filter(function(e){return e.off;}).slice(-150);
+  return act.concat(offl);
+ },
+ active:function(list){return (list||[]).filter(function(e){return e&&e.st==='validated'&&!e.off&&LMEAN.test(e.m||'');});},
+ undo:function(list,target,nowMs){
+  nowMs=nowMs||Date.now();var act=LEARNAPI.active(list),ids={};
+  if(target==='last'){var l=act.slice().sort(function(a,b){return (a.at||0)-(b.at||0);}).pop();if(l)ids[l.id]=1;}
+  else if(typeof target==='string'&&/^L[0-9a-z]+$/.test(target)){ids[target]=1;}
+  else if(typeof target==='string'){var k=phraseKey(target);k=k&&k.key;act.forEach(function(e){if(k&&(e.k===k||tokSim(e.k,k)>=0.85))ids[e.id]=1;});}
+  var hit=[];var out=(list||[]).map(function(e){if(e&&ids[e.id]&&!e.off){hit.push(e);return Object.assign({},e,{off:1,offAt:nowMs});}return e;});
+  return {list:out,hit:hit};
+ },
+ /* "when I say X I mean the weather" / "remember that X means my calendar" */
+ parseTeach:function(raw){
+  var n=norm(raw);var m=/^(?:mint )?(?:when(?:ever)? i say|if i say|if i ask|when i ask) (.{3,80}?),? (?:i mean|i want|it means|that means|show me|give me|check|pull up|use|treat it as|answer with|that is|that is the same as)\s+(.{3,80})$/.exec(n)||/^(?:mint )?(?:remember|learn|note|teach (?:you|mint)|please remember|please learn)(?: that| this)? (.{3,80}?) (?:means|mean|is the same as|is another way of saying|is code for|equals) (.{3,80})$/.exec(n);
+  return m?{phrase:m[1].replace(/^(?:the (?:phrase|words?) )/,'').trim(),target:m[2].trim()}:null;
+ },
+ targetMeaning:function(t,nowMs){
+  t=String(t||'');
+  if(/\b(?:weather|forecast|temperature)\b/.test(t))return 'weather';
+  if(/\b(?:calendar|schedule|agenda|appointments?)\b/.test(t))return 'cal';
+  if(/\bfollow ?ups?\b|\bfollowup\b/.test(t))return 'status:followups';
+  if(/\bleads?\b/.test(t))return 'status:leads';
+  if(/\b(?:jobs?|deposits?|bookings?)\b/.test(t))return 'status:jobs';
+  if(/\binventory|supplies\b/.test(t))return 'status:inventory';
+  if(/\b(?:health|system|automations?|workflows?)\b/.test(t))return 'status:health';
+  if(/\b(?:rundown|everything|status|briefing|overview|business)\b/.test(t))return 'status:full';
+  if(/\bjoke\b/.test(t))return 'reply:joke';
+  if(/\btime\b/.test(t))return 'reply:time';
+  var r=understand(t,{nowMs:nowMs||Date.now()},null);return meaningOf(r);
+ },
+ /* full teach pipeline: parse, resolve meaning, refuse unsafe wording, validate. Pure: the host decides where to store. */
+ teach:function(raw,nowMs,learned){
+  nowMs=nowMs||Date.now();var pt=LEARNAPI.parseTeach(raw);if(!pt)return null;
+  var m=LEARNAPI.targetMeaning(pt.target,nowMs);
+  if(!m)return {ok:false,text:'I can learn new wording for the weather, your calendar, status reports, jokes and the time. Which of those did you mean?'};
+  var c=LEARNAPI.candidate(pt.phrase,m,'teach',nowMs);
+  if(!c.ok){
+   if(c.why==='already understood')return {ok:false,text:'I already understand "'+pt.phrase+'" that way.'};
+   if(c.why==='action wording is never learned')return {ok:false,text:'I can only learn wording for lookups. Texting, booking, cancelling and refunds always need your normal confirmation, so I will not learn those.'};
+   return {ok:false,text:'I could not learn that one ('+c.why+'). Try a short plain phrase.'};
+  }
+  var base=understand(pt.phrase,{nowMs:nowMs},null);var bm=meaningOf(base);
+  if(bm&&bm!==m)return {ok:false,text:'I already read "'+pt.phrase+'" as something else, so I will not override it. Pick a different phrase.'};
+  var v=LEARNAPI.autoValidate(c.cand,pt.phrase,nowMs);
+  if(!v.ok)return {ok:false,text:'That phrase is too close to other things I understand, so I did not save it. Try a more specific one.'};
+  c.cand.st='validated';c.cand.q=pt.phrase.slice(0,80);
+  return {ok:true,cand:c.cand,text:'Got it. "'+pt.phrase+'" now means '+({weather:'the weather','cal':'your calendar','status:followups':'the follow-ups report','status:leads':'the leads report','status:jobs':'the jobs report','status:inventory':'the inventory report','status:health':'the system check','status:full':'the full rundown','reply:joke':'a joke','reply:time':'the time'}[m]||m)+'. Say "forget that phrase" to undo it.'};
+ },
+ parseUndo:function(raw){
+  var n=norm(raw);
+  if(/^(?:mint )?(?:forget|undo|remove|unlearn|delete) (?:that|the last|the latest) (?:phrase|lesson|one i taught you|wording)$|^(?:mint )?unlearn that$|^(?:mint )?forget what i just taught you$/.test(n))return {target:'last'};
+  var m=/^(?:mint )?(?:unlearn|forget the phrase|remove the phrase|forget the wording) (.{3,80})$/.exec(n);if(m)return {target:m[1].trim()};
+  return null;
+ },
+ parseList:function(raw){return /^(?:mint )?(?:what (?:phrases )?(?:have|did) (?:you|i) (?:learned?|taught you)|list (?:the )?(?:learned|taught) phrases|show (?:me )?(?:the )?learned phrases|what phrases do you know)$/.test(norm(raw));},
  /* build a candidate from wording + an existing meaning. Rejects anything that could carry secrets or act on people. */
  candidate:function(raw,meaning,src,nowMs){
   if(!LMEAN.test(meaning||''))return {ok:false,why:'meaning not allowed'};

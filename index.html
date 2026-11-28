@@ -664,7 +664,7 @@ html.tv #tvCorner button svg{width:28px;height:28px}
   <div class="db" id="dBody"></div>
 </aside>
 
-<script src="nlu/nlu.min.js?v=97"></script>
+<script src="nlu/nlu.min.js?v=98"></script>
 <script>
 (function(){
 'use strict';
@@ -786,7 +786,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v97-2026-11-28';
+var BUILD='v98-2026-11-28';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1209,7 +1209,7 @@ function finish(o){
 }
 function devSrc(){try{if(document.documentElement.classList.contains('tv'))return 'tv';}catch(e){}return /Mobi|Android|iPhone/i.test(navigator.userAgent)?'phone':'laptop';}
 function sharedPost(e){try{if(!BR||!e||!e.q)return;fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,action:'chatadd',src:devSrc(),q:String(e.q).slice(0,240),a:String(e.a||'').slice(0,420)})}).catch(function(){});}catch(x){}}
-function sharedSync(){try{if(!BR)return Promise.resolve(false);return fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,action:'chatlog'})}).then(function(r){return r.text();}).then(function(t){try{if(nluOK()){var dv=window.M1NT_NLU.deriveFromChat(t,Date.now());if(dv&&(dv.at||0)>((NS&&NS.at)||0)){NS=dv;nluSave();}}}catch(x){}var added=false;String(t||'').split('\n').forEach(function(l){var p=l.split('|');if(p.length<4)return;var at=Number(p[0]),src=p[1],q=p[2],a=p.slice(3).join('|');if(!at||!q)return;var dup=hist.some(function(h){return h.q===q&&Math.abs((h.at||0)-at)<600000;});if(!dup){hist.push({q:q,a:a,at:at,src:src,tags:[]});added=true;}});if(added){hist.sort(function(a,b){return (b.at||0)-(a.at||0);});hist=hist.slice(0,400);try{store('hist',hist);}catch(x){}}return added;}).catch(function(){return false;});}catch(x){return Promise.resolve(false);}}
+function sharedSync(){try{if(!BR)return Promise.resolve(false);try{learnPull();}catch(e){}return fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,action:'chatlog'})}).then(function(r){return r.text();}).then(function(t){try{if(nluOK()){var dv=window.M1NT_NLU.deriveFromChat(t,Date.now());if(dv&&(dv.at||0)>((NS&&NS.at)||0)){NS=dv;nluSave();}}}catch(x){}var added=false;String(t||'').split('\n').forEach(function(l){var p=l.split('|');if(p.length<4)return;var at=Number(p[0]),src=p[1],q=p[2],a=p.slice(3).join('|');if(!at||!q)return;var dup=hist.some(function(h){return h.q===q&&Math.abs((h.at||0)-at)<600000;});if(!dup){hist.push({q:q,a:a,at:at,src:src,tags:[]});added=true;}});if(added){hist.sort(function(a,b){return (b.at||0)-(a.at||0);});hist=hist.slice(0,400);try{store('hist',hist);}catch(x){}}return added;}).catch(function(){return false;});}catch(x){return Promise.resolve(false);}}
 function pushHist(e){if(e&&e.q&&LOG_SKIP.test(e.q))return;if(e&&e.a&&e.a.length>700)e.a=e.a.slice(0,700);sharedPost(e);hist.unshift(e);hist=hist.slice(0,400);try{store('hist',hist);}catch(x){hist=hist.slice(0,150);try{store('hist',hist);}catch(y){}}}
 var LOG_SKIP=/^(?:(?:hey |ok |okay )?(?:mint |m1nt )?)?(?:bring up|show|open|pull up|let me see|display)\b.*\b(?:log|history)\b/i;
 
@@ -3849,19 +3849,28 @@ function nluPre(q,opt){
     var r=N.converse(NS,q,{nowMs:Date.now(),learned:LEARNED,onCandidate:nluCand});nluSave();return r||false;}catch(e){return null;}
 }
 function nluNote(t){try{if(nluOK()&&NS){window.M1NT_NLU.noteAssistant(NS,String(t||''),Date.now());nluSave();}}catch(e){}}
+function learnUrl(){return LURL;}
+function learnSave(){try{store('nlu_learned',JSON.stringify(LEARNED));}catch(e){}}
+function learnMerge(list){try{LEARNED=window.M1NT_NLU.learn.merge(LEARNED,list||[]);learnSave();}catch(e){}}
+var LURL=store('learnurl')||null;
+(function(){try{var m=/[#&]l=([^&]+)/.exec(location.hash||'');if(m){var u=atob(decodeURIComponent(m[1]).replace(/-/g,'+').replace(/_/g,'/'));if(setLearnUrl(u))logMic('learn','sync address linked from the link');history.replaceState(null,'',location.pathname+location.search);}}catch(e){}})();
+function setLearnUrl(u){u=String(u||'').trim();if(!/^https:\/\/hook\.[a-z0-9]+\.make\.com\/[A-Za-z0-9]+$/.test(u))return false;LURL=u;store('learnurl',u);setTimeout(learnPull,300);return true;}
+function learnCall(action,v){if(!LURL||!BR||!BR.code)return Promise.resolve(null);var b={code:BR.code,action:action};if(v!==undefined)b.v=v;return fetch(LURL,{method:'POST',body:new URLSearchParams(b)}).then(function(r){return r.text();}).then(function(t){try{var a=JSON.parse(t);return Array.isArray(a)?a:null;}catch(e){return null;}}).catch(function(){return null;});}
+function learnPost(entries){if(!LURL)return;var ents=(entries&&entries.length?entries:LEARNED).slice(-60);learnCall('learnset',JSON.stringify(ents)).then(function(a){if(a){learnMerge(a);try{renderSetupIfOpen();}catch(e){}}});}
+function learnPull(){if(!LURL)return;learnCall('learnget').then(function(a){if(a){var before=JSON.stringify(LEARNED);learnMerge(a);if(JSON.stringify(LEARNED)!==before){logMic('learn','synced the shared learned list');try{renderSetupIfOpen();}catch(e){}}}});}
+function learnAdd(c){try{var e=Object.assign({},c,{st:'validated',off:0});learnMerge([e]);logMic('learn','learned "'+c.k+'" as '+c.m);learnPost([e]);}catch(x){}}
+function learnOffIds(ids){try{var N=window.M1NT_NLU,offs=[];(ids||[]).forEach(function(id){var u=N.learn.undo(LEARNED,id,Date.now());LEARNED=u.list;u.hit.forEach(function(h){offs.push(Object.assign({},h,{off:1,offAt:Date.now()}));});});learnSave();if(offs.length){logMic('learn','removed '+offs.length+' learned phrase(s)');learnPost(offs);}}catch(x){}}
+function learnUndo(id){learnOffIds([id]);}
 function nluCand(c,prevQ){
   try{var N=window.M1NT_NLU;var v=N.learn.autoValidate(c,prevQ,Date.now());
     if(!v.ok){logMic('learn','rejected '+c.m+': '+(v.examples&&v.examples[0]||'failed checks'));return;}
-    c.st='validated';c.q=String(prevQ).slice(0,80);LEARNED.push(c);LEARNED=LEARNED.slice(-60);store('nlu_learned',JSON.stringify(LEARNED));
-    logMic('learn','learned "'+c.k+'" as '+c.m);learnPost();
+    c.st='validated';c.q=String(prevQ).slice(0,80);learnAdd(c);
   }catch(e){}
 }
-function learnPost(){try{if(!BR)return;fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,action:'learnset',v:JSON.stringify(LEARNED.map(function(e){return {id:e.id,k:e.k,m:e.m,d:e.d,st:e.st,off:e.off||0,at:e.at};})).slice(0,6000)})}).catch(function(){});}catch(e){}}
-function learnPull(){try{if(!BR)return;fetch(BR.url,{method:'POST',body:new URLSearchParams({code:BR.code,action:'learnget'})}).then(function(r){return r.text();}).then(function(t){try{var a=JSON.parse(t);if(Array.isArray(a)){var by={};LEARNED.forEach(function(e){by[e.id]=e;});a.forEach(function(e){if(e&&e.id&&(!by[e.id]||(e.off&&!by[e.id].off)))by[e.id]=Object.assign({},by[e.id]||{},e);});LEARNED=Object.keys(by).map(function(k){return by[k];});store('nlu_learned',JSON.stringify(LEARNED));}}catch(x){}}).catch(function(){});}catch(e){}}
-function learnUndo(id){LEARNED=LEARNED.map(function(e){return e.id===id?Object.assign({},e,{off:1}):e;});store('nlu_learned',JSON.stringify(LEARNED));learnPost();}
 function nluDayOff(ds){var a=new Date(etDay(0)+'T12:00:00').getTime(),b=new Date(ds+'T12:00:00').getTime();return Math.round((b-a)/86400000);}
 var NLU_CANON={full:'how is everything looking',followups:'who needs a follow up',leads:'any new leads',jobs:'which deposits are unpaid',health:'is the system running ok',inventory:'what is low on inventory'};
 function nluDo(q,opt,r){
+  try{if(r&&r.learn)learnAdd(r.learn);if(r&&r.unlearn)learnOffIds(r.unlearn);}catch(e){}
   try{
     if(!r)return false;
     var N=window.M1NT_NLU;
@@ -4102,6 +4111,10 @@ function renderSetup(){
   var act=LEARNED.filter(function(e){return e.st==='validated'&&!e.off;});
   li.appendChild(el('div','sm',act.length?'Wordings M1NT learned from you. They only change how a question is understood, never what is allowed. Tap Undo to remove one.':'Nothing learned yet. When you correct me or Claude resolves a new wording, a safe candidate shows up here after it passes checks.'));
   act.slice(-12).reverse().forEach(function(e){var row=el('div','sm','"'+e.k+'" means '+e.m+' ');var ub=el('button','btn','Undo');ub.type='button';ub.addEventListener('click',function(){learnUndo(e.id);renderSetup();});row.appendChild(ub);li.appendChild(row);});
+  var lui=el('input','sel');lui.type='text';lui.placeholder=LURL?'Sync address saved. Paste a new one to replace it':'Paste the learning sync address (https://hook…)';lui.style.cssText='width:100%;margin-top:8px';lui.setAttribute('aria-label','Learning sync address');
+  var lsb=el('button','btn','Save sync address');lsb.type='button';lsb.addEventListener('click',function(){if(setLearnUrl(lui.value)){lui.value='';renderSetup();}else li.appendChild(el('div','sm','That does not look like a https://hook… address.'));});
+  var lpb=el('button','btn','Sync now');lpb.type='button';lpb.addEventListener('click',function(){learnPull();});
+  var lbr=el('div');lbr.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:8px';lbr.appendChild(lsb);lbr.appendChild(lpb);li.appendChild(lui);li.appendChild(lbr);
   dBody.appendChild(li);
   var mi=el('div','item');mi.appendChild(el('div','k','MICROPHONE'));
   var eb=el('button','btn pri','Enable microphone');eb.type='button';eb.addEventListener('click',function(){eb.disabled=true;enableMic().then(function(){eb.disabled=false;});});
