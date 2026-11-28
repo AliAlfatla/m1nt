@@ -664,7 +664,7 @@ html.tv #tvCorner button svg{width:28px;height:28px}
   <div class="db" id="dBody"></div>
 </aside>
 
-<script src="nlu/nlu.min.js?v=99"></script>
+<script src="nlu/nlu.min.js?v=100"></script>
 <script>
 (function(){
 'use strict';
@@ -786,7 +786,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v99-2026-11-28';
+var BUILD='v100-2026-11-28';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -1567,7 +1567,7 @@ function handleWake(t,isFinal){
   var q=cleanQ(t);if(!q)return;
   if(!standby&&isFinal&&lockReq(q)){clearTimeout(silTimer);wakePend=null;wake.cap=false;convo.pending=null;convo.last=null;wake.ignoreUntil=Date.now()+2500;doLock(q);return;}
   if(q.split(/\s+/).length>=5&&looksLikeEcho(q)){if(isFinal)logMic('ignored','echo of M1NT: '+q.slice(0,40));return;}
-  if(q.split(/\s+/).length<=2&&!YESNO_RE.test(q.trim())&&!convo.pending&&!(convo.askC&&Date.now()<convo.askC.until)&&!(simCtl&&simCtl.node&&simCtl.node.isConnected)&&!(convo.last&&Date.now()-convo.last.at<120000)&&!routeKnown(q,{},true)){if(isFinal)logMic('ignored','unclear fragment: '+q.slice(0,30));return;}
+  if(q.split(/\s+/).length<=2&&!YESNO_RE.test(q.trim())&&!convo.pending&&!(convo.askC&&Date.now()<convo.askC.until)&&!(simCtl&&simCtl.node&&simCtl.node.isConnected)&&!(convo.last&&Date.now()-convo.last.at<120000)&&!routeKnown(q,{},true)&&!nluKnown(q)){if(isFinal)logMic('ignored','unclear fragment: '+q.slice(0,30));return;}
   clearTimeout(silTimer);wakePend=q;
   if(isFinal)submitHeard(q);else silTimer=setTimeout(function(){submitHeard(wakePend);},SIL);
 }
@@ -3771,7 +3771,7 @@ function dashStart(){
  TV.lastUser=Date.now();dashShow(false);},true);});
 document.addEventListener('mousemove',function(){if(!TV.on)return;var h=document.documentElement;h.classList.add('cur');clearTimeout(TV.curT);TV.curT=setTimeout(function(){h.classList.remove('cur');},4000);});
 
-window.__t={run:function(q,o){return run(q,o||{});},lpull:function(){return learnPull();},lpost:function(){return learnPost();},lundo:function(id){return learnUndo(id);},lget:function(){return LEARNED;},lset:function(l){LEARNED=l;},build:function(){return BUILD;},rk:function(q){return routeKnown(q,{},true);},nlu:function(){return NS;},sim:function(){return simCtl?{done:simCtl.done,conn:simCtl.node.isConnected,inEx:$('extra').contains(simCtl.node),docked:simCtl.docked}:null;},parse:function(q){return parseTextCmd(q);},tok:function(q){return phoneTokens(q);},h2:H2,ptt:ptt,dashShow:dashShow,unlock:function(){LOCKED=false;},h2Go:h2Go,dashLoad:dashLoad,lexTalk:lexTalk,tvSet:tvSet,lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,lockReq:lockReq,doLock:doLock,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
+window.__t={run:function(q,o){return run(q,o||{});},known:function(q){return nluKnown(q);},lpull:function(){return learnPull();},lpost:function(){return learnPost();},lundo:function(id){return learnUndo(id);},lget:function(){return LEARNED;},lset:function(l){LEARNED=l;},build:function(){return BUILD;},rk:function(q){return routeKnown(q,{},true);},nlu:function(){return NS;},sim:function(){return simCtl?{done:simCtl.done,conn:simCtl.node.isConnected,inEx:$('extra').contains(simCtl.node),docked:simCtl.docked}:null;},parse:function(q){return parseTextCmd(q);},tok:function(q){return phoneTokens(q);},h2:H2,ptt:ptt,dashShow:dashShow,unlock:function(){LOCKED=false;},h2Go:h2Go,dashLoad:dashLoad,lexTalk:lexTalk,tvSet:tvSet,lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,lockReq:lockReq,doLock:doLock,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
 function addReminder(q,s){
   var pw=parseWhen(s);var txt=remText(pw?pw.rest:s);
   if(!pw){convo.pending={kind:'remwhen',text:txt,orig:q,until:Date.now()+120000};beginAsk(q);finish({headline:'When should I remind you?',small:true,spoken:'When should I remind you'+(txt?' to '+txt:'')+'?',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say a time, like in 20 minutes, or tomorrow at 9.'}]});return;}
@@ -3869,6 +3869,7 @@ function nluCand(c,prevQ){
 }
 function nluDayOff(ds){var a=new Date(etDay(0)+'T12:00:00').getTime(),b=new Date(ds+'T12:00:00').getTime();return Math.round((b-a)/86400000);}
 var NLU_CANON={full:'how is everything looking',followups:'who needs a follow up',leads:'any new leads',jobs:'which deposits are unpaid',health:'is the system running ok',inventory:'what is low on inventory'};
+function nluKnown(q){try{if(!nluOK()||!LEARNED.length)return false;var N=window.M1NT_NLU,r=N.converse(N.newState(),q,{nowMs:Date.now(),learned:LEARNED});return !!(r&&(r.k==='weather'||r.k==='cal'||r.k==='status'||r.k==='reply'));}catch(e){return false;}}
 function nluDo(q,opt,r){
   try{if(r&&r.learn)learnAdd(r.learn);if(r&&r.unlearn)learnOffIds(r.unlearn);}catch(e){}
   try{
