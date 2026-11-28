@@ -664,7 +664,7 @@ html.tv #tvCorner button svg{width:28px;height:28px}
   <div class="db" id="dBody"></div>
 </aside>
 
-<script src="nlu/nlu.min.js?v=100"></script>
+<script src="nlu/nlu.min.js?v=101"></script>
 <script>
 (function(){
 'use strict';
@@ -786,7 +786,7 @@ var ptt={on:false,buf:'',held:false};
 var wake={on:false,armed:false,pausedForSpeech:false,cooldownUntil:0,cap:false,capTimer:0,starts:0};
 var sessionStart=Date.now();
 var STANDALONE=!window.claude;
-var BUILD='v100-2026-11-28';
+var BUILD='v101-2026-11-28';
 var INAPP=/Claude\//.test(navigator.userAgent||'');
 
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -3771,7 +3771,7 @@ function dashStart(){
  TV.lastUser=Date.now();dashShow(false);},true);});
 document.addEventListener('mousemove',function(){if(!TV.on)return;var h=document.documentElement;h.classList.add('cur');clearTimeout(TV.curT);TV.curT=setTimeout(function(){h.classList.remove('cur');},4000);});
 
-window.__t={run:function(q,o){return run(q,o||{});},known:function(q){return nluKnown(q);},lpull:function(){return learnPull();},lpost:function(){return learnPost();},lundo:function(id){return learnUndo(id);},lget:function(){return LEARNED;},lset:function(l){LEARNED=l;},build:function(){return BUILD;},rk:function(q){return routeKnown(q,{},true);},nlu:function(){return NS;},sim:function(){return simCtl?{done:simCtl.done,conn:simCtl.node.isConnected,inEx:$('extra').contains(simCtl.node),docked:simCtl.docked}:null;},parse:function(q){return parseTextCmd(q);},tok:function(q){return phoneTokens(q);},h2:H2,ptt:ptt,dashShow:dashShow,unlock:function(){LOCKED=false;},h2Go:h2Go,dashLoad:dashLoad,lexTalk:lexTalk,tvSet:tvSet,lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,lockReq:lockReq,doLock:doLock,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
+window.__t={run:function(q,o){return run(q,o||{});},known:function(q){return nluKnown(q);},heard:function(q){return handleWake(q,true);},mlog:function(){return micLog.slice(-4).map(function(x){return x.kind+':'+x.detail;}).join(' / ');},awake:function(){return isAwake();},lpull:function(){return learnPull();},lsync:function(){return LSYNC;},lpost:function(){return learnPost();},lundo:function(id){return learnUndo(id);},lget:function(){return LEARNED;},lset:function(l){LEARNED=l;},build:function(){return BUILD;},rk:function(q){return routeKnown(q,{},true);},nlu:function(){return NS;},sim:function(){return simCtl?{done:simCtl.done,conn:simCtl.node.isConnected,inEx:$('extra').contains(simCtl.node),docked:simCtl.docked}:null;},parse:function(q){return parseTextCmd(q);},tok:function(q){return phoneTokens(q);},h2:H2,ptt:ptt,dashShow:dashShow,unlock:function(){LOCKED=false;},h2Go:h2Go,dashLoad:dashLoad,lexTalk:lexTalk,tvSet:tvSet,lkDigits:lkDigits,lkVoice:lkVoice,sleepUi:sleepUi,lockReq:lockReq,doLock:doLock,sleepKind:sleepKind,WAKEUP_RE:WAKEUP_RE,parseWhen:parseWhen,remText:remText,statusAnswer:statusAnswer,smallTalk:smallTalk};setInterval(remCheck,3000);setTimeout(remCheck,2500);
 function addReminder(q,s){
   var pw=parseWhen(s);var txt=remText(pw?pw.rest:s);
   if(!pw){convo.pending={kind:'remwhen',text:txt,orig:q,until:Date.now()+120000};beginAsk(q);finish({headline:'When should I remind you?',small:true,spoken:'When should I remind you'+(txt?' to '+txt:'')+'?',clarify:true,tags:[srcTag('snap','Need one detail')],banners:[{kind:'',bold:'WAITING FOR YOUR REPLY.',text:'Say a time, like in 20 minutes, or tomorrow at 9.'}]});return;}
@@ -3852,15 +3852,16 @@ function nluNote(t){try{if(nluOK()&&NS){window.M1NT_NLU.noteAssistant(NS,String(
 function learnUrl(){return LURL;}
 function learnSave(){try{store('nlu_learned',JSON.stringify(LEARNED));}catch(e){}}
 function learnMerge(list){try{LEARNED=window.M1NT_NLU.learn.merge(LEARNED,list||[]);learnSave();}catch(e){}}
-var LURL=store('learnurl')||null;
+var LURL=store('learnurl')||'https://hook.us2.make.com/3fuvnmxqutsnf3xxcm4esk4zncjcvowc';var LSYNC={at:0,ok:null,n:0,err:''};
 (function(){try{var m=/[#&]l=([^&]+)/.exec(location.hash||'');if(m){var u=atob(decodeURIComponent(m[1]).replace(/-/g,'+').replace(/_/g,'/'));if(setLearnUrl(u))logMic('learn','sync address linked from the link');history.replaceState(null,'',location.pathname+location.search);}}catch(e){}})();
 function setLearnUrl(u){u=String(u||'').trim();if(!/^https:\/\/hook\.[a-z0-9]+\.make\.com\/[A-Za-z0-9]+$/.test(u))return false;LURL=u;store('learnurl',u);setTimeout(learnPull,300);return true;}
-function learnCall(action,v){if(!LURL||!BR||!BR.code)return Promise.resolve(null);var b={code:BR.code,action:action};if(v!==undefined)b.v=v;return fetch(LURL,{method:'POST',body:new URLSearchParams(b)}).then(function(r){return r.text();}).then(function(t){try{var a=JSON.parse(t);return Array.isArray(a)?a:null;}catch(e){return null;}}).catch(function(){return null;});}
+function learnCall(action,v){if(!LURL||!BR||!BR.code){LSYNC.ok=false;LSYNC.err=!BR?'no bridge code on this device':'no sync address';return Promise.resolve(null);}var b={code:BR.code,action:action};if(v!==undefined)b.v=v;return fetch(LURL,{method:'POST',body:new URLSearchParams(b)}).then(function(r){return r.text();}).then(function(t){try{var a=JSON.parse(t);if(Array.isArray(a)){LSYNC.at=Date.now();LSYNC.ok=true;LSYNC.n=a.filter(function(e){return !e.off;}).length;LSYNC.err='';return a;}LSYNC.ok=false;LSYNC.err='unexpected reply';return null;}catch(e){LSYNC.ok=false;LSYNC.err='bad reply';return null;}}).catch(function(e){LSYNC.ok=false;LSYNC.err='network';return null;});}
 function learnPost(entries){if(!LURL)return;var ents=(entries&&entries.length?entries:LEARNED).slice(-60);learnCall('learnset',JSON.stringify(ents)).then(function(a){if(a){learnMerge(a);try{renderSetupIfOpen();}catch(e){}}});}
 function learnPull(){if(!LURL)return;learnCall('learnget').then(function(a){if(a){var before=JSON.stringify(LEARNED);learnMerge(a);if(JSON.stringify(LEARNED)!==before){logMic('learn','synced the shared learned list');try{renderSetupIfOpen();}catch(e){}}}});}
 function learnAdd(c){try{var e=Object.assign({},c,{st:'validated',off:0});learnMerge([e]);logMic('learn','learned "'+c.k+'" as '+c.m);learnPost([e]);}catch(x){}}
 function learnOffIds(ids){try{var N=window.M1NT_NLU,offs=[];(ids||[]).forEach(function(id){var u=N.learn.undo(LEARNED,id,Date.now());LEARNED=u.list;u.hit.forEach(function(h){offs.push(Object.assign({},h,{off:1,offAt:Date.now()}));});});learnSave();if(offs.length){logMic('learn','removed '+offs.length+' learned phrase(s)');learnPost(offs);}}catch(x){}}
 function learnUndo(id){learnOffIds([id]);}
+setTimeout(function(){try{learnPull();}catch(e){}},1500);setInterval(function(){try{if(!document.hidden)learnPull();}catch(e){}},45000);document.addEventListener('visibilitychange',function(){try{if(!document.hidden)learnPull();}catch(e){}});
 function nluCand(c,prevQ){
   try{var N=window.M1NT_NLU;var v=N.learn.autoValidate(c,prevQ,Date.now());
     if(!v.ok){logMic('learn','rejected '+c.m+': '+(v.examples&&v.examples[0]||'failed checks'));return;}
@@ -4113,6 +4114,7 @@ function renderSetup(){
   var act=LEARNED.filter(function(e){return e.st==='validated'&&!e.off;});
   li.appendChild(el('div','sm',act.length?'Wordings M1NT learned from you. They only change how a question is understood, never what is allowed. Tap Undo to remove one.':'Nothing learned yet. When you correct me or Claude resolves a new wording, a safe candidate shows up here after it passes checks.'));
   act.slice(-12).reverse().forEach(function(e){var row=el('div','sm','"'+e.k+'" means '+e.m+' ');var ub=el('button','btn','Undo');ub.type='button';ub.addEventListener('click',function(){learnUndo(e.id);renderSetup();});row.appendChild(ub);li.appendChild(row);});
+  li.appendChild(el('div','sm','Sync: '+(LSYNC.ok===null?'not yet':LSYNC.ok?('OK '+stampET(LSYNC.at)+', '+LSYNC.n+' active shared'):('problem ('+LSYNC.err+')'))));
   var lui=el('input','sel');lui.type='text';lui.placeholder=LURL?'Sync address saved. Paste a new one to replace it':'Paste the learning sync address (https://hook…)';lui.style.cssText='width:100%;margin-top:8px';lui.setAttribute('aria-label','Learning sync address');
   var lsb=el('button','btn','Save sync address');lsb.type='button';lsb.addEventListener('click',function(){if(setLearnUrl(lui.value)){lui.value='';renderSetup();}else li.appendChild(el('div','sm','That does not look like a https://hook… address.'));});
   var lpb=el('button','btn','Sync now');lpb.type='button';lpb.addEventListener('click',function(){learnPull();});
