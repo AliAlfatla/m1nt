@@ -1,0 +1,4 @@
+dev.json  e7e075fc4534bd70eea37e177b05faeb9214de777c9cac756c7ead3e5a0cc283
+final.json b2eca493d04171e5a6ed422a08e57f1e82bd56bf2603cd4fda839b5451065958
+frozen 2026-11-27T23:45:58.849Z
+Rule: final.json is never used to tune nlu.js. Run eval only for baseline (before) and the last post-tuning measurement.

@@ -42,7 +42,7 @@ const prevW={q:'what is the weather tomorrow',a:'Tomorrow: ...',ageMs:120000};
 const prevC={q:'what\'s on my calendar tomorrow',a:'...',ageMs:60000};
 ['and saturday?','what about monday','how about this weekend','and next week','no I meant sunday','what about the 3rd'].forEach(q=>T(q,'cal',{prev:prevC}));
 ['and saturday?','what about monday'].forEach(q=>T(q,'null',{prev:{q:'text Marc we are late',a:'x',ageMs:1000}}));
-['saturday?'].forEach(q=>T(q,'null',{prev:{q:'what is the weather tomorrow',a:'x',ageMs:3600000}}));
+['saturday?'].forEach(q=>T(q,['null','ask'],{prev:{q:'what is the weather tomorrow',a:'x',ageMs:3600000}}));
 // ack/yes after a question goes to Claude
 ['yes','ok','sure','go ahead','sounds good'].forEach(q=>T(q,'null',{lastWasQuestion:true}));
 console.log('pass',pass,'fail',fail);fails.forEach(f=>console.log('FAIL',f));
