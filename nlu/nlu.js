@@ -750,6 +750,7 @@ function phraseKey(raw){
 }
 function tokSim(a,b){var A=a.split(' ').filter(Boolean),B=b.split(' ').filter(Boolean);if(!A.length||!B.length)return 0;var used={},m=0;A.forEach(function(x){for(var j=0;j<B.length;j++){if(used[j])continue;var y=B[j];if(x===y||(x.length>=5&&y.length>=5&&dl(x,y,1)<=1)){used[j]=1;m++;return;}}});return 2*m/(A.length+B.length);}
 function jaccard(a,b){var A={},B={},i;a.split(' ').forEach(function(x){if(x)A[x]=1;});b.split(' ').forEach(function(x){if(x)B[x]=1;});var inter=0,uni=0;for(i in A){uni++;if(B[i])inter++;}for(i in B)if(!A[i])uni++;return uni?inter/uni:0;}
+function LEADSTRIP(n){n=String(n||'');for(var i=0;i<5;i++){var m=n.replace(/^(?:hey|hi|hello|ok|okay|so|alright|all right|um+|uh+|well|please|mint|m1nt|and|now|actually|listen|just|quick|can you|could you)\s+/,'');if(m===n)break;n=m;}return n.replace(/\s+(?:please|thanks|thank you|ok|okay|mint)$/,'').trim();}
 var LEARNAPI={
 
  /* ---- shared list helpers: used identically by the site and by the owner-SMS router ---- */
@@ -775,7 +776,7 @@ var LEARNAPI={
  },
  /* "when I say X I mean the weather" / "remember that X means my calendar" */
  parseTeach:function(raw){
-  var n=norm(raw);var m=/^(?:mint )?(?:when(?:ever)? i say|if i say|if i ask|when i ask) (.{3,80}?),? (?:i mean|i want|it means|that means|show me|give me|check|pull up|use|treat it as|answer with|that is|that is the same as)\s+(.{3,80})$/.exec(n)||/^(?:mint )?(?:remember|learn|note|teach (?:you|mint)|please remember|please learn)(?: that| this)? (.{3,80}?) (?:means|mean|is the same as|is another way of saying|is code for|equals) (.{3,80})$/.exec(n);
+  var n=LEADSTRIP(norm(raw));var m=/^(?:mint )?(?:when(?:ever)? i say|if i say|if i ask|when i ask) (.{3,80}?),? (?:i mean|i want|it means|that means|show me|give me|check|pull up|use|treat it as|answer with|that is|that is the same as)\s+(.{3,80})$/.exec(n)||/^(?:mint )?(?:remember|learn|note|teach (?:you|mint)|please remember|please learn)(?: that| this)? (.{3,80}?) (?:means|mean|is the same as|is another way of saying|is code for|equals) (.{3,80})$/.exec(n);
   return m?{phrase:m[1].replace(/^(?:the (?:phrase|words?) )/,'').trim(),target:m[2].trim()}:null;
  },
  targetMeaning:function(t,nowMs){
@@ -811,12 +812,12 @@ var LEARNAPI={
   return {ok:true,cand:c.cand,text:'Got it. "'+pt.phrase+'" now means '+({weather:'the weather','cal':'your calendar','status:followups':'the follow-ups report','status:leads':'the leads report','status:jobs':'the jobs report','status:inventory':'the inventory report','status:health':'the system check','status:full':'the full rundown','reply:joke':'a joke','reply:time':'the time'}[m]||m)+'. Say "forget that phrase" to undo it.'};
  },
  parseUndo:function(raw){
-  var n=norm(raw);
+  var n=LEADSTRIP(norm(raw));
   if(/^(?:mint )?(?:forget|undo|remove|unlearn|delete) (?:that|the last|the latest) (?:phrase|lesson|one i taught you|wording)$|^(?:mint )?unlearn that$|^(?:mint )?forget what i just taught you$/.test(n))return {target:'last'};
   var m=/^(?:mint )?(?:unlearn|forget the phrase|remove the phrase|forget the wording) (.{3,80})$/.exec(n);if(m)return {target:m[1].trim()};
   return null;
  },
- parseList:function(raw){return /^(?:mint )?(?:what (?:phrases )?(?:have|did) (?:you|i) (?:learned?|taught you)|list (?:the )?(?:learned|taught) phrases|show (?:me )?(?:the )?learned phrases|what phrases do you know)$/.test(norm(raw));},
+ parseList:function(raw){return /^(?:mint )?(?:what (?:phrases )?(?:have|did) (?:you|i) (?:learned?|taught you)|list (?:the )?(?:learned|taught) phrases|show (?:me )?(?:the )?learned phrases|what phrases do you know)$/.test(LEADSTRIP(norm(raw)));},
  /* build a candidate from wording + an existing meaning. Rejects anything that could carry secrets or act on people. */
  candidate:function(raw,meaning,src,nowMs){
   if(!LMEAN.test(meaning||''))return {ok:false,why:'meaning not allowed'};
